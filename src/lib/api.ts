@@ -1,4 +1,24 @@
+import { session } from "./session";
+
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+
+let isRefreshing = false;
+let failedQueue: {
+    resolve: (value: unknown) => void;
+    reject: (reason?: any) => void;
+}[] = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+    failedQueue.forEach((prom) => {
+        if (error) {
+            prom.reject(error);
+        } else {
+            prom.resolve(token);
+        }
+    });
+
+    failedQueue = [];
+};
 
 async function request<T>(
     endpoint: string,
@@ -6,11 +26,7 @@ async function request<T>(
 ): Promise<T> {
     const url = `${BASE_URL}${endpoint}`;
 
-    // You can add logic here to get the token from storage (e.g., localStorage, cookies)
-    const token =
-        typeof window !== "undefined"
-            ? localStorage.getItem("authToken")
-            : null;
+    const token = session.getAccessToken();
 
     const defaultHeaders: HeadersInit = {
         "Content-Type": "application/json",
@@ -28,22 +44,66 @@ async function request<T>(
         },
     };
 
-    const response = await fetch(url, config);
+    try {
+        const response = await fetch(url, config);
 
-    if (!response.ok) {
-        // You can create a custom error object for better error handling
-        const errorData = await response
-            .json()
-            .catch(() => ({ message: response.statusText }));
-        throw new Error(errorData.message || "An unknown error occurred");
+        if (!response.ok) {
+            const errorData = await response
+                .json()
+                .catch(() => ({ message: response.statusText }));
+
+            if (
+                response.status === 401 &&
+                !options.headers?.hasOwnProperty("_retry")
+            ) {
+                if (!isRefreshing) {
+                    isRefreshing = true;
+                    try {
+                        const { accessToken } = await apiClient.post<{
+                            accessToken: string;
+                        }>("/auth/refresh", {});
+                        session.setAccessToken(accessToken);
+                        processQueue(null, accessToken);
+                        return request(endpoint, {
+                            ...options,
+                            headers: { ...options.headers, _retry: "true" },
+                        });
+                    } catch (err) {
+                        processQueue(err, null);
+                        session.destroy();
+                        window.location.href = "/login";
+                        return Promise.reject(err);
+                    } finally {
+                        isRefreshing = false;
+                    }
+                }
+
+                return new Promise((resolve, reject) => {
+                    failedQueue.push({ resolve, reject });
+                })
+                    .then((token) => {
+                        return request(endpoint, {
+                            ...options,
+                            headers: { ...options.headers, _retry: "true" },
+                        });
+                    })
+                    .catch((err) => {
+                        return Promise.reject(err);
+                    }) as Promise<T>;
+            }
+
+            throw new Error(errorData.message || "An unknown error occurred");
+        }
+
+        // Handle cases with no content
+        if (response.status === 204) {
+            return null as T;
+        }
+
+        return await response.json();
+    } catch (error) {
+        return Promise.reject(error);
     }
-
-    // Handle cases with no content
-    if (response.status === 204) {
-        return null as T;
-    }
-
-    return response.json();
 }
 
 export const apiClient = {
