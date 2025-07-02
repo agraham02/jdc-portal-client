@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useAuth, UserRole } from "@/lib/contexts/auth-context";
+import { useAuth } from "@/lib/contexts/auth-context";
 import { RoleGuard } from "@/components/auth/RoleGuard";
+import { RoleName } from "@/lib/types/auth";
 import { Button } from "@/components/ui/button";
 import {
     LogOut,
@@ -21,46 +22,49 @@ export function Navigation() {
             label: "Dashboard",
             href: "/dashboard",
             icon: User,
-            roles: [UserRole.ADMIN, UserRole.EMPLOYEE, UserRole.VENDOR],
+            roles: [RoleName.ADMIN, RoleName.EMPLOYEE, RoleName.VENDOR],
         },
         {
             label: "Employees",
             href: "/employees",
             icon: Users,
-            roles: [UserRole.ADMIN],
+            roles: [RoleName.ADMIN],
         },
         {
             label: "Vendors",
             href: "/vendors",
             icon: Building,
-            roles: [UserRole.ADMIN, UserRole.EMPLOYEE],
+            roles: [RoleName.ADMIN, RoleName.EMPLOYEE],
         },
         {
             label: "Contracts",
             href: "/contracts",
             icon: FileText,
-            roles: [UserRole.ADMIN, UserRole.EMPLOYEE, UserRole.VENDOR],
+            roles: [RoleName.ADMIN, RoleName.EMPLOYEE, RoleName.VENDOR],
         },
         {
             label: "Settings",
             href: "/settings",
             icon: Settings,
-            roles: [UserRole.ADMIN, UserRole.EMPLOYEE, UserRole.VENDOR],
+            roles: [RoleName.ADMIN, RoleName.EMPLOYEE, RoleName.VENDOR],
         },
     ];
 
     return (
         <nav className="bg-background border-r border-border p-4 min-h-screen w-64">
             <div className="space-y-2">
+                {" "}
                 <div className="mb-6">
                     <h2 className="text-lg font-semibold">JDC Portal</h2>
                     {user && (
                         <p className="text-sm text-muted-foreground">
-                            {user.name} ({user.role})
+                            {user.fullName ||
+                                `${user.firstName} ${user.lastName}`.trim() ||
+                                user.email}{" "}
+                            ({user.accountType})
                         </p>
                     )}
                 </div>
-
                 {navigationItems.map((item) => {
                     const Icon = item.icon;
                     return (
@@ -75,7 +79,6 @@ export function Navigation() {
                         </RoleGuard>
                     );
                 })}
-
                 <div className="pt-4 mt-4 border-t border-border">
                     <Button
                         variant="outline"
