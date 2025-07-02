@@ -35,6 +35,7 @@ interface AuthContextType {
     login: (credentials: LoginCredentials) => Promise<AuthUser>;
     logout: () => Promise<void>;
     refreshUser: () => Promise<void>;
+    refreshToken: () => Promise<boolean>; // Add explicit refresh method
     hasRole: (role: RoleName | RoleName[]) => boolean;
     hasAccountType: (type: AccountType | AccountType[]) => boolean;
     hasPermission: (permission: string) => boolean;
@@ -111,6 +112,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const isEmployee = (): boolean => hasRole(RoleName.EMPLOYEE);
     const isVendor = (): boolean => hasRole(RoleName.VENDOR);
 
+    // Explicit token refresh method
+    const refreshToken = async (): Promise<boolean> => {
+        try {
+            const { accessToken } = await AuthService.refreshToken();
+            session.setAccessToken(accessToken);
+            return true;
+        } catch (error) {
+            console.error("Token refresh failed:", error);
+            return false;
+        }
+    };
+
     const login = async (credentials: LoginCredentials): Promise<AuthUser> => {
         setIsLoading(true);
         try {
@@ -148,21 +161,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         const initializeAuth = async () => {
             try {
-                // Check if we have an access token first
                 const token = session.getAccessToken();
+                console.log("Auth initialization - Access token exists:", !!token);
+                
                 if (!token) {
-                    // No token means definitely not authenticated
-                    setUser(null);
-                    setIsLoading(false);
-                    return;
+                    // No access token - try to refresh to see if we have a valid refresh token
+                    console.log("No access token found, attempting refresh...");
+                    console.log("Available cookies:", session.debugCookies());
+                    try {
+                        const refreshResult = await AuthService.refreshToken();
+                        console.log("Refresh API call successful:", refreshResult);
+                        session.setAccessToken(refreshResult.accessToken);
+                        console.log("Refresh successful, got new access token");
+                        
+                        // Now get the user profile with the new token
+                        const user = await AuthService.getProfile();
+                        setUser(user as AuthUser);
+                        console.log("User profile loaded successfully");
+                        return;
+                    } catch (refreshError) {
+                        // No valid refresh token or refresh failed
+                        console.log("Refresh failed - no valid refresh token:", refreshError);
+                        console.log("Error details:", {
+                            message: (refreshError as any)?.message,
+                            status: (refreshError as any)?.status,
+                            name: (refreshError as any)?.name
+                        });
+                        setUser(null);
+                        return;
+                    }
                 }
 
-                // Only try to get profile if we have a token
+                // We have an access token - try to get profile
+                // If the token is expired, the API client will automatically refresh it
+                console.log("Access token exists, attempting to get profile...");
                 const user = await AuthService.getProfile();
                 setUser(user as AuthUser);
+                console.log("Profile loaded successfully with existing token");
             } catch (error) {
                 console.error("Failed to initialize auth:", error);
-                // If profile fetch fails, clear user state
+                // If profile fetch fails (including refresh failure), clear user state
                 setUser(null);
             } finally {
                 setIsLoading(false);
@@ -181,6 +219,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 login,
                 logout,
                 refreshUser,
+                refreshToken,
                 hasRole,
                 hasAccountType,
                 hasPermission,

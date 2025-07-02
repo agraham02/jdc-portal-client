@@ -38,6 +38,7 @@ async function request<T>(
 
     const config: RequestInit = {
         ...options,
+        credentials: "include", // This is crucial for httpOnly cookies
         headers: {
             ...defaultHeaders,
             ...options.headers,
@@ -46,15 +47,19 @@ async function request<T>(
 
     try {
         const response = await fetch(url, config);
+        console.log(`API Request: ${endpoint} - Status: ${response.status}`);
 
         if (!response.ok) {
             const errorData = await response
                 .json()
                 .catch(() => ({ message: response.statusText }));
 
+            console.log(`API Error: ${endpoint} - ${response.status}`, errorData);
+
             if (
                 response.status === 401 &&
-                !options.headers?.hasOwnProperty("_retry")
+                !options.headers?.hasOwnProperty("_retry") &&
+                endpoint !== "/auth/refresh" // Prevent infinite refresh loops
             ) {
                 if (!isRefreshing) {
                     isRefreshing = true;

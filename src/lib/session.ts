@@ -2,6 +2,13 @@ import { parseCookies, setCookie, destroyCookie } from "nookies";
 
 const ACCESS_TOKEN_KEY = "accessToken";
 
+// Debug function to check all cookies
+const debugCookies = () => {
+    const cookies = parseCookies();
+    console.log("All available cookies:", cookies);
+    return cookies;
+};
+
 export const session = {
     setAccessToken: (accessToken: string) => {
         setCookie(null, ACCESS_TOKEN_KEY, accessToken, {
@@ -21,4 +28,6 @@ export const session = {
     destroy: () => {
         destroyCookie(null, ACCESS_TOKEN_KEY, { path: "/" });
     },
+
+    debugCookies,
 };
