@@ -1,5 +1,9 @@
 "use client";
 
+import { useEffect } from "react";
+import { useAuth, UserRole } from "@/lib/contexts/auth-context";
+import { useRouter } from "next/navigation";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { motion } from "motion/react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -21,6 +25,45 @@ import {
 } from "lucide-react";
 
 export default function Home() {
+    const { isAuthenticated, user, isLoading } = useAuth();
+    const router = useRouter();
+
+    useEffect(() => {
+        if (!isLoading && isAuthenticated && user) {
+            // Redirect authenticated users to their appropriate dashboard
+            switch (user.role) {
+                case UserRole.ADMIN:
+                    router.push("/admin/dashboard");
+                    break;
+                case UserRole.EMPLOYEE:
+                    router.push("/employee/dashboard");
+                    break;
+                case UserRole.VENDOR:
+                    router.push("/vendor/dashboard");
+                    break;
+                default:
+                    router.push("/dashboard");
+            }
+        }
+    }, [isAuthenticated, user, isLoading, router]);
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <LoadingSpinner size={32} />
+            </div>
+        );
+    }
+
+    // If authenticated, don't show the landing page (will redirect)
+    if (isAuthenticated) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <LoadingSpinner size={32} />
+            </div>
+        );
+    }
+    
     const features = [
         {
             icon: Building2,
