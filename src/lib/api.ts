@@ -54,7 +54,10 @@ async function request<T>(
                 .json()
                 .catch(() => ({ message: response.statusText }));
 
-            console.log(`API Error: ${endpoint} - ${response.status}`, errorData);
+            console.log(
+                `API Error: ${endpoint} - ${response.status}`,
+                errorData
+            );
 
             if (
                 response.status === 401 &&

@@ -42,7 +42,11 @@ export function AuthDebugPanel() {
                     <Button onClick={checkToken} variant="outline" size="sm">
                         Check Token
                     </Button>
-                    <Button onClick={handleManualRefresh} variant="outline" size="sm">
+                    <Button
+                        onClick={handleManualRefresh}
+                        variant="outline"
+                        size="sm"
+                    >
                         Manual Refresh
                     </Button>
                     <Button onClick={clearToken} variant="outline" size="sm">

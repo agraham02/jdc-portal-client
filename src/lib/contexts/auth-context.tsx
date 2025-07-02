@@ -162,18 +162,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const initializeAuth = async () => {
             try {
                 const token = session.getAccessToken();
-                console.log("Auth initialization - Access token exists:", !!token);
-                
+                console.log(
+                    "Auth initialization - Access token exists:",
+                    !!token
+                );
+
                 if (!token) {
                     // No access token - try to refresh to see if we have a valid refresh token
                     console.log("No access token found, attempting refresh...");
                     console.log("Available cookies:", session.debugCookies());
                     try {
                         const refreshResult = await AuthService.refreshToken();
-                        console.log("Refresh API call successful:", refreshResult);
+                        console.log(
+                            "Refresh API call successful:",
+                            refreshResult
+                        );
                         session.setAccessToken(refreshResult.accessToken);
                         console.log("Refresh successful, got new access token");
-                        
+
                         // Now get the user profile with the new token
                         const user = await AuthService.getProfile();
                         setUser(user as AuthUser);
@@ -181,11 +187,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                         return;
                     } catch (refreshError) {
                         // No valid refresh token or refresh failed
-                        console.log("Refresh failed - no valid refresh token:", refreshError);
+                        console.log(
+                            "Refresh failed - no valid refresh token:",
+                            refreshError
+                        );
                         console.log("Error details:", {
                             message: (refreshError as any)?.message,
                             status: (refreshError as any)?.status,
-                            name: (refreshError as any)?.name
+                            name: (refreshError as any)?.name,
                         });
                         setUser(null);
                         return;
@@ -194,7 +203,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
                 // We have an access token - try to get profile
                 // If the token is expired, the API client will automatically refresh it
-                console.log("Access token exists, attempting to get profile...");
+                console.log(
+                    "Access token exists, attempting to get profile..."
+                );
                 const user = await AuthService.getProfile();
                 setUser(user as AuthUser);
                 console.log("Profile loaded successfully with existing token");
