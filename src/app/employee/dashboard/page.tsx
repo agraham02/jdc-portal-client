@@ -1,10 +1,10 @@
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
-import { UserRole } from "@/lib/contexts/auth-context";
+import { RoleName } from "@/lib/types/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function EmployeeDashboardPage() {
     return (
-        <ProtectedRoute requiredRoles={UserRole.EMPLOYEE}>
+        <ProtectedRoute requiredRoles={RoleName.EMPLOYEE}>
             <div className="container mx-auto p-6 space-y-6">
                 <h1 className="text-3xl font-bold">Employee Dashboard</h1>
 

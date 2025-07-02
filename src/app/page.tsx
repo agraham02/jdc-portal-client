@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { useAuth, UserRole } from "@/lib/contexts/auth-context";
+import { useAuth } from "@/lib/contexts/auth-context";
+import { AccountType } from "@/lib/types/auth";
 import { useRouter } from "next/navigation";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { motion } from "motion/react";
@@ -31,15 +32,18 @@ export default function Home() {
     useEffect(() => {
         if (!isLoading && isAuthenticated && user) {
             // Redirect authenticated users to their appropriate dashboard
-            switch (user.role) {
-                case UserRole.ADMIN:
+            switch (user.accountType) {
+                case AccountType.ADMIN:
                     router.push("/admin/dashboard");
                     break;
-                case UserRole.EMPLOYEE:
+                case AccountType.EMPLOYEE:
                     router.push("/employee/dashboard");
                     break;
-                case UserRole.VENDOR:
+                case AccountType.VENDOR:
                     router.push("/vendor/dashboard");
+                    break;
+                case AccountType.HOUSING_TENANT:
+                    router.push("/tenant/dashboard");
                     break;
                 default:
                     router.push("/dashboard");
@@ -63,7 +67,7 @@ export default function Home() {
             </div>
         );
     }
-    
+
     const features = [
         {
             icon: Building2,
