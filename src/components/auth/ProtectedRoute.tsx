@@ -2,14 +2,15 @@
 
 import { ReactNode } from "react";
 import { redirect } from "next/navigation";
-import { useAuth, UserRole } from "@/lib/contexts/auth-context";
+import { useAuth } from "@/lib/contexts/auth-context";
+import { RoleName } from "@/lib/types/auth";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { AccessDenied } from "@/components/auth/AccessDenied";
 import { AccountStatusPage } from "@/components/auth/AccountStatus";
 
 interface ProtectedRouteProps {
     children: ReactNode;
-    requiredRoles?: UserRole | UserRole[];
+    requiredRoles?: RoleName | RoleName[];
     requiredPermissions?: string[];
     requireActiveAccount?: boolean;
     fallback?: ReactNode;

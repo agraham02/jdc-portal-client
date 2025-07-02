@@ -1,9 +1,17 @@
 "use client";
 
-import { AlertTriangle, Clock, XCircle, Mail } from "lucide-react";
+import {
+    AlertTriangle,
+    Clock,
+    XCircle,
+    Mail,
+    Archive,
+    Ban,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useAuth, AuthUser, AccountStatus } from "@/lib/contexts/auth-context";
+import { useAuth, AuthUser } from "@/lib/contexts/auth-context";
+import { UserStatus } from "@/lib/types/auth";
 
 interface AccountStatusProps {
     user: AuthUser | null;
@@ -16,7 +24,7 @@ export function AccountStatusPage({ user }: AccountStatusProps) {
 
     const getStatusConfig = () => {
         switch (user.status) {
-            case AccountStatus.PENDING:
+            case UserStatus.PENDING:
                 return {
                     icon: Clock,
                     title: "Account Pending Approval",
@@ -24,32 +32,47 @@ export function AccountStatusPage({ user }: AccountStatusProps) {
                         "Your account is awaiting admin approval. You will receive an email once approved.",
                     variant: "warning" as const,
                 };
-            case AccountStatus.SUSPENDED:
+            case UserStatus.ONBOARDING:
                 return {
-                    icon: XCircle,
-                    title: "Account Suspended",
+                    icon: Clock,
+                    title: "Account Setup In Progress",
                     message:
-                        "Your account has been suspended. Please contact support for assistance.",
-                    variant: "destructive" as const,
+                        "Your account is being set up. Please complete the onboarding process.",
+                    variant: "warning" as const,
                 };
-            case AccountStatus.INACTIVE:
+            case UserStatus.INACTIVE:
                 return {
                     icon: AlertTriangle,
                     title: "Account Inactive",
                     message:
-                        "Your account is inactive. Please contact support to reactivate.",
+                        "Your account is temporarily inactive. Please contact support to reactivate.",
+                    variant: "warning" as const,
+                };
+            case UserStatus.REJECTED:
+                return {
+                    icon: XCircle,
+                    title: "Account Application Rejected",
+                    message:
+                        "Your account application has been rejected. Please contact support for more information.",
+                    variant: "destructive" as const,
+                };
+            case UserStatus.TERMINATED:
+                return {
+                    icon: Ban,
+                    title: "Account Terminated",
+                    message:
+                        "Your account has been terminated. Please contact support if you believe this is an error.",
+                    variant: "destructive" as const,
+                };
+            case UserStatus.ARCHIVED:
+                return {
+                    icon: Archive,
+                    title: "Account Archived",
+                    message:
+                        "Your account has been archived. Please contact support to restore access.",
                     variant: "warning" as const,
                 };
             default:
-                if (!user.isEmailVerified) {
-                    return {
-                        icon: Mail,
-                        title: "Email Verification Required",
-                        message:
-                            "Please verify your email address to access all features.",
-                        variant: "warning" as const,
-                    };
-                }
                 return null;
         }
     };
@@ -80,8 +103,8 @@ export function AccountStatusPage({ user }: AccountStatusProps) {
                         >
                             Sign Out
                         </Button>
-                        {!user.isEmailVerified && (
-                            <Button className="flex-1">Resend Email</Button>
+                        {user.status === UserStatus.PENDING && (
+                            <Button className="flex-1">Contact Support</Button>
                         )}
                     </div>
                 </CardContent>

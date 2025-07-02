@@ -2,7 +2,8 @@
 
 import { ReactNode } from "react";
 import { redirect } from "next/navigation";
-import { useAuth, UserRole } from "@/lib/contexts/auth-context";
+import { useAuth } from "@/lib/contexts/auth-context";
+import { AccountType } from "@/lib/types/auth";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 interface PublicRouteProps {
@@ -23,21 +24,23 @@ export function PublicRoute({
     }
 
     if (redirectIfAuthenticated && isAuthenticated && user) {
-        const defaultRedirectPath = getDashboardPath(user.role);
+        const defaultRedirectPath = getDashboardPath(user.accountType);
         redirect(redirectPath || defaultRedirectPath);
     }
 
     return <>{children}</>;
 }
 
-function getDashboardPath(role: UserRole): string {
-    switch (role) {
-        case UserRole.ADMIN:
+function getDashboardPath(accountType: AccountType): string {
+    switch (accountType) {
+        case AccountType.ADMIN:
             return "/admin/dashboard";
-        case UserRole.EMPLOYEE:
+        case AccountType.EMPLOYEE:
             return "/employee/dashboard";
-        case UserRole.VENDOR:
+        case AccountType.VENDOR:
             return "/vendor/dashboard";
+        case AccountType.HOUSING_TENANT:
+            return "/tenant/dashboard";
         default:
             return "/dashboard";
     }

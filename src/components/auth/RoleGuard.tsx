@@ -1,11 +1,12 @@
 "use client";
 
 import { ReactNode } from "react";
-import { useAuth, UserRole } from "@/lib/contexts/auth-context";
+import { useAuth } from "@/lib/contexts/auth-context";
+import { RoleName } from "@/lib/types/auth";
 
 interface RoleGuardProps {
     children: ReactNode;
-    requiredRoles: UserRole | UserRole[];
+    requiredRoles: RoleName | RoleName[];
     fallback?: ReactNode;
 }
 
