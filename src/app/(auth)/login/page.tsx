@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+// import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
@@ -50,10 +50,13 @@ export default function LoginPage() {
                 throw new Error("Invalid email or password");
             }
             console.log("Login successful:", user);
-            // router.push("/dashboard");
-        } catch (error: any) {
-            console.error(error);
-            setError(error.message || "Login failed. Please try again.");
+        } catch (error) {
+            if (error instanceof Error) {
+                console.error(error);
+                setError(error.message || "Login failed. Please try again.");
+            } else {
+                setError("Login failed. Please try again.");
+            }
         } finally {
             setIsLoading(false);
         }
