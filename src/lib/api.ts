@@ -49,17 +49,21 @@ async function request<T>(
 
     try {
         const response = await fetch(url, config);
-        console.log(`API Request: ${endpoint} - Status: ${response.status}`);
+        if (process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_DEBUG_API === "true") {
+            console.log(`API Request: ${endpoint} - Status: ${response.status}`);
+        }
 
         if (!response.ok) {
             const errorData = await response
                 .json()
                 .catch(() => ({ message: response.statusText }));
 
-            console.log(
-                `API Error: ${endpoint} - ${response.status}`,
-                errorData
-            );
+            if (process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_DEBUG_API === "true") {
+                console.log(
+                    `API Error: ${endpoint} - ${response.status}`,
+                    errorData
+                );
+            }
 
             if (
                 response.status === 401 &&
