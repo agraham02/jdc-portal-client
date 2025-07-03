@@ -3,12 +3,14 @@ import { session } from "./session";
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 let isRefreshing = false;
-let failedQueue: {
-    resolve: (value: unknown) => void;
-    reject: (reason?: any) => void;
-}[] = [];
 
-const processQueue = (error: any, token: string | null = null) => {
+type FailedQueueItem = {
+    resolve: (value: unknown) => void;
+    reject: (reason?: unknown) => void;
+};
+let failedQueue: FailedQueueItem[] = [];
+
+const processQueue = (error: unknown, token: string | null = null) => {
     failedQueue.forEach((prom) => {
         if (error) {
             prom.reject(error);
@@ -81,13 +83,13 @@ async function request<T>(
                 return new Promise((resolve, reject) => {
                     failedQueue.push({ resolve, reject });
                 })
-                    .then((token) => {
+                    .then(() => {
                         return request(endpoint, {
                             ...options,
                             headers: { ...options.headers, _retry: "true" },
                         });
                     })
-                    .catch((err) => {
+                    .catch((err: unknown) => {
                         return Promise.reject(err);
                     }) as Promise<T>;
             }
@@ -110,14 +112,14 @@ export const apiClient = {
     get: <T>(endpoint: string, options?: RequestInit) =>
         request<T>(endpoint, { ...options, method: "GET" }),
 
-    post: <T>(endpoint: string, body: any, options?: RequestInit) =>
+    post: <T>(endpoint: string, body: unknown, options?: RequestInit) =>
         request<T>(endpoint, {
             ...options,
             method: "POST",
             body: JSON.stringify(body),
         }),
 
-    patch: <T>(endpoint: string, body: any, options?: RequestInit) =>
+    patch: <T>(endpoint: string, body: unknown, options?: RequestInit) =>
         request<T>(endpoint, {
             ...options,
             method: "PATCH",
