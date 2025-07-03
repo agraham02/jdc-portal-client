@@ -1,13 +1,6 @@
 "use client";
 
-import {
-    AlertTriangle,
-    Clock,
-    XCircle,
-    Mail,
-    Archive,
-    Ban,
-} from "lucide-react";
+import { AlertTriangle, Clock, XCircle, Archive, Ban } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth, AuthUser } from "@/lib/contexts/auth-context";
@@ -97,7 +90,11 @@ export function AccountStatusPage({ user }: AccountStatusProps) {
                     </p>
                     <div className="flex gap-2">
                         <Button
-                            variant="outline"
+                            variant={
+                                variant === "destructive"
+                                    ? "destructive"
+                                    : "outline"
+                            }
                             onClick={logout}
                             className="flex-1"
                         >

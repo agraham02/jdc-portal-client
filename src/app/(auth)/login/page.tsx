@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-// import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
@@ -24,7 +23,6 @@ import { useAuth } from "@/lib/contexts/auth-context";
 import { PublicRoute } from "@/components/auth/PublicRoute";
 
 export default function LoginPage() {
-    const router = useRouter();
     const { login } = useAuth();
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -180,7 +178,7 @@ export default function LoginPage() {
 
                             <div className="mt-6 text-center">
                                 <p className="text-sm text-muted-foreground">
-                                    Don't have an account?{" "}
+                                    Don&apos;t have an account?{" "}
                                     <Link
                                         href="/register"
                                         className="text-primary hover:underline"

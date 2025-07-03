@@ -185,16 +185,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                         setUser(user as AuthUser);
                         console.log("User profile loaded successfully");
                         return;
-                    } catch (refreshError) {
+                    } catch (refreshError: unknown) {
                         // No valid refresh token or refresh failed
                         console.log(
                             "Refresh failed - no valid refresh token:",
                             refreshError
                         );
                         console.log("Error details:", {
-                            message: (refreshError as any)?.message,
-                            status: (refreshError as any)?.status,
-                            name: (refreshError as any)?.name,
+                            message: (refreshError as { message?: string })
+                                .message,
+                            status: (refreshError as { status?: number })
+                                .status,
+                            name: (refreshError as { name?: string }).name,
                         });
                         setUser(null);
                         return;
