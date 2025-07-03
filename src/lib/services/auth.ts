@@ -32,8 +32,13 @@ const getProfile = (): Promise<User> => {
     return apiClient.get("/auth/me");
 };
 
+const refreshToken = async (): Promise<{ accessToken: string }> => {
+    return apiClient.post("/auth/refresh", {});
+};
+
 export const AuthService = {
     login,
     logout,
     getProfile,
+    refreshToken,
 };
