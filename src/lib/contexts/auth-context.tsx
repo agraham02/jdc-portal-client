@@ -84,6 +84,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Check if user has specific permission
     const hasPermission = (permission: string): boolean => {
         if (!user) return false;
+        console.log("Checking permission:");
+        console.log(user, permission);
         return user.permissions?.includes(permission) || false;
     };
 
@@ -173,7 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                         const user = await AuthService.getProfile();
                         setUser(user as AuthUser);
                         return;
-                    } catch (refreshError: unknown) {
+                    } catch {
                         // No valid refresh token or refresh failed
                         setUser(null);
                         return;
