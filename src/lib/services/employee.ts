@@ -62,7 +62,7 @@ export interface EmployeeResponse {
     limit: number;
 }
 
-export interface EmployeeWithUser extends Omit<Employee, 'userId'> {
+export interface EmployeeWithUser extends Omit<Employee, "userId"> {
     userId: User;
 }
 
@@ -77,12 +77,15 @@ export class EmployeeService {
     /**
      * Get all employees with pagination
      */
-    static async getEmployees(page = 1, limit = 10): Promise<EmployeeResponseWithUser> {
+    static async getEmployees(
+        page = 1,
+        limit = 10
+    ): Promise<EmployeeResponseWithUser> {
         const params = new URLSearchParams({
             page: page.toString(),
             limit: limit.toString(),
         });
-        
+
         return apiClient.get<EmployeeResponseWithUser>(`/employees?${params}`);
     }
 
@@ -90,7 +93,7 @@ export class EmployeeService {
      * Get pending employees
      */
     static async getPendingEmployees(): Promise<EmployeeResponseWithUser> {
-        return apiClient.get<EmployeeResponseWithUser>('/employees/pending');
+        return apiClient.get<EmployeeResponseWithUser>("/employees/pending");
     }
 
     /**
@@ -103,25 +106,33 @@ export class EmployeeService {
     /**
      * Create a new employee
      */
-    static async createEmployee(employeeData: CreateEmployeeRequest): Promise<{ message: string }> {
-        return apiClient.post<{ message: string }>('/employees', employeeData);
+    static async createEmployee(
+        employeeData: CreateEmployeeRequest
+    ): Promise<{ message: string }> {
+        return apiClient.post<{ message: string }>("/employees", employeeData);
     }
 
     /**
      * Update an employee
      */
     static async updateEmployee(
-        id: string, 
+        id: string,
         employeeData: UpdateEmployeeRequest
     ): Promise<{ message: string }> {
-        return apiClient.patch<{ message: string }>(`/employees/${id}`, employeeData);
+        return apiClient.patch<{ message: string }>(
+            `/employees/${id}`,
+            employeeData
+        );
     }
 
     /**
      * Approve a pending employee
      */
     static async approveEmployee(id: string): Promise<{ message: string }> {
-        return apiClient.patch<{ message: string }>(`/employees/${id}/approve`, {});
+        return apiClient.patch<{ message: string }>(
+            `/employees/${id}/approve`,
+            {}
+        );
     }
 
     /**
