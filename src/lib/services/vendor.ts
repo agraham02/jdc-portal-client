@@ -25,7 +25,7 @@ export interface CreateVendorRequest {
     password: string;
     contactEmail?: string;
     contactPhone?: string;
-    
+
     // Vendor-specific fields
     companyName: string;
     contactName?: string;
@@ -40,7 +40,7 @@ export interface UpdateVendorRequest {
     lastName?: string;
     contactEmail?: string;
     contactPhone?: string;
-    
+
     // Vendor-specific fields
     companyName?: string;
     contactName?: string;
@@ -66,7 +66,9 @@ export class VendorService {
      * Get all vendors with pagination
      */
     static async getVendors(page = 1, limit = 10): Promise<VendorListResponse> {
-        return apiClient.get<VendorListResponse>(`/vendors?page=${page}&limit=${limit}`);
+        return apiClient.get<VendorListResponse>(
+            `/vendors?page=${page}&limit=${limit}`
+        );
     }
 
     /**
@@ -79,8 +81,13 @@ export class VendorService {
     /**
      * Get active vendors only
      */
-    static async getActiveVendors(page = 1, limit = 10): Promise<VendorListResponse> {
-        return apiClient.get<VendorListResponse>(`/vendors/active?page=${page}&limit=${limit}`);
+    static async getActiveVendors(
+        page = 1,
+        limit = 10
+    ): Promise<VendorListResponse> {
+        return apiClient.get<VendorListResponse>(
+            `/vendors/active?page=${page}&limit=${limit}`
+        );
     }
 
     /**
@@ -93,29 +100,45 @@ export class VendorService {
     /**
      * Create a new vendor account
      */
-    static async createVendor(vendorData: CreateVendorRequest): Promise<VendorResponse> {
+    static async createVendor(
+        vendorData: CreateVendorRequest
+    ): Promise<VendorResponse> {
         return apiClient.post<VendorResponse>(`/vendors`, vendorData);
     }
 
     /**
      * Update vendor information
      */
-    static async updateVendor(vendorId: string, vendorData: UpdateVendorRequest): Promise<VendorResponse> {
-        return apiClient.patch<VendorResponse>(`/vendors/${vendorId}`, vendorData);
+    static async updateVendor(
+        vendorId: string,
+        vendorData: UpdateVendorRequest
+    ): Promise<VendorResponse> {
+        return apiClient.patch<VendorResponse>(
+            `/vendors/${vendorId}`,
+            vendorData
+        );
     }
 
     /**
      * Approve a pending vendor
      */
     static async approveVendor(vendorId: string): Promise<VendorResponse> {
-        return apiClient.patch<VendorResponse>(`/vendors/${vendorId}/approve`, {});
+        return apiClient.patch<VendorResponse>(
+            `/vendors/${vendorId}/approve`,
+            {}
+        );
     }
 
     /**
      * Reject a pending vendor
      */
-    static async rejectVendor(vendorId: string, reason?: string): Promise<VendorResponse> {
-        return apiClient.patch<VendorResponse>(`/vendors/${vendorId}/reject`, { reason });
+    static async rejectVendor(
+        vendorId: string,
+        reason?: string
+    ): Promise<VendorResponse> {
+        return apiClient.patch<VendorResponse>(`/vendors/${vendorId}/reject`, {
+            reason,
+        });
     }
 
     /**
@@ -128,7 +151,15 @@ export class VendorService {
     /**
      * Search vendors by query
      */
-    static async searchVendors(query: string, page = 1, limit = 10): Promise<VendorListResponse> {
-        return apiClient.get<VendorListResponse>(`/vendors/search?q=${encodeURIComponent(query)}&page=${page}&limit=${limit}`);
+    static async searchVendors(
+        query: string,
+        page = 1,
+        limit = 10
+    ): Promise<VendorListResponse> {
+        return apiClient.get<VendorListResponse>(
+            `/vendors/search?q=${encodeURIComponent(
+                query
+            )}&page=${page}&limit=${limit}`
+        );
     }
 }

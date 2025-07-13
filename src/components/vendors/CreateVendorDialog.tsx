@@ -26,7 +26,11 @@ const createVendorSchema = z.object({
     lastName: z.string().min(1, "Last name is required"),
     email: z.string().email("Invalid email address"),
     password: z.string().min(8, "Password must be at least 8 characters"),
-    contactEmail: z.string().email("Invalid email address").optional().or(z.literal("")),
+    contactEmail: z
+        .string()
+        .email("Invalid email address")
+        .optional()
+        .or(z.literal("")),
     contactPhone: z.string().optional(),
 
     // Vendor information
@@ -43,7 +47,9 @@ interface CreateVendorDialogProps {
     onVendorCreated?: () => void;
 }
 
-export function CreateVendorDialog({ onVendorCreated }: CreateVendorDialogProps) {
+export function CreateVendorDialog({
+    onVendorCreated,
+}: CreateVendorDialogProps) {
     const [open, setOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const { toast } = useToast();
@@ -69,8 +75,11 @@ export function CreateVendorDialog({ onVendorCreated }: CreateVendorDialogProps)
                 contactName: data.contactName || undefined,
                 website: data.website || undefined,
                 notes: data.notes || undefined,
-                servicesOffered: data.servicesOffered 
-                    ? data.servicesOffered.split(',').map(s => s.trim()).filter(Boolean)
+                servicesOffered: data.servicesOffered
+                    ? data.servicesOffered
+                          .split(",")
+                          .map((s) => s.trim())
+                          .filter(Boolean)
                     : undefined,
             };
 
@@ -88,7 +97,8 @@ export function CreateVendorDialog({ onVendorCreated }: CreateVendorDialogProps)
             console.error("Failed to create vendor:", error);
             toast({
                 title: "Error",
-                description: "Failed to create vendor account. Please try again.",
+                description:
+                    "Failed to create vendor account. Please try again.",
                 variant: "destructive",
             });
         } finally {
@@ -108,13 +118,16 @@ export function CreateVendorDialog({ onVendorCreated }: CreateVendorDialogProps)
                 <DialogHeader>
                     <DialogTitle>Create New Vendor Account</DialogTitle>
                     <DialogDescription>
-                        Create a new vendor account with login credentials and company information.
+                        Create a new vendor account with login credentials and
+                        company information.
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                     {/* User Information Section */}
                     <div className="space-y-4">
-                        <h3 className="text-lg font-medium">Contact Information</h3>
+                        <h3 className="text-lg font-medium">
+                            Contact Information
+                        </h3>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="firstName">First Name *</Label>
@@ -124,7 +137,9 @@ export function CreateVendorDialog({ onVendorCreated }: CreateVendorDialogProps)
                                     disabled={isLoading}
                                 />
                                 {errors.firstName && (
-                                    <p className="text-sm text-red-500">{errors.firstName.message}</p>
+                                    <p className="text-sm text-red-500">
+                                        {errors.firstName.message}
+                                    </p>
                                 )}
                             </div>
                             <div className="space-y-2">
@@ -135,7 +150,9 @@ export function CreateVendorDialog({ onVendorCreated }: CreateVendorDialogProps)
                                     disabled={isLoading}
                                 />
                                 {errors.lastName && (
-                                    <p className="text-sm text-red-500">{errors.lastName.message}</p>
+                                    <p className="text-sm text-red-500">
+                                        {errors.lastName.message}
+                                    </p>
                                 )}
                             </div>
                         </div>
@@ -149,7 +166,9 @@ export function CreateVendorDialog({ onVendorCreated }: CreateVendorDialogProps)
                                 disabled={isLoading}
                             />
                             {errors.email && (
-                                <p className="text-sm text-red-500">{errors.email.message}</p>
+                                <p className="text-sm text-red-500">
+                                    {errors.email.message}
+                                </p>
                             )}
                         </div>
 
@@ -162,13 +181,17 @@ export function CreateVendorDialog({ onVendorCreated }: CreateVendorDialogProps)
                                 disabled={isLoading}
                             />
                             {errors.password && (
-                                <p className="text-sm text-red-500">{errors.password.message}</p>
+                                <p className="text-sm text-red-500">
+                                    {errors.password.message}
+                                </p>
                             )}
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="contactEmail">Contact Email</Label>
+                                <Label htmlFor="contactEmail">
+                                    Contact Email
+                                </Label>
                                 <Input
                                     id="contactEmail"
                                     type="email"
@@ -177,11 +200,15 @@ export function CreateVendorDialog({ onVendorCreated }: CreateVendorDialogProps)
                                     placeholder="Alternative contact email"
                                 />
                                 {errors.contactEmail && (
-                                    <p className="text-sm text-red-500">{errors.contactEmail.message}</p>
+                                    <p className="text-sm text-red-500">
+                                        {errors.contactEmail.message}
+                                    </p>
                                 )}
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="contactPhone">Contact Phone</Label>
+                                <Label htmlFor="contactPhone">
+                                    Contact Phone
+                                </Label>
                                 <Input
                                     id="contactPhone"
                                     {...register("contactPhone")}
@@ -189,7 +216,9 @@ export function CreateVendorDialog({ onVendorCreated }: CreateVendorDialogProps)
                                     placeholder="(555) 123-4567"
                                 />
                                 {errors.contactPhone && (
-                                    <p className="text-sm text-red-500">{errors.contactPhone.message}</p>
+                                    <p className="text-sm text-red-500">
+                                        {errors.contactPhone.message}
+                                    </p>
                                 )}
                             </div>
                         </div>
@@ -197,7 +226,9 @@ export function CreateVendorDialog({ onVendorCreated }: CreateVendorDialogProps)
 
                     {/* Company Information Section */}
                     <div className="space-y-4">
-                        <h3 className="text-lg font-medium">Company Information</h3>
+                        <h3 className="text-lg font-medium">
+                            Company Information
+                        </h3>
                         <div className="space-y-2">
                             <Label htmlFor="companyName">Company Name *</Label>
                             <Input
@@ -206,12 +237,16 @@ export function CreateVendorDialog({ onVendorCreated }: CreateVendorDialogProps)
                                 disabled={isLoading}
                             />
                             {errors.companyName && (
-                                <p className="text-sm text-red-500">{errors.companyName.message}</p>
+                                <p className="text-sm text-red-500">
+                                    {errors.companyName.message}
+                                </p>
                             )}
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="contactName">Primary Contact Name</Label>
+                            <Label htmlFor="contactName">
+                                Primary Contact Name
+                            </Label>
                             <Input
                                 id="contactName"
                                 {...register("contactName")}
@@ -219,7 +254,9 @@ export function CreateVendorDialog({ onVendorCreated }: CreateVendorDialogProps)
                                 placeholder="Main contact person for the company"
                             />
                             {errors.contactName && (
-                                <p className="text-sm text-red-500">{errors.contactName.message}</p>
+                                <p className="text-sm text-red-500">
+                                    {errors.contactName.message}
+                                </p>
                             )}
                         </div>
 
@@ -232,12 +269,16 @@ export function CreateVendorDialog({ onVendorCreated }: CreateVendorDialogProps)
                                 placeholder="https://www.company.com"
                             />
                             {errors.website && (
-                                <p className="text-sm text-red-500">{errors.website.message}</p>
+                                <p className="text-sm text-red-500">
+                                    {errors.website.message}
+                                </p>
                             )}
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="servicesOffered">Services Offered</Label>
+                            <Label htmlFor="servicesOffered">
+                                Services Offered
+                            </Label>
                             <Input
                                 id="servicesOffered"
                                 {...register("servicesOffered")}
@@ -248,7 +289,9 @@ export function CreateVendorDialog({ onVendorCreated }: CreateVendorDialogProps)
                                 Separate multiple services with commas
                             </p>
                             {errors.servicesOffered && (
-                                <p className="text-sm text-red-500">{errors.servicesOffered.message}</p>
+                                <p className="text-sm text-red-500">
+                                    {errors.servicesOffered.message}
+                                </p>
                             )}
                         </div>
 
@@ -261,7 +304,9 @@ export function CreateVendorDialog({ onVendorCreated }: CreateVendorDialogProps)
                                 placeholder="Internal admin notes (optional)"
                             />
                             {errors.notes && (
-                                <p className="text-sm text-red-500">{errors.notes.message}</p>
+                                <p className="text-sm text-red-500">
+                                    {errors.notes.message}
+                                </p>
                             )}
                         </div>
                     </div>

@@ -1,2 +1,2 @@
-export { CreateVendorDialog } from './CreateVendorDialog';
-export { EditVendorDialog } from './EditVendorDialog';
+export { CreateVendorDialog } from "./CreateVendorDialog";
+export { EditVendorDialog } from "./EditVendorDialog";

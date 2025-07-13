@@ -15,14 +15,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { VendorService, UpdateVendorRequest, Vendor } from "@/lib/services/vendor";
+import {
+    VendorService,
+    UpdateVendorRequest,
+    Vendor,
+} from "@/lib/services/vendor";
 import { useToast } from "@/components/ui/use-toast";
 
 const editVendorSchema = z.object({
     // User information
     firstName: z.string().min(1, "First name is required"),
     lastName: z.string().min(1, "Last name is required"),
-    contactEmail: z.string().email("Invalid email address").optional().or(z.literal("")),
+    contactEmail: z
+        .string()
+        .email("Invalid email address")
+        .optional()
+        .or(z.literal("")),
     contactPhone: z.string().optional(),
 
     // Vendor information
@@ -42,11 +50,11 @@ interface EditVendorDialogProps {
     onVendorUpdated?: () => void;
 }
 
-export function EditVendorDialog({ 
-    vendor, 
-    open, 
-    onOpenChange, 
-    onVendorUpdated 
+export function EditVendorDialog({
+    vendor,
+    open,
+    onOpenChange,
+    onVendorUpdated,
 }: EditVendorDialogProps) {
     const [isLoading, setIsLoading] = useState(false);
     const { toast } = useToast();
@@ -91,8 +99,11 @@ export function EditVendorDialog({
                 contactName: data.contactName || undefined,
                 website: data.website || undefined,
                 notes: data.notes || undefined,
-                servicesOffered: data.servicesOffered 
-                    ? data.servicesOffered.split(',').map(s => s.trim()).filter(Boolean)
+                servicesOffered: data.servicesOffered
+                    ? data.servicesOffered
+                          .split(",")
+                          .map((s) => s.trim())
+                          .filter(Boolean)
                     : undefined,
             };
 
@@ -129,7 +140,9 @@ export function EditVendorDialog({
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                     {/* User Information Section */}
                     <div className="space-y-4">
-                        <h3 className="text-lg font-medium">Contact Information</h3>
+                        <h3 className="text-lg font-medium">
+                            Contact Information
+                        </h3>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="firstName">First Name *</Label>
@@ -139,7 +152,9 @@ export function EditVendorDialog({
                                     disabled={isLoading}
                                 />
                                 {errors.firstName && (
-                                    <p className="text-sm text-red-500">{errors.firstName.message}</p>
+                                    <p className="text-sm text-red-500">
+                                        {errors.firstName.message}
+                                    </p>
                                 )}
                             </div>
                             <div className="space-y-2">
@@ -150,7 +165,9 @@ export function EditVendorDialog({
                                     disabled={isLoading}
                                 />
                                 {errors.lastName && (
-                                    <p className="text-sm text-red-500">{errors.lastName.message}</p>
+                                    <p className="text-sm text-red-500">
+                                        {errors.lastName.message}
+                                    </p>
                                 )}
                             </div>
                         </div>
@@ -171,7 +188,9 @@ export function EditVendorDialog({
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="contactEmail">Contact Email</Label>
+                                <Label htmlFor="contactEmail">
+                                    Contact Email
+                                </Label>
                                 <Input
                                     id="contactEmail"
                                     type="email"
@@ -180,11 +199,15 @@ export function EditVendorDialog({
                                     placeholder="Alternative contact email"
                                 />
                                 {errors.contactEmail && (
-                                    <p className="text-sm text-red-500">{errors.contactEmail.message}</p>
+                                    <p className="text-sm text-red-500">
+                                        {errors.contactEmail.message}
+                                    </p>
                                 )}
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="contactPhone">Contact Phone</Label>
+                                <Label htmlFor="contactPhone">
+                                    Contact Phone
+                                </Label>
                                 <Input
                                     id="contactPhone"
                                     {...register("contactPhone")}
@@ -192,7 +215,9 @@ export function EditVendorDialog({
                                     placeholder="(555) 123-4567"
                                 />
                                 {errors.contactPhone && (
-                                    <p className="text-sm text-red-500">{errors.contactPhone.message}</p>
+                                    <p className="text-sm text-red-500">
+                                        {errors.contactPhone.message}
+                                    </p>
                                 )}
                             </div>
                         </div>
@@ -200,7 +225,9 @@ export function EditVendorDialog({
 
                     {/* Company Information Section */}
                     <div className="space-y-4">
-                        <h3 className="text-lg font-medium">Company Information</h3>
+                        <h3 className="text-lg font-medium">
+                            Company Information
+                        </h3>
                         <div className="space-y-2">
                             <Label htmlFor="companyName">Company Name *</Label>
                             <Input
@@ -209,12 +236,16 @@ export function EditVendorDialog({
                                 disabled={isLoading}
                             />
                             {errors.companyName && (
-                                <p className="text-sm text-red-500">{errors.companyName.message}</p>
+                                <p className="text-sm text-red-500">
+                                    {errors.companyName.message}
+                                </p>
                             )}
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="contactName">Primary Contact Name</Label>
+                            <Label htmlFor="contactName">
+                                Primary Contact Name
+                            </Label>
                             <Input
                                 id="contactName"
                                 {...register("contactName")}
@@ -222,7 +253,9 @@ export function EditVendorDialog({
                                 placeholder="Main contact person for the company"
                             />
                             {errors.contactName && (
-                                <p className="text-sm text-red-500">{errors.contactName.message}</p>
+                                <p className="text-sm text-red-500">
+                                    {errors.contactName.message}
+                                </p>
                             )}
                         </div>
 
@@ -235,12 +268,16 @@ export function EditVendorDialog({
                                 placeholder="https://www.company.com"
                             />
                             {errors.website && (
-                                <p className="text-sm text-red-500">{errors.website.message}</p>
+                                <p className="text-sm text-red-500">
+                                    {errors.website.message}
+                                </p>
                             )}
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="servicesOffered">Services Offered</Label>
+                            <Label htmlFor="servicesOffered">
+                                Services Offered
+                            </Label>
                             <Input
                                 id="servicesOffered"
                                 {...register("servicesOffered")}
@@ -251,7 +288,9 @@ export function EditVendorDialog({
                                 Separate multiple services with commas
                             </p>
                             {errors.servicesOffered && (
-                                <p className="text-sm text-red-500">{errors.servicesOffered.message}</p>
+                                <p className="text-sm text-red-500">
+                                    {errors.servicesOffered.message}
+                                </p>
                             )}
                         </div>
 
@@ -264,7 +303,9 @@ export function EditVendorDialog({
                                 placeholder="Internal admin notes (optional)"
                             />
                             {errors.notes && (
-                                <p className="text-sm text-red-500">{errors.notes.message}</p>
+                                <p className="text-sm text-red-500">
+                                    {errors.notes.message}
+                                </p>
                             )}
                         </div>
                     </div>
