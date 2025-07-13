@@ -15,7 +15,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
-import { EmployeeService, CreateEmployeeRequest } from "@/lib/services/employee";
+import {
+    EmployeeService,
+    CreateEmployeeRequest,
+} from "@/lib/services/employee";
 
 const createEmployeeSchema = z.object({
     email: z.string().email("Invalid email address"),
@@ -26,7 +29,11 @@ const createEmployeeSchema = z.object({
     jobTitle: z.string().optional(),
     department: z.string().optional(),
     hireDate: z.string().optional(),
-    contactEmail: z.string().email("Invalid email address").optional().or(z.literal("")),
+    contactEmail: z
+        .string()
+        .email("Invalid email address")
+        .optional()
+        .or(z.literal("")),
     contactPhone: z.string().optional(),
 });
 
@@ -64,12 +71,12 @@ export function CreateEmployeeDialog({
             };
 
             await EmployeeService.createEmployee(employeeData);
-            
+
             toast({
                 title: "Success",
                 description: "Employee created successfully",
             });
-            
+
             reset();
             onSuccess();
         } catch (error) {
@@ -97,7 +104,8 @@ export function CreateEmployeeDialog({
                 <DialogHeader>
                     <DialogTitle>Create New Employee</DialogTitle>
                     <DialogDescription>
-                        Add a new employee to the system. They will be created with an active status.
+                        Add a new employee to the system. They will be created
+                        with an active status.
                     </DialogDescription>
                 </DialogHeader>
 

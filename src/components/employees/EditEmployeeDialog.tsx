@@ -15,7 +15,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
-import { EmployeeService, UpdateEmployeeRequest, EmployeeWithUser } from "@/lib/services/employee";
+import {
+    EmployeeService,
+    UpdateEmployeeRequest,
+    EmployeeWithUser,
+} from "@/lib/services/employee";
 
 const updateEmployeeSchema = z.object({
     firstName: z.string().min(1, "First name is required"),
@@ -24,7 +28,11 @@ const updateEmployeeSchema = z.object({
     jobTitle: z.string().optional(),
     department: z.string().optional(),
     hireDate: z.string().optional(),
-    contactEmail: z.string().email("Invalid email address").optional().or(z.literal("")),
+    contactEmail: z
+        .string()
+        .email("Invalid email address")
+        .optional()
+        .or(z.literal("")),
     contactPhone: z.string().optional(),
 });
 
@@ -64,8 +72,8 @@ export function EditEmployeeDialog({
                 employeeId: employee.employeeId || "",
                 jobTitle: employee.jobTitle || "",
                 department: employee.department || "",
-                hireDate: employee.hireDate 
-                    ? new Date(employee.hireDate).toISOString().split('T')[0] 
+                hireDate: employee.hireDate
+                    ? new Date(employee.hireDate).toISOString().split("T")[0]
                     : "",
                 contactEmail: employee.userId.contactEmail || "",
                 contactPhone: employee.userId.contactPhone || "",
@@ -82,12 +90,12 @@ export function EditEmployeeDialog({
             };
 
             await EmployeeService.updateEmployee(employee._id, updateData);
-            
+
             toast({
                 title: "Success",
                 description: "Employee updated successfully",
             });
-            
+
             onSuccess();
         } catch (error) {
             console.error("Failed to update employee:", error);
@@ -107,7 +115,8 @@ export function EditEmployeeDialog({
                 <DialogHeader>
                     <DialogTitle>Edit Employee</DialogTitle>
                     <DialogDescription>
-                        Update employee information. Changes will be reflected immediately.
+                        Update employee information. Changes will be reflected
+                        immediately.
                     </DialogDescription>
                 </DialogHeader>
 
