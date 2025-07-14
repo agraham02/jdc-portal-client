@@ -1,10 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { useAuth } from "@/lib/contexts/auth-context";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 import { RoleName } from "@/lib/types/auth";
 import { Button } from "@/components/ui/button";
+import { NotificationBadge } from "@/components/notifications/NotificationBadge";
+import { NotificationDropdown } from "@/components/notifications/NotificationDropdown";
 import {
     LogOut,
     User,
@@ -17,6 +20,8 @@ import {
 
 export function Navigation() {
     const { user, logout } = useAuth();
+    const [showNotificationDropdown, setShowNotificationDropdown] =
+        useState(false);
 
     const navigationItems = [
         {
@@ -71,6 +76,25 @@ export function Navigation() {
                             ({user.accountType})
                         </p>
                     )}
+                </div>
+                {/* Notifications */}
+                <div className="mb-4 relative">
+                    <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors">
+                        <NotificationBadge
+                            onClick={() =>
+                                setShowNotificationDropdown(
+                                    !showNotificationDropdown
+                                )
+                            }
+                        />
+                        <Link href="/notifications" className="flex-1">
+                            <span>Notifications</span>
+                        </Link>
+                    </div>
+                    <NotificationDropdown
+                        isOpen={showNotificationDropdown}
+                        onClose={() => setShowNotificationDropdown(false)}
+                    />
                 </div>
                 {navigationItems.map((item) => {
                     const Icon = item.icon;
