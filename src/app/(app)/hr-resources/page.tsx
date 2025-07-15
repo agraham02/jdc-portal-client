@@ -42,7 +42,7 @@ export default function HrResourcesPage() {
             };
 
             const response = await FileService.getHrDocuments(query);
-            console.log("Fetched HR documents:", response);
+            // console.log("Fetched HR documents:", response);
             setFiles(response.files);
             setTotalPages(response.totalPages);
             setCurrentPage(response.page);
