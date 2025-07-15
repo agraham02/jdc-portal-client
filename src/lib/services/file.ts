@@ -1,4 +1,5 @@
 import { apiClient } from '../api';
+import { session } from '../session';
 import { FileUploadDto, FileQueryDto, FilesResponse, UploadedFile, FileStats } from '../types/file';
 
 export class FileService {
@@ -91,9 +92,13 @@ export class FileService {
    * Download file by ID
    */
   static async downloadFile(id: string): Promise<Blob> {
+    // Import session if not already imported
+    // import { session } from '../session'; // Ensure this import exists at the top
+
+    const accessToken = session.getAccessToken();
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/files/${id}/download`, {
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+        'Authorization': `Bearer ${accessToken}`,
       },
     });
 
