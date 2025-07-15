@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useState } from "react";
 import { useAuth } from "@/lib/contexts/auth-context";
 import { RoleGuard } from "@/components/auth/RoleGuard";
+import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { RoleName } from "@/lib/types/auth";
+import { RBAC_PERMISSIONS } from "@/lib/constants/permissions";
 import { Button } from "@/components/ui/button";
 import { NotificationBadge } from "@/components/notifications/NotificationBadge";
 import { NotificationDropdown } from "@/components/notifications/NotificationDropdown";
@@ -16,6 +18,7 @@ import {
     Building,
     FileText,
     FolderOpen,
+    Shield,
     ClipboardList,
 } from "lucide-react";
 
@@ -62,6 +65,13 @@ export function Navigation() {
             roles: [RoleName.ADMIN, RoleName.EMPLOYEE],
         },
         {
+            label: "RBAC Management",
+            href: "/admin/rbac",
+            icon: Shield,
+            roles: [RoleName.ADMIN],
+            permission: RBAC_PERMISSIONS.ROLE_MANAGE,
+        },
+        {
             label: "Settings",
             href: "/settings",
             icon: Settings,
@@ -105,15 +115,32 @@ export function Navigation() {
                 </div>
                 {navigationItems.map((item) => {
                     const Icon = item.icon;
+                    const navigationItem = (
+                        <Link
+                            href={item.href}
+                            className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
+                        >
+                            <Icon className="w-5 h-5" />
+                            {item.label}
+                        </Link>
+                    );
+
+                    // If item has a specific permission requirement, use PermissionGuard
+                    if ("permission" in item && item.permission) {
+                        return (
+                            <PermissionGuard
+                                key={item.href}
+                                requiredPermissions={item.permission}
+                            >
+                                {navigationItem}
+                            </PermissionGuard>
+                        );
+                    }
+
+                    // Otherwise use RoleGuard
                     return (
                         <RoleGuard key={item.href} requiredRoles={item.roles}>
-                            <Link
-                                href={item.href}
-                                className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
-                            >
-                                <Icon className="w-5 h-5" />
-                                {item.label}
-                            </Link>
+                            {navigationItem}
                         </RoleGuard>
                     );
                 })}
