@@ -67,7 +67,7 @@ export default function HrResourcesPage() {
     const handleDownload = async (file: UploadedFile) => {
         try {
             await FileService.triggerDownload(file._id, file.originalName);
-            // Success feedback could be added here
+            alert("File downloaded successfully");
         } catch (error) {
             console.error("Download failed:", error);
             alert("Failed to download file");
@@ -186,11 +186,20 @@ export default function HrResourcesPage() {
                                             aria-label={
                                                 file.mimetype.includes("pdf")
                                                     ? "PDF file"
-                                                    : file.mimetype.includes("word")
+                                                    : file.mimetype.includes(
+                                                          "word"
+                                                      )
                                                     ? "Word document"
-                                                    : file.mimetype.includes("excel") || file.mimetype.includes("spreadsheet")
+                                                    : file.mimetype.includes(
+                                                          "excel"
+                                                      ) ||
+                                                      file.mimetype.includes(
+                                                          "spreadsheet"
+                                                      )
                                                     ? "Excel spreadsheet"
-                                                    : file.mimetype.includes("image")
+                                                    : file.mimetype.includes(
+                                                          "image"
+                                                      )
                                                     ? "Image file"
                                                     : "Attachment"
                                             }
@@ -358,9 +367,24 @@ function UploadModal({ onClose, onUpload, uploading }: UploadModalProps) {
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
-                <h2 className="text-xl font-semibold mb-4">
+        <div
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+            onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                    onClose();
+                }
+            }}
+        >
+            <div
+                className="bg-white rounded-lg p-6 w-full max-w-md"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="upload-modal-title"
+            >
+                <h2
+                    id="upload-modal-title"
+                    className="text-xl font-semibold mb-4"
+                >
                     Upload HR Document
                 </h2>
                 <form onSubmit={handleSubmit} className="space-y-4">

@@ -4,13 +4,12 @@ import { FileUploadDto, FileQueryDto, FilesResponse, UploadedFile, FileStats } f
 
 export class FileService {
   /**
-   * Upload a general file
+   * Helper method to build FormData for file upload
    */
-  static async uploadFile(file: File, metadata: FileUploadDto = {}): Promise<UploadedFile> {
+  private static buildFormData(file: File, metadata: FileUploadDto = {}): FormData {
     const formData = new FormData();
     formData.append('file', file);
 
-    // Add metadata to form data
     Object.entries(metadata).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
         if (Array.isArray(value)) {
@@ -21,6 +20,14 @@ export class FileService {
       }
     });
 
+    return formData;
+  }
+
+  /**
+   * Upload a general file
+   */
+  static async uploadFile(file: File, metadata: FileUploadDto = {}): Promise<UploadedFile> {
+    const formData = this.buildFormData(file, metadata);
     return apiClient.postFormData<UploadedFile>('/files/upload', formData);
   }
 
@@ -28,20 +35,7 @@ export class FileService {
    * Upload an HR document (requires HR_DOCUMENT_CREATE permission)
    */
   static async uploadHrDocument(file: File, metadata: FileUploadDto = {}): Promise<UploadedFile> {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    // Add metadata to form data
-    Object.entries(metadata).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        if (Array.isArray(value)) {
-          formData.append(key, value.join(','));
-        } else {
-          formData.append(key, value.toString());
-        }
-      }
-    });
-
+    const formData = this.buildFormData(file, metadata);
     return apiClient.postFormData<UploadedFile>('/files/upload/hr-document', formData);
   }
 
@@ -92,9 +86,6 @@ export class FileService {
    * Download file by ID
    */
   static async downloadFile(id: string): Promise<Blob> {
-    // Import session if not already imported
-    // import { session } from '../session'; // Ensure this import exists at the top
-
     const accessToken = session.getAccessToken();
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/files/${id}/download`, {
       headers: {
