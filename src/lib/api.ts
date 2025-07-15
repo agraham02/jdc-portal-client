@@ -30,9 +30,12 @@ async function request<T>(
 
     const token = session.getAccessToken();
 
-    const defaultHeaders: HeadersInit = {
-        "Content-Type": "application/json",
-    };
+    const defaultHeaders: HeadersInit = {};
+
+    // Only set Content-Type to application/json if body is not FormData
+    if (!(options.body instanceof FormData)) {
+        defaultHeaders["Content-Type"] = "application/json";
+    }
 
     if (token) {
         defaultHeaders["Authorization"] = `Bearer ${token}`;
@@ -49,8 +52,13 @@ async function request<T>(
 
     try {
         const response = await fetch(url, config);
-        if (process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_DEBUG_API === "true") {
-            console.log(`API Request: ${endpoint} - Status: ${response.status}`);
+        if (
+            process.env.NODE_ENV !== "production" &&
+            process.env.NEXT_PUBLIC_DEBUG_API === "true"
+        ) {
+            console.log(
+                `API Request: ${endpoint} - Status: ${response.status}`
+            );
         }
 
         if (!response.ok) {
@@ -58,7 +66,10 @@ async function request<T>(
                 .json()
                 .catch(() => ({ message: response.statusText }));
 
-            if (process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_DEBUG_API === "true") {
+            if (
+                process.env.NODE_ENV !== "production" &&
+                process.env.NEXT_PUBLIC_DEBUG_API === "true"
+            ) {
                 console.log(
                     `API Error: ${endpoint} - ${response.status}`,
                     errorData
@@ -140,4 +151,55 @@ export const apiClient = {
 
     delete: <T>(endpoint: string, options?: RequestInit) =>
         request<T>(endpoint, { ...options, method: "DELETE" }),
+
+    // FormData-specific methods that don't JSON.stringify the body
+    postFormData: <T>(
+        endpoint: string,
+        formData: FormData,
+        options?: RequestInit
+    ) => {
+        const { headers, ...restOptions } = options || {};
+        
+        // Create clean headers without Content-Type for FormData
+        const cleanHeaders: HeadersInit = {};
+        if (headers) {
+            Object.entries(headers).forEach(([key, value]) => {
+                if (key.toLowerCase() !== 'content-type') {
+                    cleanHeaders[key] = value;
+                }
+            });
+        }
+        
+        return request<T>(endpoint, {
+            ...restOptions,
+            method: "POST",
+            body: formData,
+            headers: cleanHeaders,
+        });
+    },
+
+    patchFormData: <T>(
+        endpoint: string,
+        formData: FormData,
+        options?: RequestInit
+    ) => {
+        const { headers, ...restOptions } = options || {};
+        
+        // Create clean headers without Content-Type for FormData
+        const cleanHeaders: HeadersInit = {};
+        if (headers) {
+            Object.entries(headers).forEach(([key, value]) => {
+                if (key.toLowerCase() !== 'content-type') {
+                    cleanHeaders[key] = value;
+                }
+            });
+        }
+        
+        return request<T>(endpoint, {
+            ...restOptions,
+            method: "PATCH",
+            body: formData,
+            headers: cleanHeaders,
+        });
+    },
 };

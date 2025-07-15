@@ -21,9 +21,11 @@ import {
 import { LoginFormData, loginSchema } from "@/lib/validations";
 import { useAuth } from "@/lib/contexts/auth-context";
 import { PublicRoute } from "@/components/auth/PublicRoute";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
     const { login } = useAuth();
+    const router = useRouter();
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -48,6 +50,7 @@ export default function LoginPage() {
                 throw new Error("Invalid email or password");
             }
             console.log("Login successful:", user);
+            router.push("/dashboard");
         } catch (error) {
             if (error instanceof Error) {
                 console.error(error);

@@ -12,6 +12,7 @@ import {
     Users,
     Building,
     FileText,
+    FolderOpen,
 } from "lucide-react";
 
 export function Navigation() {
@@ -41,6 +42,12 @@ export function Navigation() {
             href: "/contracts",
             icon: FileText,
             roles: [RoleName.ADMIN, RoleName.EMPLOYEE, RoleName.VENDOR],
+        },
+        {
+            label: "HR Resources",
+            href: "/hr-resources",
+            icon: FolderOpen,
+            roles: [RoleName.ADMIN, RoleName.EMPLOYEE],
         },
         {
             label: "Settings",
