@@ -6,6 +6,13 @@ import { NotificationItem } from "./NotificationItem";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { RefreshCw } from "lucide-react";
 import { NotificationType } from "@/lib/types/notifications";
 import type { NotificationQueryParams } from "@/lib/types/notifications";
@@ -117,45 +124,49 @@ export function NotificationList({ className }: NotificationListProps) {
 
                     {/* Filter controls */}
                     <div className="flex gap-2">
-                        <select
-                            onChange={(e) => handleReadFilter(e.target.value)}
+                        <Select
+                            onValueChange={handleReadFilter}
                             defaultValue="all"
-                            className="px-3 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring w-32"
                         >
-                            <option value="all">All</option>
-                            <option value="false">Unread</option>
-                            <option value="true">Read</option>
-                        </select>
+                            <SelectTrigger className="w-32">
+                                <SelectValue placeholder="Read status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All</SelectItem>
+                                <SelectItem value="false">Unread</SelectItem>
+                                <SelectItem value="true">Read</SelectItem>
+                            </SelectContent>
+                        </Select>
 
-                        <select
-                            onChange={(e) => handleTypeFilter(e.target.value)}
+                        <Select
+                            onValueChange={handleTypeFilter}
                             defaultValue="all"
-                            className="px-3 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring w-40"
                         >
-                            <option value="all">All Types</option>
-                            <option value={NotificationType.CONTRACT_CREATED}>
-                                Contracts
-                            </option>
-                            <option
-                                value={NotificationType.APPLICATION_SUBMITTED}
-                            >
-                                Applications
-                            </option>
-                            <option value={NotificationType.EMPLOYEE_APPROVED}>
-                                Employees
-                            </option>
-                            <option value={NotificationType.VENDOR_APPROVED}>
-                                Vendors
-                            </option>
-                            <option value={NotificationType.FILE_UPLOADED}>
-                                Files
-                            </option>
-                            <option
-                                value={NotificationType.SYSTEM_ANNOUNCEMENT}
-                            >
-                                System
-                            </option>
-                        </select>
+                            <SelectTrigger className="w-40">
+                                <SelectValue placeholder="Type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Types</SelectItem>
+                                <SelectItem value={NotificationType.CONTRACT_CREATED}>
+                                    Contracts
+                                </SelectItem>
+                                <SelectItem value={NotificationType.APPLICATION_SUBMITTED}>
+                                    Applications
+                                </SelectItem>
+                                <SelectItem value={NotificationType.EMPLOYEE_APPROVED}>
+                                    Employees
+                                </SelectItem>
+                                <SelectItem value={NotificationType.VENDOR_APPROVED}>
+                                    Vendors
+                                </SelectItem>
+                                <SelectItem value={NotificationType.FILE_UPLOADED}>
+                                    Files
+                                </SelectItem>
+                                <SelectItem value={NotificationType.SYSTEM_ANNOUNCEMENT}>
+                                    System
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                 </div>
             </div>
