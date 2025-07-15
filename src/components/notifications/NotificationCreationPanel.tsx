@@ -182,11 +182,6 @@ export function NotificationCreationPanel() {
             });
 
             resetForm();
-
-            // Optional: Refresh the page to see the new notification
-            setTimeout(() => {
-                window.location.reload();
-            }, 1000);
         } catch {
             console.error("Failed to create notification. Please try again.");
             toast({

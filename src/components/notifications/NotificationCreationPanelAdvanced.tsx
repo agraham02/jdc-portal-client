@@ -95,7 +95,6 @@ export function NotificationCreationPanelAdvanced() {
                 setSearchResults(results);
                 setShowSearchResults(true);
             } catch {
-                console.error("Failed to search users. Please try again.");
                 toast({
                     title: "Search Error",
                     description: "Failed to search users. Please try again.",
@@ -270,11 +269,6 @@ export function NotificationCreationPanelAdvanced() {
             });
 
             resetForm();
-
-            // Optional: Refresh to see new notifications
-            setTimeout(() => {
-                window.location.reload();
-            }, 1000);
         } catch (error) {
             console.error("Failed to create notification(s):", error);
             toast({
