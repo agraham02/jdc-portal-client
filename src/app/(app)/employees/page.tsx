@@ -65,6 +65,7 @@ export default function EmployeesPage() {
                 currentPage,
                 limit
             );
+            console.log(response);
             setEmployees(response.data);
             setTotalEmployees(response.total);
         } catch (error) {
@@ -90,8 +91,11 @@ export default function EmployeesPage() {
 
     useEffect(() => {
         loadEmployees();
+    }, [loadEmployees]);
+
+    useEffect(() => {
         loadPendingEmployees();
-    }, [loadEmployees, loadPendingEmployees]);
+    }, [loadPendingEmployees]);
 
     const handleApproveEmployee = async (employeeId: string) => {
         try {
@@ -141,43 +145,28 @@ export default function EmployeesPage() {
         setEditingEmployee(null);
     };
 
-    const filteredEmployees = employees.filter(
-        (employee) =>
-            employee.userId.firstName
-                ?.toLowerCase()
-                .includes(searchTerm.toLowerCase()) ||
-            employee.userId.lastName
-                ?.toLowerCase()
-                .includes(searchTerm.toLowerCase()) ||
-            employee.userId.email
-                .toLowerCase()
-                .includes(searchTerm.toLowerCase()) ||
-            employee.jobTitle
-                ?.toLowerCase()
-                .includes(searchTerm.toLowerCase()) ||
-            employee.department
-                ?.toLowerCase()
-                .includes(searchTerm.toLowerCase())
-    );
+    const filterEmployees = (list: EmployeeWithUser[]) =>
+        list.filter(
+            (employee) =>
+                employee.userId.firstName
+                    ?.toLowerCase()
+                    .includes(searchTerm.toLowerCase()) ||
+                employee.userId.lastName
+                    ?.toLowerCase()
+                    .includes(searchTerm.toLowerCase()) ||
+                employee.userId.email
+                    .toLowerCase()
+                    .includes(searchTerm.toLowerCase()) ||
+                employee.jobTitle
+                    ?.toLowerCase()
+                    .includes(searchTerm.toLowerCase()) ||
+                employee.department
+                    ?.toLowerCase()
+                    .includes(searchTerm.toLowerCase())
+        );
 
-    const filteredPendingEmployees = pendingEmployees.filter(
-        (employee) =>
-            employee.userId.firstName
-                ?.toLowerCase()
-                .includes(searchTerm.toLowerCase()) ||
-            employee.userId.lastName
-                ?.toLowerCase()
-                .includes(searchTerm.toLowerCase()) ||
-            employee.userId.email
-                .toLowerCase()
-                .includes(searchTerm.toLowerCase()) ||
-            employee.jobTitle
-                ?.toLowerCase()
-                .includes(searchTerm.toLowerCase()) ||
-            employee.department
-                ?.toLowerCase()
-                .includes(searchTerm.toLowerCase())
-    );
+    const filteredEmployees = filterEmployees(employees);
+    const filteredPendingEmployees = filterEmployees(pendingEmployees);
 
     const getStatusBadge = (status: UserStatus) => {
         switch (status) {
@@ -273,7 +262,7 @@ export default function EmployeesPage() {
                             }
                             onClick={() => setActiveTab("active")}
                         >
-                            Active Employees
+                            All Employees
                         </Button>
                         <Button
                             variant={
@@ -390,12 +379,14 @@ export default function EmployeesPage() {
                                                             Edit
                                                         </DropdownMenuItem>
                                                         {employee.userId
-                                                            .status ===
-                                                            UserStatus.PENDING && (
+                                                            .status !==
+                                                            UserStatus.ACTIVE && (
                                                             <DropdownMenuItem
                                                                 onClick={() =>
                                                                     handleApproveEmployee(
-                                                                        employee._id
+                                                                        employee
+                                                                            .userId
+                                                                            ._id
                                                                     )
                                                                 }
                                                             >
@@ -404,17 +395,22 @@ export default function EmployeesPage() {
                                                             </DropdownMenuItem>
                                                         )}
                                                         <DropdownMenuSeparator />
-                                                        <DropdownMenuItem
-                                                            onClick={() =>
-                                                                handleDeleteEmployee(
-                                                                    employee._id
-                                                                )
-                                                            }
-                                                            className="text-destructive"
-                                                        >
-                                                            <Trash2 className="h-4 w-4 mr-2" />
-                                                            Deactivate
-                                                        </DropdownMenuItem>
+                                                        {employee.userId._id !==
+                                                            UserStatus.INACTIVE && (
+                                                            <DropdownMenuItem
+                                                                onClick={() =>
+                                                                    handleDeleteEmployee(
+                                                                        employee
+                                                                            .userId
+                                                                            ._id
+                                                                    )
+                                                                }
+                                                                className="text-destructive"
+                                                            >
+                                                                <Trash2 className="h-4 w-4 mr-2" />
+                                                                Deactivate
+                                                            </DropdownMenuItem>
+                                                        )}
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
                                             </TableCell>
