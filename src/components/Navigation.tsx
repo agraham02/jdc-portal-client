@@ -16,6 +16,7 @@ import {
     Building,
     FileText,
     FolderOpen,
+    ClipboardList,
 } from "lucide-react";
 
 export function Navigation() {
@@ -47,6 +48,12 @@ export function Navigation() {
             href: "/contracts",
             icon: FileText,
             roles: [RoleName.ADMIN, RoleName.EMPLOYEE, RoleName.VENDOR],
+        },
+        {
+            label: "My Applications",
+            href: "/contracts/my-applications",
+            icon: ClipboardList,
+            roles: [RoleName.VENDOR],
         },
         {
             label: "HR Resources",
