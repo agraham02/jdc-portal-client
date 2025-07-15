@@ -1,5 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
-import { notificationService } from "@/lib/services/notificationService";
+import { useNotificationContext } from "@/lib/contexts/notification-context";
 
 interface UseUnreadCountReturn {
     unreadCount: number;
@@ -9,36 +8,12 @@ interface UseUnreadCountReturn {
 }
 
 export function useUnreadCount(): UseUnreadCountReturn {
-    const [unreadCount, setUnreadCount] = useState(0);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-
-    const fetchUnreadCount = useCallback(async () => {
-        setLoading(true);
-        setError(null);
-
-        try {
-            const response = await notificationService.getUnreadCount();
-            setUnreadCount(response.count);
-        } catch (err) {
-            setError(
-                err instanceof Error
-                    ? err.message
-                    : "Failed to fetch unread count"
-            );
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        fetchUnreadCount();
-    }, [fetchUnreadCount]);
+    const context = useNotificationContext();
 
     return {
-        unreadCount,
-        loading,
-        error,
-        refetch: fetchUnreadCount,
+        unreadCount: context.unreadCount,
+        loading: context.loading,
+        error: context.error,
+        refetch: context.refetch,
     };
 }

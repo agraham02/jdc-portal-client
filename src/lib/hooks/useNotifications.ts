@@ -1,7 +1,6 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { notificationService } from "@/lib/services/notificationService";
+import { useEffect, useMemo, useRef } from "react";
+import { useNotificationContext } from "@/lib/contexts/notification-context";
 import type {
-    NotificationListResponse,
     NotificationQueryParams,
     Notification,
 } from "@/lib/types/notifications";
@@ -28,141 +27,39 @@ interface UseNotificationsReturn {
 export function useNotifications(
     params: NotificationQueryParams = {}
 ): UseNotificationsReturn {
-    const [notifications, setNotifications] = useState<Notification[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [pagination, setPagination] = useState({
-        total: 0,
-        totalPages: 0,
-        page: 1,
-        limit: 10,
-    });
-    const [unreadCount, setUnreadCount] = useState(0);
+    const context = useNotificationContext();
+    const paramsRef = useRef<string>("");
 
     // Memoize the params to prevent unnecessary re-renders
-    const stableParams = useMemo(
-        () => params,
-        [params.page, params.limit, params.type, params.read, params.search]
-    );
+    const stableParams = useMemo(() => params, [JSON.stringify(params)]);
+    const paramsString = JSON.stringify(stableParams);
 
-    const fetchNotifications = useCallback(
-        async (newParams?: NotificationQueryParams) => {
-            setLoading(true);
-            setError(null);
-
-            try {
-                const queryParams = { ...stableParams, ...newParams };
-                const response = await notificationService.getNotifications(
-                    queryParams
-                );
-
-                setNotifications(response.data);
-                setPagination({
-                    total: response.total,
-                    totalPages: response.totalPages,
-                    page: response.page,
-                    limit: response.limit,
-                });
-                setUnreadCount(response.unreadCount);
-            } catch (err) {
-                setError(
-                    err instanceof Error
-                        ? err.message
-                        : "Failed to fetch notifications"
-                );
-            } finally {
-                setLoading(false);
-            }
-        },
-        [stableParams]
-    );
-
-    const refetch = useCallback(
-        () => fetchNotifications(),
-        [fetchNotifications]
-    );
-
-    const markAsRead = useCallback(async (id: string) => {
-        try {
-            await notificationService.markAsRead(id);
-            setNotifications((prev) =>
-                prev.map((notification) =>
-                    notification.id === id
-                        ? {
-                              ...notification,
-                              read: true,
-                              readAt: new Date().toISOString(),
-                          }
-                        : notification
-                )
-            );
-            setUnreadCount((prev) => Math.max(0, prev - 1));
-        } catch (err) {
-            console.error("Failed to mark notification as read:", err);
-        }
-    }, []);
-
-    const markAllAsRead = useCallback(async () => {
-        try {
-            await notificationService.markAllAsRead();
-            setNotifications((prev) =>
-                prev.map((notification) => ({
-                    ...notification,
-                    read: true,
-                    readAt: new Date().toISOString(),
-                }))
-            );
-            setUnreadCount(0);
-        } catch (err) {
-            console.error("Failed to mark all notifications as read:", err);
-        }
-    }, []);
-
-    const deleteNotification = useCallback(async (id: string) => {
-        try {
-            await notificationService.deleteNotification(id);
-            setNotifications((prev) =>
-                prev.filter((notification) => notification.id !== id)
-            );
-            setPagination((prev) => ({ ...prev, total: prev.total - 1 }));
-        } catch (err) {
-            console.error("Failed to delete notification:", err);
-        }
-    }, []);
-
-    const loadMore = useCallback(async () => {
-        if (pagination.page < pagination.totalPages && !loading) {
-            try {
-                const response = await notificationService.getNotifications({
-                    ...stableParams,
-                    page: pagination.page + 1,
-                });
-
-                setNotifications((prev) => [...prev, ...response.data]);
-                setPagination((prev) => ({ ...prev, page: prev.page + 1 }));
-            } catch (err) {
-                console.error("Failed to load more notifications:", err);
-            }
-        }
-    }, [stableParams, pagination.page, pagination.totalPages, loading]);
-
+    // Fetch notifications when params change
     useEffect(() => {
-        fetchNotifications();
-    }, [fetchNotifications]);
+        // Only fetch if params are different from last fetch
+        if (paramsRef.current !== paramsString) {
+            paramsRef.current = paramsString;
 
-    const hasMore = pagination.page < pagination.totalPages;
+            // Only fetch if we have meaningful params or if it's the first load
+            if (Object.keys(stableParams).length > 0 || !context.initialized) {
+                context.fetchNotifications(stableParams);
+            }
+        }
+    }, [paramsString, stableParams, context]);
+
+    const hasMore = context.pagination.page < context.pagination.totalPages;
 
     return {
-        notifications,
-        loading,
-        error,
-        pagination,
-        unreadCount,
-        refetch,
-        markAsRead,
-        markAllAsRead,
-        deleteNotification,
-        loadMore,
+        notifications: context.notifications,
+        loading: context.loading,
+        error: context.error,
+        pagination: context.pagination,
+        unreadCount: context.unreadCount,
+        refetch: context.refetch,
+        markAsRead: context.markAsRead,
+        markAllAsRead: context.markAllAsRead,
+        deleteNotification: context.deleteNotification,
+        loadMore: context.loadMore,
         hasMore,
     };
 }
