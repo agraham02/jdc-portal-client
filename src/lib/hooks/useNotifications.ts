@@ -49,7 +49,7 @@ export function useNotifications(
                 context.fetchNotifications(stableParams);
             }
         }
-    }, [paramsString, stableParams, context]);
+    }, [paramsString, context]);
 
     const hasMore = context.pagination.page < context.pagination.totalPages;
 

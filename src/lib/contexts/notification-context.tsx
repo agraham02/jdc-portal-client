@@ -118,7 +118,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
                 setAbortController(null);
             }
         },
-        [abortController]
+        [abortController, loading]
     );
 
     const refetch = useCallback(() => {
