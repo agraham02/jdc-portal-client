@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { notificationService } from "@/lib/services/notificationService";
 import type {
     NotificationListResponse,
@@ -39,13 +39,19 @@ export function useNotifications(
     });
     const [unreadCount, setUnreadCount] = useState(0);
 
+    // Memoize the params to prevent unnecessary re-renders
+    const stableParams = useMemo(
+        () => params,
+        [params.page, params.limit, params.type, params.read, params.search]
+    );
+
     const fetchNotifications = useCallback(
         async (newParams?: NotificationQueryParams) => {
             setLoading(true);
             setError(null);
 
             try {
-                const queryParams = { ...params, ...newParams };
+                const queryParams = { ...stableParams, ...newParams };
                 const response = await notificationService.getNotifications(
                     queryParams
                 );
@@ -68,7 +74,7 @@ export function useNotifications(
                 setLoading(false);
             }
         },
-        [params]
+        [stableParams]
     );
 
     const refetch = useCallback(
@@ -128,7 +134,7 @@ export function useNotifications(
         if (pagination.page < pagination.totalPages && !loading) {
             try {
                 const response = await notificationService.getNotifications({
-                    ...params,
+                    ...stableParams,
                     page: pagination.page + 1,
                 });
 
@@ -138,7 +144,7 @@ export function useNotifications(
                 console.error("Failed to load more notifications:", err);
             }
         }
-    }, [params, pagination.page, pagination.totalPages, loading]);
+    }, [stableParams, pagination.page, pagination.totalPages, loading]);
 
     useEffect(() => {
         fetchNotifications();
