@@ -42,6 +42,7 @@ export default function HrResourcesPage() {
             };
 
             const response = await FileService.getHrDocuments(query);
+            // Debug: Log fetched HR documents (disable in production)
             // console.log("Fetched HR documents:", response);
             setFiles(response.files);
             setTotalPages(response.totalPages);

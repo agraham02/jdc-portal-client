@@ -2,10 +2,10 @@ import { parseCookies, setCookie, destroyCookie } from "nookies";
 
 const ACCESS_TOKEN_KEY = "accessToken";
 
-// Debug function to check all cookies
+// Debug function to check all cookies (for development only)
 const debugCookies = () => {
     const cookies = parseCookies();
-    console.log("All available cookies:", cookies);
+    // console.log("All available cookies:", cookies); // Disabled in production
     return cookies;
 };
 

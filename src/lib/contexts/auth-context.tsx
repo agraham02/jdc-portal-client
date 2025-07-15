@@ -84,6 +84,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Check if user has specific permission
     const hasPermission = (permission: string): boolean => {
         if (!user) return false;
+        // Debug: Check permission (disable in production)
+        // console.log("Checking permission:");
+        // console.log(user, permission);
         return user.permissions?.includes(permission) || false;
     };
 
