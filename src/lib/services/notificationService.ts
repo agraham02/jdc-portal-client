@@ -10,11 +10,12 @@ import type {
 
 class NotificationService {
     /**
-     * Get user notifications with pagination and filtering
+     * Helper function to build URL with query parameters
      */
-    async getNotifications(
+    private buildUrlWithParams(
+        baseUrl: string,
         params: NotificationQueryParams = {}
-    ): Promise<NotificationListResponse> {
+    ): string {
         const searchParams = new URLSearchParams();
 
         Object.entries(params).forEach(([key, value]) => {
@@ -24,9 +25,19 @@ class NotificationService {
         });
 
         const queryString = searchParams.toString();
-        const endpoint = `${API_CONFIG.ENDPOINTS.NOTIFICATIONS}${
-            queryString ? `?${queryString}` : ""
-        }`;
+        return `${baseUrl}${queryString ? `?${queryString}` : ""}`;
+    }
+
+    /**
+     * Get user notifications with pagination and filtering
+     */
+    async getNotifications(
+        params: NotificationQueryParams = {}
+    ): Promise<NotificationListResponse> {
+        const endpoint = this.buildUrlWithParams(
+            API_CONFIG.ENDPOINTS.NOTIFICATIONS,
+            params
+        );
 
         return apiClient.get<NotificationListResponse>(endpoint);
     }
@@ -92,18 +103,10 @@ class NotificationService {
     async getAllNotifications(
         params: NotificationQueryParams = {}
     ): Promise<NotificationListResponse> {
-        const searchParams = new URLSearchParams();
-
-        Object.entries(params).forEach(([key, value]) => {
-            if (value !== undefined && value !== null) {
-                searchParams.append(key, String(value));
-            }
-        });
-
-        const queryString = searchParams.toString();
-        const endpoint = `${API_CONFIG.ENDPOINTS.ADMIN_ALL}${
-            queryString ? `?${queryString}` : ""
-        }`;
+        const endpoint = this.buildUrlWithParams(
+            API_CONFIG.ENDPOINTS.ADMIN_ALL,
+            params
+        );
 
         return apiClient.get<NotificationListResponse>(endpoint);
     }

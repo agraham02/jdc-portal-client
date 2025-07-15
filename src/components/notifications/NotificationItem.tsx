@@ -117,7 +117,7 @@ export function NotificationItem({
                             className={`mt-1 text-sm ${
                                 notification.read
                                     ? "text-muted-foreground"
-                                    : "text-muted-foreground"
+                                    : "text-foreground"
                             }`}
                         >
                             {notification.message}
