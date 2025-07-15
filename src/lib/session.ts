@@ -29,5 +29,5 @@ export const session = {
         destroyCookie(null, ACCESS_TOKEN_KEY, { path: "/" });
     },
 
-    ...(process.env.NODE_ENV !== "production" && { debugCookies }),
+    ...(process.env.NODE_ENV !== "production" ? { debugCookies } : {}),
 };
