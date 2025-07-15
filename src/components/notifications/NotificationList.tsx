@@ -147,22 +147,36 @@ export function NotificationList({ className }: NotificationListProps) {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">All Types</SelectItem>
-                                <SelectItem value={NotificationType.CONTRACT_CREATED}>
+                                <SelectItem
+                                    value={NotificationType.CONTRACT_CREATED}
+                                >
                                     Contracts
                                 </SelectItem>
-                                <SelectItem value={NotificationType.APPLICATION_SUBMITTED}>
+                                <SelectItem
+                                    value={
+                                        NotificationType.APPLICATION_SUBMITTED
+                                    }
+                                >
                                     Applications
                                 </SelectItem>
-                                <SelectItem value={NotificationType.EMPLOYEE_APPROVED}>
+                                <SelectItem
+                                    value={NotificationType.EMPLOYEE_APPROVED}
+                                >
                                     Employees
                                 </SelectItem>
-                                <SelectItem value={NotificationType.VENDOR_APPROVED}>
+                                <SelectItem
+                                    value={NotificationType.VENDOR_APPROVED}
+                                >
                                     Vendors
                                 </SelectItem>
-                                <SelectItem value={NotificationType.FILE_UPLOADED}>
+                                <SelectItem
+                                    value={NotificationType.FILE_UPLOADED}
+                                >
                                     Files
                                 </SelectItem>
-                                <SelectItem value={NotificationType.SYSTEM_ANNOUNCEMENT}>
+                                <SelectItem
+                                    value={NotificationType.SYSTEM_ANNOUNCEMENT}
+                                >
                                     System
                                 </SelectItem>
                             </SelectContent>

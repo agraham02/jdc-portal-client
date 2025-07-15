@@ -30,8 +30,12 @@ export function useNotifications(
     const context = useNotificationContext();
     const paramsRef = useRef<string>("");
 
-    // Memoize the params to prevent unnecessary re-renders
-    const stableParams = useMemo(() => params, [JSON.stringify(params)]);
+    // Memoize the params to prevent unnecessary re-renders using deep comparison
+    const stableParams = useMemo(
+        () => params,
+        [params.page, params.limit, params.type, params.read, params.search]
+    );
+
     const paramsString = JSON.stringify(stableParams);
 
     // Fetch notifications when params change
