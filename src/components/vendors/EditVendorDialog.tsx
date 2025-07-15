@@ -21,6 +21,7 @@ import {
     Vendor,
 } from "@/lib/services/vendor";
 import { useToast } from "@/components/ui/use-toast";
+import { parseCommaSeparatedString } from "@/lib/utils";
 
 const editVendorSchema = z.object({
     // User information
@@ -99,12 +100,7 @@ export function EditVendorDialog({
                 contactName: data.contactName || undefined,
                 website: data.website || undefined,
                 notes: data.notes || undefined,
-                servicesOffered: data.servicesOffered
-                    ? data.servicesOffered
-                          .split(",")
-                          .map((s) => s.trim())
-                          .filter(Boolean)
-                    : undefined,
+                servicesOffered: parseCommaSeparatedString(data.servicesOffered),
             };
 
             await VendorService.updateVendor(vendor._id, updateData);

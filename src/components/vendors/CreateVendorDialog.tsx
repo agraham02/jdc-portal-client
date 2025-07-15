@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { VendorService, CreateVendorRequest } from "@/lib/services/vendor";
 import { useToast } from "@/components/ui/use-toast";
+import { parseCommaSeparatedString } from "@/lib/utils";
 import { Plus } from "lucide-react";
 
 const createVendorSchema = z.object({
@@ -63,6 +64,13 @@ export function CreateVendorDialog({
         resolver: zodResolver(createVendorSchema),
     });
 
+    // Reset form when dialog is opened
+    useEffect(() => {
+        if (open) {
+            reset();
+        }
+    }, [open, reset]);
+
     const onSubmit = async (data: CreateVendorFormData) => {
         try {
             setIsLoading(true);
@@ -75,12 +83,7 @@ export function CreateVendorDialog({
                 contactName: data.contactName || undefined,
                 website: data.website || undefined,
                 notes: data.notes || undefined,
-                servicesOffered: data.servicesOffered
-                    ? data.servicesOffered
-                          .split(",")
-                          .map((s) => s.trim())
-                          .filter(Boolean)
-                    : undefined,
+                servicesOffered: parseCommaSeparatedString(data.servicesOffered),
             };
 
             await VendorService.createVendor(vendorData);
