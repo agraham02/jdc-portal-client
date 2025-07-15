@@ -180,7 +180,21 @@ export default function HrResourcesPage() {
                             <CardHeader className="pb-3">
                                 <div className="flex items-start justify-between">
                                     <div className="flex items-center gap-2">
-                                        <span className="text-2xl">
+                                        <span
+                                            className="text-2xl"
+                                            role="img"
+                                            aria-label={
+                                                file.mimetype.includes("pdf")
+                                                    ? "PDF file"
+                                                    : file.mimetype.includes("word")
+                                                    ? "Word document"
+                                                    : file.mimetype.includes("excel") || file.mimetype.includes("spreadsheet")
+                                                    ? "Excel spreadsheet"
+                                                    : file.mimetype.includes("image")
+                                                    ? "Image file"
+                                                    : "Attachment"
+                                            }
+                                        >
                                             {getFileIcon(file.mimetype)}
                                         </span>
                                         <div className="flex-1">
