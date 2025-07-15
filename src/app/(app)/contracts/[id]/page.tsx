@@ -26,6 +26,7 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AccountTypeGuard } from "@/components/auth/AccountTypeGuard";
 import { ApplicationForm, EditContractDialog } from "@/components/contracts";
 import { contractService } from "@/lib/services/contract";
+import { FileService } from "@/lib/services/file";
 import {
     Contract,
     ContractStatus,
@@ -187,6 +188,35 @@ export default function ContractDetailsPage() {
                 error instanceof Error
                     ? error.message
                     : "Failed to award contract";
+            toast({
+                title: "Error",
+                description: errorMessage,
+                variant: "destructive",
+            });
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
+    const handleDownloadDocument = async (
+        documentId: string,
+        index: number
+    ) => {
+        try {
+            setActionLoading(`download-${documentId}`);
+            await FileService.triggerDownload(
+                documentId,
+                `contract-document-${index + 1}.pdf`
+            );
+            toast({
+                title: "Success",
+                description: "Document downloaded successfully",
+            });
+        } catch (error: unknown) {
+            const errorMessage =
+                error instanceof Error
+                    ? error.message
+                    : "Failed to download document";
             toast({
                 title: "Error",
                 description: errorMessage,
@@ -403,8 +433,23 @@ export default function ContractDetailsPage() {
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
+                                                            onClick={() =>
+                                                                handleDownloadDocument(
+                                                                    doc,
+                                                                    index
+                                                                )
+                                                            }
+                                                            disabled={
+                                                                actionLoading ===
+                                                                `download-${doc}`
+                                                            }
                                                         >
-                                                            <Download className="w-4 h-4" />
+                                                            {actionLoading ===
+                                                            `download-${doc}` ? (
+                                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                                            ) : (
+                                                                <Download className="w-4 h-4" />
+                                                            )}
                                                         </Button>
                                                     </div>
                                                 )
