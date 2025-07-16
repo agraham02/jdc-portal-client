@@ -43,7 +43,7 @@ export interface Contract {
     applications: ContractApplication[];
     documents?: string[];
     statusLog?: Array<{
-        status: string;
+        status: ContractStatus;
         changedAt: Date;
         changedBy: string;
     }>;

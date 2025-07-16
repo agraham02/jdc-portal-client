@@ -30,7 +30,7 @@ export const contractService = {
 
     // Get active/open contracts
     async getActiveContracts(): Promise<ContractListResponse> {
-        return await apiClient.get<ContractListResponse>("/contracts/active");
+        return apiClient.get<ContractListResponse>("/contracts/active");
     },
 
     // Get vendor's applications
