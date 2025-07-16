@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { notificationService } from "@/lib/services/notificationService";
+import { useNotificationContext } from "@/lib/contexts/notification-context";
 import type {
     NotificationQueryParams,
     Notification,
@@ -37,9 +38,15 @@ export function useNotifications(
         limit: 10,
     });
     const [unreadCount, setUnreadCount] = useState(0);
+    
+    // Get context for global state management
+    const context = useNotificationContext();
 
     // Memoize the params to prevent unnecessary re-renders
-    const stableParams = useMemo(() => params, [params]);
+    const stableParams = useMemo(
+        () => params,
+        [params.page, params.limit, params.type, params.read, params.search]
+    );
 
     const fetchNotifications = useCallback(
         async (newParams?: NotificationQueryParams) => {
@@ -60,17 +67,33 @@ export function useNotifications(
                     limit: response.limit,
                 });
                 setUnreadCount(response.unreadCount);
+                
+                // Sync with global context if this is the main notification view
+                if (context && !newParams) {
+                    context.fetchNotifications(queryParams);
+                }
             } catch (err) {
-                setError(
-                    err instanceof Error
-                        ? err.message
-                        : "Failed to fetch notifications"
-                );
+                let errorMessage = "Failed to fetch notifications";
+                
+                if (err instanceof Error) {
+                    if (err.message.includes('network') || err.message.includes('fetch')) {
+                        errorMessage = "Network error. Please check your connection and try again.";
+                    } else if (err.message.includes('unauthorized') || err.message.includes('403')) {
+                        errorMessage = "You don't have permission to view notifications.";
+                    } else if (err.message.includes('timeout')) {
+                        errorMessage = "Request timed out. Please try again.";
+                    } else {
+                        errorMessage = err.message;
+                    }
+                }
+                
+                setError(errorMessage);
+                console.error("Failed to fetch notifications:", err);
             } finally {
                 setLoading(false);
             }
         },
-        [stableParams]
+        [stableParams, context]
     );
 
     const refetch = useCallback(
