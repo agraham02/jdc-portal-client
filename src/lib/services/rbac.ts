@@ -121,7 +121,15 @@ export class RBACService {
                             }
                         });
                     } catch (error) {
-                        // Log but don't fail the entire operation for one role
+                        // Collect error details for reporting
+                        const errors = [];
+                        errors.push({
+                            roleName: role.name,
+                            error:
+                                error instanceof Error
+                                    ? error.message
+                                    : "Unknown error",
+                        });
                         console.warn(
                             `Failed to fetch users for role ${role.name}:`,
                             error

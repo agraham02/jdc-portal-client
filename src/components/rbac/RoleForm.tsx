@@ -163,11 +163,40 @@ export function RoleForm({
         } catch (error: unknown) {
             console.error("Failed to save role:", error);
 
-            // Handle specific error cases
-            const errorMessage =
-                error instanceof Error
-                    ? error.message
-                    : "Failed to save role. Please try again.";
+            let errorMessage = "Failed to save role. Please try again.";
+
+            if (error instanceof Error) {
+                // Type-safe error handling with proper interfaces
+                const axiosError = error as {
+                    code?: string;
+                    isAxiosError?: boolean;
+                    response?: { status?: number };
+                };
+
+                // Check for network errors
+                if (
+                    axiosError.code === "ECONNABORTED" ||
+                    axiosError.isAxiosError
+                ) {
+                    errorMessage =
+                        "Network error: Unable to connect to the server. Please check your internet connection.";
+                }
+                // Check for validation errors
+                else if (axiosError.response?.status === 400) {
+                    errorMessage =
+                        "Validation error: Please ensure all fields are filled out correctly.";
+                }
+                // Check for server errors
+                else if (
+                    axiosError.response?.status &&
+                    axiosError.response.status >= 500
+                ) {
+                    errorMessage =
+                        "Server error: Something went wrong on our end. Please try again later.";
+                } else {
+                    errorMessage = error.message;
+                }
+            }
             setErrors({
                 general: errorMessage,
             });
