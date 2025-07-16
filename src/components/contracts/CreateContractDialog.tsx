@@ -15,6 +15,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { contractService } from "@/lib/services/contract";
 import { CreateContractRequest } from "@/lib/types/contract";
 import { Loader2, Upload, X } from "lucide-react";
+import { FILE_UPLOAD_CONFIG, ERROR_MESSAGES } from "@/lib/constants/contracts";
 
 const contractSchema = z.object({
     title: z
@@ -46,6 +47,14 @@ export function CreateContractDialog({
     const [files, setFiles] = useState<File[]>([]);
     const { toast } = useToast();
 
+    // File validation constants
+    const { 
+        MAX_FILE_SIZE, 
+        MAX_FILES_CONTRACT, 
+        ALLOWED_CONTRACT_TYPES, 
+        ALLOWED_CONTRACT_EXTENSIONS 
+    } = FILE_UPLOAD_CONFIG;
+
     const form = useForm<ContractFormData>({
         resolver: zodResolver(contractSchema),
         defaultValues: {
@@ -56,9 +65,52 @@ export function CreateContractDialog({
         },
     });
 
+    const validateFile = (file: File): string | null => {
+        // Check file size
+        if (file.size > MAX_FILE_SIZE) {
+            return ERROR_MESSAGES.FILE_TOO_LARGE(file.name);
+        }
+
+        // Check file type
+        if (!ALLOWED_CONTRACT_TYPES.includes(file.type)) {
+            const extension = '.' + file.name.split('.').pop()?.toLowerCase();
+            if (!ALLOWED_CONTRACT_EXTENSIONS.includes(extension)) {
+                return ERROR_MESSAGES.UNSUPPORTED_FILE_TYPE(file.name, "PDF, DOC, DOCX, TXT");
+            }
+        }
+
+        return null;
+    };
+
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
-            setFiles(Array.from(e.target.files));
+            const newFiles = Array.from(e.target.files);
+            const validFiles: File[] = [];
+            
+            for (const file of newFiles) {
+                const error = validateFile(file);
+                if (error) {
+                    toast({
+                        title: "File Validation Error",
+                        description: error,
+                        variant: "destructive"
+                    });
+                } else {
+                    validFiles.push(file);
+                }
+            }
+            
+            // Check total number of files
+            if (files.length + validFiles.length > MAX_FILES_CONTRACT) {
+                toast({
+                    title: "Too Many Files",
+                    description: ERROR_MESSAGES.TOO_MANY_FILES(MAX_FILES_CONTRACT),
+                    variant: "destructive"
+                });
+                return;
+            }
+            
+            setFiles([...files, ...validFiles]);
         }
     };
 
@@ -89,10 +141,22 @@ export function CreateContractDialog({
             onSuccess();
             onOpenChange(false);
         } catch (error: unknown) {
-            const errorMessage =
-                error instanceof Error
-                    ? error.message
-                    : "Failed to create contract";
+            let errorMessage = "Failed to create contract";
+            
+            if (error instanceof Error) {
+                if (error.message.includes('network') || error.message.includes('fetch')) {
+                    errorMessage = ERROR_MESSAGES.NETWORK_ERROR;
+                } else if (error.message.includes('unauthorized') || error.message.includes('403')) {
+                    errorMessage = ERROR_MESSAGES.UNAUTHORIZED;
+                } else if (error.message.includes('file') || error.message.includes('upload')) {
+                    errorMessage = ERROR_MESSAGES.FILE_UPLOAD_ERROR;
+                } else if (error.message.includes('validation')) {
+                    errorMessage = ERROR_MESSAGES.VALIDATION_ERROR;
+                } else {
+                    errorMessage = error.message;
+                }
+            }
+            
             toast({
                 title: "Error",
                 description: errorMessage,
@@ -191,7 +255,9 @@ export function CreateContractDialog({
                                 className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                             />
                             <p className="text-sm text-gray-500 mt-1">
-                                Upload contract documents (PDF, DOC, DOCX, TXT)
+                                Upload contract documents (Max 10 files, 10MB each)
+                                <br />
+                                Supported formats: PDF, DOC, DOCX, TXT
                             </p>
                         </div>
 
