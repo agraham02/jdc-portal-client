@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar, DollarSign, Eye, FileText, Users } from "lucide-react";
 import { Contract, ContractStatus } from "@/lib/types/contract";
+import { CONTRACT_STATUS_COLORS, CONTRACT_STATUS_LABELS } from "@/lib/constants/contracts";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 
@@ -13,20 +14,6 @@ interface ContractCardProps {
     isVendor?: boolean;
     hasApplied?: boolean;
 }
-
-const statusColors = {
-    [ContractStatus.OPEN]: "bg-green-500",
-    [ContractStatus.IN_PROGRESS]: "bg-blue-500",
-    [ContractStatus.AWARDED]: "bg-purple-500",
-    [ContractStatus.CLOSED]: "bg-gray-500",
-};
-
-const statusLabels = {
-    [ContractStatus.OPEN]: "Open",
-    [ContractStatus.IN_PROGRESS]: "In Progress",
-    [ContractStatus.AWARDED]: "Awarded",
-    [ContractStatus.CLOSED]: "Closed",
-};
 
 export function ContractCard({
     contract,
@@ -50,10 +37,10 @@ export function ContractCard({
                         </CardTitle>
                         <Badge
                             className={`${
-                                statusColors[contract.status]
+                                CONTRACT_STATUS_COLORS[contract.status]
                             } text-white`}
                         >
-                            {statusLabels[contract.status]}
+                            {CONTRACT_STATUS_LABELS[contract.status]}
                         </Badge>
                     </div>
                     {contract.deadline && (
