@@ -89,10 +89,11 @@ export default function VendorRegisterPage() {
 
             await AuthService.registerVendor(cleanData);
             setSuccess(true);
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error("Registration failed:", err);
+            const error = err as { response?: { data?: { message?: string } } };
             setError(
-                err.response?.data?.message ||
+                error.response?.data?.message ||
                     "Registration failed. Please try again."
             );
         } finally {
@@ -145,8 +146,8 @@ export default function VendorRegisterPage() {
                                 </CardTitle>
                                 <CardDescription>
                                     Your vendor account has been created and is
-                                    pending approval. You'll be notified via
-                                    email once your account is approved.
+                                    pending approval. You&apos;ll be notified
+                                    via email once your account is approved.
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>

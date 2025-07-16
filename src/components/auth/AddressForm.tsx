@@ -23,9 +23,16 @@ export function AddressForm({
     const getFieldName = (field: string) => `${prefix}.${field}`;
     const getError = (field: string) => {
         const fieldPath = getFieldName(field);
-        return fieldPath
-            .split(".")
-            .reduce((obj: any, key) => obj?.[key], errors);
+        // Navigate through the nested error object structure
+        let result: unknown = errors;
+        for (const key of fieldPath.split(".")) {
+            if (result && typeof result === "object" && key in result) {
+                result = (result as Record<string, unknown>)[key];
+            } else {
+                return undefined;
+            }
+        }
+        return result as { message?: string } | undefined;
     };
 
     return (
@@ -48,7 +55,7 @@ export function AddressForm({
                     />
                     {getError("line1") && (
                         <p className="text-red-500 text-sm mt-1">
-                            {getError("line1")?.message || getError("line1")}
+                            {getError("line1")?.message}
                         </p>
                     )}
                 </div>
@@ -79,7 +86,7 @@ export function AddressForm({
                         />
                         {getError("city") && (
                             <p className="text-red-500 text-sm mt-1">
-                                {getError("city")?.message || getError("city")}
+                                {getError("city")?.message}
                             </p>
                         )}
                     </div>
@@ -99,8 +106,7 @@ export function AddressForm({
                         />
                         {getError("state") && (
                             <p className="text-red-500 text-sm mt-1">
-                                {getError("state")?.message ||
-                                    getError("state")}
+                                {getError("state")?.message}
                             </p>
                         )}
                     </div>
@@ -119,7 +125,7 @@ export function AddressForm({
                         />
                         {getError("zip") && (
                             <p className="text-red-500 text-sm mt-1">
-                                {getError("zip")?.message || getError("zip")}
+                                {getError("zip")?.message}
                             </p>
                         )}
                     </div>
