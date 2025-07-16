@@ -14,6 +14,7 @@ import { contractService } from "@/lib/services/contract";
 import { ApplyToContractRequest } from "@/lib/types/contract";
 import { Label } from "@/components/ui/label";
 import { Loader2, Upload, X } from "lucide-react";
+import { FILE_UPLOAD_CONFIG, ERROR_MESSAGES } from "@/lib/constants/contracts";
 
 const applicationSchema = z.object({
     proposalDetails: z
@@ -43,6 +44,14 @@ export function ApplicationForm({
     const [files, setFiles] = useState<File[]>([]);
     const { toast } = useToast();
 
+    // File validation constants
+    const { 
+        MAX_FILE_SIZE, 
+        MAX_FILES_APPLICATION, 
+        ALLOWED_APPLICATION_TYPES, 
+        ALLOWED_APPLICATION_EXTENSIONS 
+    } = FILE_UPLOAD_CONFIG;
+
     const form = useForm<ApplicationFormData>({
         resolver: zodResolver(applicationSchema),
         defaultValues: {
@@ -50,9 +59,52 @@ export function ApplicationForm({
         },
     });
 
+    const validateFile = (file: File): string | null => {
+        // Check file size
+        if (file.size > MAX_FILE_SIZE) {
+            return ERROR_MESSAGES.FILE_TOO_LARGE(file.name);
+        }
+
+        // Check file type
+        if (!ALLOWED_APPLICATION_TYPES.includes(file.type)) {
+            const extension = '.' + file.name.split('.').pop()?.toLowerCase();
+            if (!ALLOWED_APPLICATION_EXTENSIONS.includes(extension)) {
+                return ERROR_MESSAGES.UNSUPPORTED_FILE_TYPE(file.name, "PDF, DOC, DOCX, TXT, JPG, PNG");
+            }
+        }
+
+        return null;
+    };
+
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
-            setFiles(Array.from(e.target.files));
+            const newFiles = Array.from(e.target.files);
+            const validFiles: File[] = [];
+            
+            for (const file of newFiles) {
+                const error = validateFile(file);
+                if (error) {
+                    toast({
+                        title: "File Validation Error",
+                        description: error,
+                        variant: "destructive"
+                    });
+                } else {
+                    validFiles.push(file);
+                }
+            }
+            
+            // Check total number of files
+            if (files.length + validFiles.length > MAX_FILES_APPLICATION) {
+                toast({
+                    title: "Too Many Files",
+                    description: ERROR_MESSAGES.TOO_MANY_FILES(MAX_FILES_APPLICATION),
+                    variant: "destructive"
+                });
+                return;
+            }
+            
+            setFiles([...files, ...validFiles]);
         }
     };
 
@@ -84,10 +136,20 @@ export function ApplicationForm({
             onSuccess();
             onOpenChange(false);
         } catch (error: unknown) {
-            const errorMessage =
-                error instanceof Error
-                    ? error.message
-                    : "Failed to submit application";
+            let errorMessage = "Failed to submit application";
+            
+            if (error instanceof Error) {
+                if (error.message.includes('network') || error.message.includes('fetch')) {
+                    errorMessage = ERROR_MESSAGES.NETWORK_ERROR;
+                } else if (error.message.includes('unauthorized') || error.message.includes('403')) {
+                    errorMessage = ERROR_MESSAGES.UNAUTHORIZED;
+                } else if (error.message.includes('file') || error.message.includes('upload')) {
+                    errorMessage = ERROR_MESSAGES.FILE_UPLOAD_ERROR;
+                } else {
+                    errorMessage = error.message;
+                }
+            }
+            
             toast({
                 title: "Error",
                 description: errorMessage,
@@ -145,8 +207,9 @@ export function ApplicationForm({
                                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             />
                             <p className="text-sm text-gray-500 mt-1">
-                                Upload portfolio, certifications, or other
-                                relevant documents
+                                Upload portfolio, certifications, or other relevant documents (Max 5 files, 10MB each)
+                                <br />
+                                Supported formats: PDF, DOC, DOCX, TXT, JPG, PNG
                             </p>
                         </div>
 
