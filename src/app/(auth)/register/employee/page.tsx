@@ -82,7 +82,6 @@ export default function EmployeeRegisterPage() {
                     ? data.mailingAddress
                     : undefined,
             };
-            console.log(cleanData.employeeId);
 
             await AuthService.registerEmployee(cleanData);
             setSuccess(true);

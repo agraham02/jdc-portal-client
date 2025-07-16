@@ -26,7 +26,7 @@ const registerEmployee = async (
     // Remove confirmPassword before sending to backend
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { confirmPassword, ...registrationData } = data;
-    return apiClient.post("/auth/register/employee", registrationData);
+    return apiClient.post<{ message: string }>("/auth/register/employee", registrationData);
 };
 
 const registerVendor = async (

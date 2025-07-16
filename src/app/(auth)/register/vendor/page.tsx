@@ -274,6 +274,7 @@ export default function VendorRegisterPage() {
                                                                     type="button"
                                                                     variant="outline"
                                                                     size="sm"
+                                                                    aria-label="Remove service"
                                                                     onClick={() =>
                                                                         removeService(
                                                                             index
