@@ -43,10 +43,7 @@ export function useNotifications(
     const context = useNotificationContext();
 
     // Memoize the params to prevent unnecessary re-renders
-    const stableParams = useMemo(
-        () => params,
-        [params.page, params.limit, params.type, params.read, params.search]
-    );
+    const stableParams = useMemo(() => params, [params]);
 
     const fetchNotifications = useCallback(
         async (newParams?: NotificationQueryParams) => {
