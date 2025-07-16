@@ -39,10 +39,7 @@ export function useNotifications(
     const [unreadCount, setUnreadCount] = useState(0);
 
     // Memoize the params to prevent unnecessary re-renders
-    const stableParams = useMemo(
-        () => params,
-        [params]
-    );
+    const stableParams = useMemo(() => params, [params]);
 
     const fetchNotifications = useCallback(
         async (newParams?: NotificationQueryParams) => {
