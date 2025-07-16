@@ -49,8 +49,6 @@ export default function LoginPage() {
             if (!user) {
                 throw new Error("Invalid email or password");
             }
-            // Debug: Login successful (disable in production)
-            // console.log("Login successful:", user);
             router.push("/dashboard");
         } catch (error) {
             if (error instanceof Error) {
