@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { notificationService } from "@/lib/services/notificationService";
 import type {
-    NotificationListResponse,
     NotificationQueryParams,
     Notification,
 } from "@/lib/types/notifications";
@@ -42,7 +41,7 @@ export function useNotifications(
     // Memoize the params to prevent unnecessary re-renders
     const stableParams = useMemo(
         () => params,
-        [params.page, params.limit, params.type, params.read, params.search]
+        [params]
     );
 
     const fetchNotifications = useCallback(

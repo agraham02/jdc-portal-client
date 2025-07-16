@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Plus, Building, AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
@@ -40,7 +40,7 @@ export default function ContractsPage() {
     const isVendor = user?.accountType === AccountType.VENDOR;
     const isEmployee = user?.accountType === AccountType.EMPLOYEE;
 
-    const loadContracts = async () => {
+    const loadContracts = useCallback(async () => {
         try {
             setLoading(true);
             let response;
@@ -70,11 +70,11 @@ export default function ContractsPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [page, limit, statusFilter, showActiveOnly, toast]);
 
     useEffect(() => {
         loadContracts();
-    }, [page, statusFilter, showActiveOnly]); // loadContracts dependency removed as it's stable
+    }, [page, statusFilter, showActiveOnly, loadContracts]);
 
     const handleCreateSuccess = () => {
         loadContracts();

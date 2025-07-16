@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
     FileText,
     Building,
@@ -46,7 +46,7 @@ export default function MyApplicationsPage() {
 
     const limit = 12;
 
-    const loadApplications = async () => {
+    const loadApplications = useCallback(async () => {
         try {
             setLoading(true);
             const response = await contractService.getMyApplications({
@@ -68,11 +68,11 @@ export default function MyApplicationsPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [page, limit, toast]);
 
     useEffect(() => {
         loadApplications();
-    }, [page]); // loadApplications dependency removed as it's stable
+    }, [page, loadApplications]);
 
     if (loading && page === 1) {
         return (

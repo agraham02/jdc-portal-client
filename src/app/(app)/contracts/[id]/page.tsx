@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
     Building,
@@ -68,7 +68,7 @@ export default function ContractDetailsPage() {
     const isVendor = user?.accountType === AccountType.VENDOR;
     const isEmployee = user?.accountType === AccountType.EMPLOYEE;
 
-    const loadContract = async () => {
+    const loadContract = useCallback(async () => {
         try {
             setLoading(true);
             const contractData = await contractService.getContract(contractId);
@@ -87,11 +87,11 @@ export default function ContractDetailsPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [contractId, toast, router]);
 
     useEffect(() => {
         loadContract();
-    }, [contractId]); // loadContract dependency removed as it's stable
+    }, [contractId, loadContract]);
 
     const handleEditSuccess = () => {
         loadContract();
