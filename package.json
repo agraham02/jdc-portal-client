@@ -8,7 +8,8 @@
         "start": "next start",
         "lint": "next lint",
         "type-check": "tsc --noEmit",
-        "tidy": "npm run lint && npm run type-check"
+        "tidy": "npm run lint && npm run type-check",
+        "pre-deploy": "npm run tidy && npm run build && npm run start"
     },
     "dependencies": {
         "@hookform/resolvers": "^5.1.1",
