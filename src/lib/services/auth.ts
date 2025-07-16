@@ -1,7 +1,11 @@
 import { apiClient } from "../api";
 import { session } from "../session";
 import { User } from "../types/auth";
-import { LoginFormData } from "../validations/auth";
+import {
+    LoginFormData,
+    EmployeeRegistrationFormData,
+    VendorRegistrationFormData,
+} from "../validations/auth";
 
 const login = async (credentials: LoginFormData): Promise<{ user: User }> => {
     // The refreshToken is handled by the backend via httpOnly cookies
@@ -14,6 +18,22 @@ const login = async (credentials: LoginFormData): Promise<{ user: User }> => {
     const user = await getProfile();
 
     return { user };
+};
+
+const registerEmployee = async (
+    data: EmployeeRegistrationFormData
+): Promise<{ message: string }> => {
+    // Remove confirmPassword before sending to backend
+    const { confirmPassword, ...registrationData } = data;
+    return apiClient.post("/auth/register/employee", registrationData);
+};
+
+const registerVendor = async (
+    data: VendorRegistrationFormData
+): Promise<{ message: string }> => {
+    // Remove confirmPassword before sending to backend
+    const { confirmPassword, ...registrationData } = data;
+    return apiClient.post("/auth/register/vendor", registrationData);
 };
 
 const logout = async () => {
@@ -38,6 +58,8 @@ const refreshToken = async (): Promise<{ accessToken: string }> => {
 
 export const AuthService = {
     login,
+    registerEmployee,
+    registerVendor,
     logout,
     getProfile,
     refreshToken,
