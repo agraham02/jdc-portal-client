@@ -210,9 +210,7 @@ export function PermissionSelector({
                                                 )
                                             }
                                             disabled={disabled}
-                                            ref={(
-                                                ref: HTMLInputElement | null
-                                            ) => {
+                                            ref={(ref) => {
                                                 if (
                                                     ref &&
                                                     selectionState ===
