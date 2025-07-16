@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { RBACService } from "@/lib/services/rbac";
 import { RBACUser, UserFilters } from "@/lib/types/rbac";
 import {
@@ -19,6 +20,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Search, Users, UserCheck, Settings } from "lucide-react";
 
 export default function UsersPage() {
+    const router = useRouter();
     const [users, setUsers] = useState<RBACUser[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -131,7 +133,7 @@ export default function UsersPage() {
                     <Button
                         variant="outline"
                         className="mt-4"
-                        onClick={() => window.location.reload()}
+                        onClick={() => router.refresh()}
                     >
                         Retry
                     </Button>
