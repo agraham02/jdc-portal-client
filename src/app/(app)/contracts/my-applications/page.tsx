@@ -18,6 +18,7 @@ import { AccountTypeGuard } from "@/components/auth/AccountTypeGuard";
 import { contractService } from "@/lib/services/contract";
 import { Contract, ContractApplicationStatus } from "@/lib/types/contract";
 import { AccountType, RoleName } from "@/lib/types/auth";
+import { useAuth } from "@/lib/contexts/auth-context";
 import { formatDistanceToNow, format } from "date-fns";
 import Link from "next/link";
 
@@ -41,6 +42,7 @@ export default function MyApplicationsPage() {
     const [page, setPage] = useState(1);
     const [total, setTotal] = useState(0);
     const { toast } = useToast();
+    const { user } = useAuth();
 
     const limit = 12;
 
@@ -134,8 +136,16 @@ export default function MyApplicationsPage() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 {applications.map((contract) => {
                                     // Find user's application for this contract
+                                    const userId = user?._id ?? "";
                                     const userApplication =
-                                        contract.applications[0]; // Since this is filtered by user
+                                        contract.applications.find(
+                                            (app) => app.userId === userId
+                                        );
+
+                                    // Skip this contract if no user application found
+                                    if (!userApplication) {
+                                        return null;
+                                    }
 
                                     return (
                                         <Card
