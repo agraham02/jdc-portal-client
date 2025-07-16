@@ -3,7 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar, DollarSign, Eye, FileText, Users } from "lucide-react";
 import { Contract, ContractStatus } from "@/lib/types/contract";
-import { CONTRACT_STATUS_COLORS, CONTRACT_STATUS_LABELS } from "@/lib/constants/contracts";
+import {
+    CONTRACT_STATUS_COLORS,
+    CONTRACT_STATUS_LABELS,
+} from "@/lib/constants/contracts";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 

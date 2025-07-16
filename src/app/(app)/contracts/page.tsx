@@ -59,19 +59,27 @@ export default function ContractsPage() {
             setTotal(response.total);
         } catch (error: unknown) {
             let errorMessage = "Failed to load contracts";
-            
+
             if (error instanceof Error) {
-                if (error.message.includes('network') || error.message.includes('fetch')) {
-                    errorMessage = "Network error. Please check your connection and try again.";
-                } else if (error.message.includes('unauthorized') || error.message.includes('403')) {
-                    errorMessage = "You don't have permission to view contracts.";
-                } else if (error.message.includes('timeout')) {
+                if (
+                    error.message.includes("network") ||
+                    error.message.includes("fetch")
+                ) {
+                    errorMessage =
+                        "Network error. Please check your connection and try again.";
+                } else if (
+                    error.message.includes("unauthorized") ||
+                    error.message.includes("403")
+                ) {
+                    errorMessage =
+                        "You don't have permission to view contracts.";
+                } else if (error.message.includes("timeout")) {
                     errorMessage = "Request timed out. Please try again.";
                 } else {
                     errorMessage = error.message;
                 }
             }
-            
+
             toast({
                 title: "Error",
                 description: errorMessage,
