@@ -31,7 +31,8 @@ export function validateFile(
 
     // Check file type
     if (!allowedTypes.includes(file.type)) {
-        const extension = "." + file.name.split(".").pop()?.toLowerCase();
+        const ext = file.name.split(".").pop();
+        const extension = ext ? "." + ext.toLowerCase() : "";
         if (!allowedExtensions.includes(extension)) {
             return ERROR_MESSAGES.UNSUPPORTED_FILE_TYPE(
                 file.name,

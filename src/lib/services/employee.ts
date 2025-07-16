@@ -130,7 +130,7 @@ export class EmployeeService {
      */
     static async approveEmployee(id: string): Promise<{ message: string }> {
         return apiClient.patch<{ message: string }>(
-            `/auth/${id}/approve`,
+            `/employees/${id}/approve`,
             {}
         );
     }
