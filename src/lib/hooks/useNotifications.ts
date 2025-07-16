@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { notificationService } from "@/lib/services/notificationService";
 import { useNotificationContext } from "@/lib/contexts/notification-context";
 import type {
     NotificationQueryParams,
@@ -27,43 +28,168 @@ interface UseNotificationsReturn {
 export function useNotifications(
     params: NotificationQueryParams = {}
 ): UseNotificationsReturn {
-    const context = useNotificationContext();
-    const paramsRef = useRef<string>("");
+    const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [pagination, setPagination] = useState({
+        total: 0,
+        totalPages: 0,
+        page: 1,
+        limit: 10,
+    });
+    const [unreadCount, setUnreadCount] = useState(0);
 
-    // Memoize the params to prevent unnecessary re-renders using deep comparison
+    // Get context for global state management
+    const context = useNotificationContext();
+
+    // Memoize the params to prevent unnecessary re-renders
     const stableParams = useMemo(
         () => params,
         [params.page, params.limit, params.type, params.read, params.search]
     );
 
-    const paramsString = JSON.stringify(stableParams);
+    const fetchNotifications = useCallback(
+        async (newParams?: NotificationQueryParams) => {
+            setLoading(true);
+            setError(null);
 
-    // Fetch notifications when params change
-    useEffect(() => {
-        // Only fetch if params are different from last fetch
-        if (paramsRef.current !== paramsString) {
-            paramsRef.current = paramsString;
+            try {
+                const queryParams = { ...stableParams, ...newParams };
+                const response = await notificationService.getNotifications(
+                    queryParams
+                );
 
-            // Only fetch if we have meaningful params or if it's the first load
-            if (Object.keys(stableParams).length > 0 || !context.initialized) {
-                context.fetchNotifications(stableParams);
+                setNotifications(response.data);
+                setPagination({
+                    total: response.total,
+                    totalPages: response.totalPages,
+                    page: response.page,
+                    limit: response.limit,
+                });
+                setUnreadCount(response.unreadCount);
+
+                // Sync with global context if this is the main notification view
+                if (context && !newParams) {
+                    context.fetchNotifications(queryParams);
+                }
+            } catch (err) {
+                let errorMessage = "Failed to fetch notifications";
+
+                if (err instanceof Error) {
+                    if (
+                        err.message.includes("network") ||
+                        err.message.includes("fetch")
+                    ) {
+                        errorMessage =
+                            "Network error. Please check your connection and try again.";
+                    } else if (
+                        err.message.includes("unauthorized") ||
+                        err.message.includes("403")
+                    ) {
+                        errorMessage =
+                            "You don't have permission to view notifications.";
+                    } else if (err.message.includes("timeout")) {
+                        errorMessage = "Request timed out. Please try again.";
+                    } else {
+                        errorMessage = err.message;
+                    }
+                }
+
+                setError(errorMessage);
+                console.error("Failed to fetch notifications:", err);
+            } finally {
+                setLoading(false);
+            }
+        },
+        [stableParams, context]
+    );
+
+    const refetch = useCallback(
+        () => fetchNotifications(),
+        [fetchNotifications]
+    );
+
+    const markAsRead = useCallback(async (id: string) => {
+        try {
+            await notificationService.markAsRead(id);
+            setNotifications((prev) =>
+                prev.map((notification) =>
+                    notification.id === id
+                        ? {
+                              ...notification,
+                              read: true,
+                              readAt: new Date().toISOString(),
+                          }
+                        : notification
+                )
+            );
+            setUnreadCount((prev) => Math.max(0, prev - 1));
+        } catch (err) {
+            console.error("Failed to mark notification as read:", err);
+        }
+    }, []);
+
+    const markAllAsRead = useCallback(async () => {
+        try {
+            await notificationService.markAllAsRead();
+            setNotifications((prev) =>
+                prev.map((notification) => ({
+                    ...notification,
+                    read: true,
+                    readAt: new Date().toISOString(),
+                }))
+            );
+            setUnreadCount(0);
+        } catch (err) {
+            console.error("Failed to mark all notifications as read:", err);
+        }
+    }, []);
+
+    const deleteNotification = useCallback(async (id: string) => {
+        try {
+            await notificationService.deleteNotification(id);
+            setNotifications((prev) =>
+                prev.filter((notification) => notification.id !== id)
+            );
+            setPagination((prev) => ({ ...prev, total: prev.total - 1 }));
+        } catch (err) {
+            console.error("Failed to delete notification:", err);
+        }
+    }, []);
+
+    const loadMore = useCallback(async () => {
+        if (pagination.page < pagination.totalPages && !loading) {
+            try {
+                const response = await notificationService.getNotifications({
+                    ...stableParams,
+                    page: pagination.page + 1,
+                });
+
+                setNotifications((prev) => [...prev, ...response.data]);
+                setPagination((prev) => ({ ...prev, page: prev.page + 1 }));
+            } catch (err) {
+                console.error("Failed to load more notifications:", err);
             }
         }
-    }, [paramsString, context]);
+    }, [stableParams, pagination.page, pagination.totalPages, loading]);
 
-    const hasMore = context.pagination.page < context.pagination.totalPages;
+    useEffect(() => {
+        fetchNotifications();
+    }, [fetchNotifications]);
+
+    const hasMore = pagination.page < pagination.totalPages;
 
     return {
-        notifications: context.notifications,
-        loading: context.loading,
-        error: context.error,
-        pagination: context.pagination,
-        unreadCount: context.unreadCount,
-        refetch: context.refetch,
-        markAsRead: context.markAsRead,
-        markAllAsRead: context.markAllAsRead,
-        deleteNotification: context.deleteNotification,
-        loadMore: context.loadMore,
+        notifications,
+        loading,
+        error,
+        pagination,
+        unreadCount,
+        refetch,
+        markAsRead,
+        markAllAsRead,
+        deleteNotification,
+        loadMore,
         hasMore,
     };
 }
