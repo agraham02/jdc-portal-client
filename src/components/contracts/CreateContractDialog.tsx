@@ -16,6 +16,10 @@ import { contractService } from "@/lib/services/contract";
 import { CreateContractRequest } from "@/lib/types/contract";
 import { Loader2, Upload, X } from "lucide-react";
 import { FILE_UPLOAD_CONFIG, ERROR_MESSAGES } from "@/lib/constants/contracts";
+import {
+    validateMultipleFiles,
+    CONTRACT_FILE_VALIDATION,
+} from "@/lib/utils/fileValidation";
 
 const contractSchema = z.object({
     title: z
@@ -48,12 +52,7 @@ export function CreateContractDialog({
     const { toast } = useToast();
 
     // File validation constants
-    const {
-        MAX_FILE_SIZE,
-        MAX_FILES_CONTRACT,
-        ALLOWED_CONTRACT_TYPES,
-        ALLOWED_CONTRACT_EXTENSIONS,
-    } = FILE_UPLOAD_CONFIG;
+    const { MAX_FILES_CONTRACT } = FILE_UPLOAD_CONFIG;
 
     const form = useForm<ContractFormData>({
         resolver: zodResolver(contractSchema),
@@ -65,56 +64,30 @@ export function CreateContractDialog({
         },
     });
 
-    const validateFile = (file: File): string | null => {
-        // Check file size
-        if (file.size > MAX_FILE_SIZE) {
-            return ERROR_MESSAGES.FILE_TOO_LARGE(file.name);
-        }
-
-        // Check file type
-        if (!ALLOWED_CONTRACT_TYPES.includes(file.type)) {
-            const extension = "." + file.name.split(".").pop()?.toLowerCase();
-            if (!ALLOWED_CONTRACT_EXTENSIONS.includes(extension)) {
-                return ERROR_MESSAGES.UNSUPPORTED_FILE_TYPE(
-                    file.name,
-                    "PDF, DOC, DOCX, TXT"
-                );
-            }
-        }
-
-        return null;
-    };
-
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
             const newFiles = Array.from(e.target.files);
-            const validFiles: File[] = [];
 
-            for (const file of newFiles) {
-                const error = validateFile(file);
-                if (error) {
-                    toast({
-                        title: "File Validation Error",
-                        description: error,
-                        variant: "destructive",
-                    });
-                } else {
-                    validFiles.push(file);
-                }
-            }
+            const { validFiles, errors } = validateMultipleFiles(
+                newFiles,
+                CONTRACT_FILE_VALIDATION,
+                files.length,
+                MAX_FILES_CONTRACT
+            );
 
-            // Check total number of files
-            if (files.length + validFiles.length > MAX_FILES_CONTRACT) {
+            // Show errors if any
+            errors.forEach((error) => {
                 toast({
-                    title: "Too Many Files",
-                    description:
-                        ERROR_MESSAGES.TOO_MANY_FILES(MAX_FILES_CONTRACT),
+                    title: "File Validation Error",
+                    description: error,
                     variant: "destructive",
                 });
-                return;
-            }
+            });
 
-            setFiles([...files, ...validFiles]);
+            // Add valid files to the list
+            if (validFiles.length > 0) {
+                setFiles((prev) => [...prev, ...validFiles]);
+            }
         }
     };
 
