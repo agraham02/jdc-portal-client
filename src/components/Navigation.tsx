@@ -21,11 +21,13 @@ import {
     Shield,
     ClipboardList,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export function Navigation() {
     const { user, logout } = useAuth();
     const [showNotificationDropdown, setShowNotificationDropdown] =
         useState(false);
+    const router = useRouter();
 
     const navigationItems = [
         {
@@ -147,7 +149,15 @@ export function Navigation() {
                 <div className="pt-4 mt-4 border-t border-border">
                     <Button
                         variant="outline"
-                        onClick={logout}
+                        onClick={async () => {
+                            try {
+                                await logout();
+                            } catch (error) {
+                                console.error("Logout failed:", error);
+                                // Force redirect even if logout fails
+                                router.push("/login");
+                            }
+                        }}
                         className="w-full justify-start"
                     >
                         <LogOut className="w-4 h-4 mr-2" />
