@@ -82,10 +82,20 @@ const refreshAccessToken = async (): Promise<string> => {
 };
 
 /**
- * Create device fingerprint for enhanced security
+ * Cached device fingerprint for enhanced security
  */
+let cachedDeviceFingerprint: string | null = null;
+
 const createDeviceFingerprint = (): string => {
-    if (typeof window === "undefined") return "";
+    // Return cached fingerprint if already computed
+    if (cachedDeviceFingerprint !== null) {
+        return cachedDeviceFingerprint;
+    }
+
+    if (typeof window === "undefined") {
+        cachedDeviceFingerprint = "";
+        return cachedDeviceFingerprint;
+    }
 
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
@@ -95,7 +105,7 @@ const createDeviceFingerprint = (): string => {
         ctx.fillText("Device fingerprint", 2, 2);
     }
 
-    const fingerprint = btoa(
+    cachedDeviceFingerprint = btoa(
         [
             navigator.userAgent,
             navigator.language,
@@ -105,7 +115,7 @@ const createDeviceFingerprint = (): string => {
         ].join("|")
     ).slice(0, 32);
 
-    return fingerprint;
+    return cachedDeviceFingerprint;
 };
 
 /**
