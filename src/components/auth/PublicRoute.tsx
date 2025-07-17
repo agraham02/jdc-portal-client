@@ -1,7 +1,7 @@
 "use client";
 
-import { ReactNode } from "react";
-import { redirect } from "next/navigation";
+import { ReactNode, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/contexts/auth-context";
 import { AccountType } from "@/lib/types/auth";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -18,14 +18,29 @@ export function PublicRoute({
     redirectPath,
 }: PublicRouteProps) {
     const { user, isLoading, isAuthenticated } = useAuth();
+    const router = useRouter();
+
+    useEffect(() => {
+        if (!isLoading && redirectIfAuthenticated && isAuthenticated && user) {
+            const defaultRedirectPath = getDashboardPath(user.accountType);
+            router.push(redirectPath || defaultRedirectPath);
+        }
+    }, [
+        isLoading,
+        redirectIfAuthenticated,
+        isAuthenticated,
+        user,
+        redirectPath,
+        router,
+    ]);
 
     if (isLoading) {
         return <LoadingSpinner />;
     }
 
+    // Don't render children while redirecting
     if (redirectIfAuthenticated && isAuthenticated && user) {
-        const defaultRedirectPath = getDashboardPath(user.accountType);
-        redirect(redirectPath || defaultRedirectPath);
+        return <LoadingSpinner />;
     }
 
     return <>{children}</>;
