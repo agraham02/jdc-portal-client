@@ -1,7 +1,11 @@
 import { apiClient } from "../api";
 import { session } from "../session";
 import { User } from "../types/auth";
-import { LoginFormData } from "../validations/auth";
+import {
+    LoginFormData,
+    EmployeeRegistrationFormData,
+    VendorRegistrationFormData,
+} from "../validations/auth";
 
 const login = async (credentials: LoginFormData): Promise<{ user: User }> => {
     // The refreshToken is handled by the backend via httpOnly cookies
@@ -16,24 +20,53 @@ const login = async (credentials: LoginFormData): Promise<{ user: User }> => {
     return { user };
 };
 
-const logout = async () => {
-    try {
-        // Tell the backend to invalidate the refresh token
-        await apiClient.post("/auth/logout", {});
-    } catch (error) {
-        console.error("Logout failed", error);
-    } finally {
-        // Always clear the client-side session
-        session.destroy();
-    }
+const registerEmployee = async (
+    data: EmployeeRegistrationFormData
+): Promise<{ message: string }> => {
+    // Remove confirmPassword before sending to backend
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { confirmPassword, ...registrationData } = data;
+    return apiClient.post<{ message: string }>(
+        "/auth/register/employee",
+        registrationData
+    );
+};
+
+const registerVendor = async (
+    data: VendorRegistrationFormData
+): Promise<{ message: string }> => {
+    // Remove confirmPassword before sending to backend
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { confirmPassword, ...registrationData } = data;
+    return apiClient.post<{ message: string }>(
+        "/auth/register/vendor",
+        registrationData
+    );
+};
+
+const logout = async (): Promise<{ message: string }> => {
+    // Tell the backend to invalidate the refresh token
+    // Don't clear session here - let AuthContext handle it
+    const response = await apiClient.post<{ message: string }>(
+        "/auth/logout",
+        {}
+    );
+    return response;
 };
 
 const getProfile = (): Promise<User> => {
     return apiClient.get("/auth/me");
 };
 
+const refreshToken = async (): Promise<{ accessToken: string }> => {
+    return apiClient.post("/auth/refresh", {});
+};
+
 export const AuthService = {
     login,
+    registerEmployee,
+    registerVendor,
     logout,
     getProfile,
+    refreshToken,
 };
