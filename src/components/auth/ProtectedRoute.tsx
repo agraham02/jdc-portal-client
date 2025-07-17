@@ -1,7 +1,7 @@
 "use client";
 
-import { ReactNode } from "react";
-import { redirect } from "next/navigation";
+import { ReactNode, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/contexts/auth-context";
 import { RoleName } from "@/lib/types/auth";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -31,15 +31,23 @@ export function ProtectedRoute({
         hasPermission,
         isAccountActive,
     } = useAuth();
+    const router = useRouter();
+
+    // Handle redirects with useEffect to prevent hooks issues
+    useEffect(() => {
+        if (!isLoading && !isAuthenticated) {
+            router.push("/login");
+        }
+    }, [isLoading, isAuthenticated, router]);
 
     // Show loading while checking auth status
     if (isLoading) {
         return <LoadingSpinner />;
     }
 
-    // Redirect to login if not authenticated
+    // Show loading while redirecting to login
     if (!isAuthenticated) {
-        redirect("/login");
+        return <LoadingSpinner />;
     }
 
     // Check if account is active (if required)
