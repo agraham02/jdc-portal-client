@@ -7,6 +7,7 @@ import {
     useState,
     ReactNode,
 } from "react";
+import { useRouter } from "next/navigation";
 import { AuthService } from "@/lib/services";
 import { session } from "@/lib/session";
 import {
@@ -52,6 +53,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<AuthUser | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isInitialized, setIsInitialized] = useState(false);
+    const router = useRouter();
 
     const isAuthenticated = !!user;
 
@@ -112,14 +115,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const isEmployee = (): boolean => hasRole(RoleName.EMPLOYEE);
     const isVendor = (): boolean => hasRole(RoleName.VENDOR);
 
-    // Explicit token refresh method
     const refreshToken = async (): Promise<boolean> => {
         try {
             const { accessToken } = await AuthService.refreshToken();
             session.setAccessToken(accessToken);
+
+            // Optionally refresh user data after token refresh
+            try {
+                await refreshUser();
+            } catch (error) {
+                // Don't fail the token refresh if user refresh fails
+                console.warn("User refresh failed after token refresh:", error);
+            }
+
             return true;
         } catch (error) {
             console.error("Token refresh failed:", error);
+            // Clear session if refresh fails
+            session.destroy();
+            setUser(null);
+            setIsInitialized(true); // Mark as initialized even on failure
+
+            // Redirect to login if refresh fails (user session expired)
+            router.push("/login");
+
             return false;
         }
     };
@@ -131,7 +150,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 credentials
             );
             setUser(authenticatedUser as AuthUser);
+            setIsInitialized(true); // Mark as initialized after successful login
             return authenticatedUser as AuthUser;
+        } catch (error) {
+            console.error("Login failed:", error);
+            setUser(null);
+            throw error; // Re-throw to allow login component to handle error
         } finally {
             setIsLoading(false);
         }
@@ -140,10 +164,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const logout = async (): Promise<void> => {
         setIsLoading(true);
         try {
-            await AuthService.logout();
+            // Clear user state immediately for responsive UI
             setUser(null);
+            setIsInitialized(false); // Reset initialization flag
+
+            // Attempt to notify backend to revoke refresh token
+            await AuthService.logout();
+        } catch (error) {
+            console.error("Logout API call failed:", error);
+            // Don't throw error - logout should always succeed on frontend
         } finally {
+            // Ensure session is always cleared
+            session.destroy();
             setIsLoading(false);
+            router.push("/login");
         }
     };
 
@@ -159,42 +193,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Initialize auth state on mount
     useEffect(() => {
+        // Skip initialization if already initialized (after login)
+        if (isInitialized) {
+            return;
+        }
+
         const initializeAuth = async () => {
             try {
                 const token = session.getAccessToken();
 
                 if (!token) {
-                    // No access token - try to refresh to see if we have a valid refresh token
+                    // No access token in memory - try to refresh using httpOnly cookie
                     try {
                         const refreshResult = await AuthService.refreshToken();
                         session.setAccessToken(refreshResult.accessToken);
 
-                        // Now get the user profile with the new token
+                        // Get the user profile with the new token
                         const user = await AuthService.getProfile();
                         setUser(user as AuthUser);
+                        setIsInitialized(true);
                         return;
                     } catch {
-                        // No valid refresh token or refresh failed
                         setUser(null);
+                        setIsInitialized(true);
                         return;
                     }
                 }
 
-                // We have an access token - try to get profile
-                // If the token is expired, the API client will automatically refresh it
-                const user = await AuthService.getProfile();
-                setUser(user as AuthUser);
-            } catch (error) {
-                console.error("Failed to initialize auth:", error);
-                // If profile fetch fails (including refresh failure), clear user state
+                // We have an access token in memory - try to get profile
+                // The API client will automatically handle token refresh if needed
+                try {
+                    const user = await AuthService.getProfile();
+                    setUser(user as AuthUser);
+                    setIsInitialized(true);
+                } catch (profileError) {
+                    // Profile fetch failed - token may be invalid/expired
+                    console.error("Failed to get user profile:", profileError);
+                    setUser(null);
+                    setIsInitialized(true);
+                }
+            } catch (authError) {
+                console.error("Failed to initialize auth:", authError);
                 setUser(null);
+                setIsInitialized(true);
             } finally {
                 setIsLoading(false);
             }
         };
 
         initializeAuth();
-    }, []);
+    }, [isInitialized]); // Add isInitialized as dependency
 
     return (
         <AuthContext.Provider
