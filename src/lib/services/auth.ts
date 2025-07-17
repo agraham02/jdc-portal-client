@@ -26,7 +26,10 @@ const registerEmployee = async (
     // Remove confirmPassword before sending to backend
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { confirmPassword, ...registrationData } = data;
-    return apiClient.post<{ message: string }>("/auth/register/employee", registrationData);
+    return apiClient.post<{ message: string }>(
+        "/auth/register/employee",
+        registrationData
+    );
 };
 
 const registerVendor = async (
@@ -35,19 +38,20 @@ const registerVendor = async (
     // Remove confirmPassword before sending to backend
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { confirmPassword, ...registrationData } = data;
-    return apiClient.post("/auth/register/vendor", registrationData);
+    return apiClient.post<{ message: string }>(
+        "/auth/register/vendor",
+        registrationData
+    );
 };
 
-const logout = async () => {
-    try {
-        // Tell the backend to invalidate the refresh token
-        await apiClient.post("/auth/logout", {});
-    } catch (error) {
-        console.error("Logout failed", error);
-    } finally {
-        // Always clear the client-side session
-        session.destroy();
-    }
+const logout = async (): Promise<{ message: string }> => {
+    // Tell the backend to invalidate the refresh token
+    // Don't clear session here - let AuthContext handle it
+    const response = await apiClient.post<{ message: string }>(
+        "/auth/logout",
+        {}
+    );
+    return response;
 };
 
 const getProfile = (): Promise<User> => {

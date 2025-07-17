@@ -1,33 +1,46 @@
-import { parseCookies, setCookie, destroyCookie } from "nookies";
+// Memory-only session management for maximum security
+// Access tokens are stored in memory only (not in cookies/localStorage)
+// Refresh tokens are handled automatically via httpOnly cookies
 
-const ACCESS_TOKEN_KEY = "accessToken";
-
-// Debug function to check all cookies (for development only)
-const debugCookies = () => {
-    const cookies = parseCookies();
-    // console.log("All available cookies:", cookies); // Disabled in production
-    return cookies;
-};
+let accessToken: string | null = null;
 
 export const session = {
-    setAccessToken: (accessToken: string) => {
-        setCookie(null, ACCESS_TOKEN_KEY, accessToken, {
-            // A shorter lifespan for access tokens is a good practice
-            maxAge: 15 * 60, // 15 minutes
-            path: "/",
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "strict",
-        });
+    /**
+     * Set access token in memory only (secure against XSS)
+     */
+    setAccessToken: (token: string) => {
+        accessToken = token;
     },
 
-    getAccessToken: () => {
-        const cookies = parseCookies();
-        return cookies[ACCESS_TOKEN_KEY];
+    /**
+     * Get access token from memory
+     */
+    getAccessToken: (): string | null => {
+        return accessToken;
     },
 
+    /**
+     * Clear access token from memory
+     */
     destroy: () => {
-        destroyCookie(null, ACCESS_TOKEN_KEY, { path: "/" });
+        accessToken = null;
     },
 
-    ...(process.env.NODE_ENV !== "production" ? { debugCookies } : {}),
+    /**
+     * Check if user has a valid access token
+     */
+    hasValidToken: (): boolean => {
+        return !!accessToken;
+    },
+
+    // Debug function for development only
+    ...(process.env.NODE_ENV !== "production"
+        ? {
+              debug: () => ({
+                  hasToken: !!accessToken,
+                  tokenExists: accessToken ? "Yes" : "No",
+                  // Don't log actual token value for security
+              }),
+          }
+        : {}),
 };
