@@ -7,6 +7,10 @@ interface UseUnreadCountReturn {
     refetch: () => Promise<void>;
 }
 
+/**
+ * Hook to get unread notification count from the global context
+ * This ensures all components share the same notification state
+ */
 export function useUnreadCount(): UseUnreadCountReturn {
     const context = useNotificationContext();
 
