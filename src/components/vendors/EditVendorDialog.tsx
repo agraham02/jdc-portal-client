@@ -73,10 +73,10 @@ export function EditVendorDialog({
     useEffect(() => {
         if (vendor && open) {
             reset({
-                firstName: vendor.user.firstName || "",
-                lastName: vendor.user.lastName || "",
-                contactEmail: vendor.user.contactEmail || "",
-                contactPhone: vendor.user.contactPhone || "",
+                firstName: vendor.userId.firstName || "",
+                lastName: vendor.userId.lastName || "",
+                contactEmail: vendor.userId.contactEmail || "",
+                contactPhone: vendor.userId.contactPhone || "",
                 companyName: vendor.companyName,
                 contactName: vendor.contactName || "",
                 website: vendor.website || "",
@@ -175,7 +175,7 @@ export function EditVendorDialog({
                             <Input
                                 id="email"
                                 type="email"
-                                value={vendor.user.email}
+                                value={vendor.userId.email}
                                 disabled={true}
                                 className="bg-muted"
                             />
