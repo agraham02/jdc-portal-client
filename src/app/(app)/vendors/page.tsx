@@ -56,6 +56,7 @@ export default function VendorsPage() {
         try {
             setLoading(true);
             const response = await VendorService.getVendors(currentPage, limit);
+            console.log(response);
             setVendors(response.data ?? []);
             setTotalVendors(response.total ?? 0);
         } catch (error) {
@@ -185,14 +186,14 @@ export default function VendorsPage() {
             vendor.companyName
                 .toLowerCase()
                 .includes(searchQuery.toLowerCase()) ||
-            vendor.user.firstName
+            vendor.userId.firstName
                 ?.toLowerCase()
                 .includes(searchQuery.toLowerCase()) ||
-            vendor.user.lastName
+            vendor.userId.lastName
                 ?.toLowerCase()
                 .includes(searchQuery.toLowerCase()) ||
-            vendor.user.email
-                .toLowerCase()
+            vendor.userId.email
+                ?.toLowerCase()
                 .includes(searchQuery.toLowerCase()) ||
             vendor.servicesOffered?.some((service) =>
                 service.toLowerCase().includes(searchQuery.toLowerCase())
@@ -204,13 +205,15 @@ export default function VendorsPage() {
             vendor.companyName
                 .toLowerCase()
                 .includes(searchQuery.toLowerCase()) ||
-            vendor.user.firstName
+            vendor.userId.firstName
                 ?.toLowerCase()
                 .includes(searchQuery.toLowerCase()) ||
-            vendor.user.lastName
+            vendor.userId.lastName
                 ?.toLowerCase()
                 .includes(searchQuery.toLowerCase()) ||
-            vendor.user.email.toLowerCase().includes(searchQuery.toLowerCase())
+            vendor.userId.email
+                ?.toLowerCase()
+                .includes(searchQuery.toLowerCase())
     );
 
     const totalPages = Math.ceil(totalVendors / limit);
@@ -276,7 +279,8 @@ export default function VendorsPage() {
                                 {
                                     vendors.filter(
                                         (v) =>
-                                            v.user.status === UserStatus.ACTIVE
+                                            v.userId.status ===
+                                            UserStatus.ACTIVE
                                     ).length
                                 }
                             </div>
@@ -365,24 +369,28 @@ export default function VendorsPage() {
                                                     <div className="space-y-1">
                                                         <div className="font-medium">
                                                             {
-                                                                vendor.user
+                                                                vendor.userId
                                                                     .firstName
                                                             }{" "}
                                                             {
-                                                                vendor.user
+                                                                vendor.userId
                                                                     .lastName
                                                             }
                                                         </div>
                                                         <div className="text-sm text-muted-foreground flex items-center gap-1">
                                                             <Mail className="w-3 h-3" />
-                                                            {vendor.user.email}
+                                                            {
+                                                                vendor.userId
+                                                                    .email
+                                                            }
                                                         </div>
-                                                        {vendor.user
+                                                        {vendor.userId
                                                             .contactPhone && (
                                                             <div className="text-sm text-muted-foreground flex items-center gap-1">
                                                                 <Phone className="w-3 h-3" />
                                                                 {
-                                                                    vendor.user
+                                                                    vendor
+                                                                        .userId
                                                                         .contactPhone
                                                                 }
                                                             </div>
@@ -431,7 +439,7 @@ export default function VendorsPage() {
                                                 </TableCell>
                                                 <TableCell>
                                                     {getStatusBadge(
-                                                        vendor.user.status
+                                                        vendor.userId.status
                                                     )}
                                                 </TableCell>
                                                 <TableCell>

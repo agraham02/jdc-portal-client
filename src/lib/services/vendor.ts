@@ -2,7 +2,7 @@ import { apiClient } from "@/lib/api";
 import { User } from "@/lib/types/auth";
 
 export interface VendorData {
-    userId: string;
+    // userId: string;
     companyName: string;
     contactName?: string;
     website?: string;
@@ -12,7 +12,7 @@ export interface VendorData {
 
 export interface Vendor extends VendorData {
     _id: string;
-    user: User;
+    userId: User;
     createdAt: string;
     updatedAt: string;
 }
