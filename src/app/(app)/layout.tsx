@@ -8,6 +8,10 @@ import { ToastProvider } from "@/components/ui/use-toast";
 import { AuthDebugPanel } from "@/components/auth/AuthDebugPanel";
 
 export default function AppLayout({ children }: { children: ReactNode }) {
+    const DEBUG_ENABLED =
+        process.env.NODE_ENV !== "production" ||
+        process.env.NEXT_PUBLIC_DEBUG_AUTH === "true";
+
     return (
         <AuthProvider>
             <NotificationProvider>
@@ -18,9 +22,11 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                             {children}
                         </main>
                         {/* Debug panel - only shows in development or when debug is enabled */}
-                        <div className="fixed bottom-4 right-4 z-50">
-                            <AuthDebugPanel />
-                        </div>
+                        {DEBUG_ENABLED && (
+                            <div className="fixed bottom-4 right-4 z-50">
+                                <AuthDebugPanel />
+                            </div>
+                        )}
                     </div>
                 </ToastProvider>
             </NotificationProvider>
