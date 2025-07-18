@@ -64,7 +64,9 @@ export class AuthDebugger {
             return { status: response.status, ok: response.ok, data };
         } catch (error) {
             this.error("Backend connection test failed", error);
-            return { error: error instanceof Error ? error.message : "Unknown error" };
+            return {
+                error: error instanceof Error ? error.message : "Unknown error",
+            };
         }
     }
 
@@ -72,15 +74,19 @@ export class AuthDebugger {
         if (!DEBUG_ENABLED) return null;
 
         try {
-            const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
-            const response = await fetch(`${baseUrl}/auth/debug/cloudfront-test`, {
-                method: "GET",
-                credentials: "include",
-                headers: {
-                    "Authorization": "Bearer test-token-for-cloudfront-test",
-                    "Content-Type": "application/json",
+            const baseUrl =
+                process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+            const response = await fetch(
+                `${baseUrl}/auth/debug/cloudfront-test`,
+                {
+                    method: "GET",
+                    credentials: "include",
+                    headers: {
+                        Authorization: "Bearer test-token-for-cloudfront-test",
+                        "Content-Type": "application/json",
+                    },
                 }
-            });
+            );
 
             const data = await response.json();
             this.log("CloudFront configuration test", {
@@ -92,7 +98,9 @@ export class AuthDebugger {
             return { status: response.status, ok: response.ok, data };
         } catch (error) {
             this.error("CloudFront test failed", error);
-            return { error: error instanceof Error ? error.message : "Unknown error" };
+            return {
+                error: error instanceof Error ? error.message : "Unknown error",
+            };
         }
     }
 
@@ -102,13 +110,13 @@ export class AuthDebugger {
         try {
             const baseUrl =
                 process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
-            
+
             // Test with Authorization header to see if it gets through
             const token = session.getAccessToken();
             const testHeaders: Record<string, string> = {
                 "Content-Type": "application/json",
             };
-            
+
             if (token) {
                 testHeaders["Authorization"] = `Bearer ${token}`;
             }
@@ -131,10 +139,10 @@ export class AuthDebugger {
             });
 
             const data = await response.json();
-            
+
             // Analyze the response for common issues
             const analysis = this.analyzeHeaderResponse(data);
-            
+
             this.log("Headers debug response", {
                 status: response.status,
                 ok: response.ok,
@@ -145,37 +153,64 @@ export class AuthDebugger {
             return { status: response.status, ok: response.ok, data, analysis };
         } catch (error) {
             this.error("Headers debug failed", error);
-            return { error: error instanceof Error ? error.message : "Unknown error" };
+            return {
+                error: error instanceof Error ? error.message : "Unknown error",
+            };
         }
     }
 
-    static analyzeHeaderResponse(debugResponse: any) {
-        const issues = [];
-        const recommendations = [];
+    static analyzeHeaderResponse(debugResponse: unknown) {
+        const issues: string[] = [];
+        const recommendations: string[] = [];
 
-        if (debugResponse?.debugInfo?.requestAnalysis?.isCloudFront) {
+        // Type guard to safely access debugResponse properties
+        const response = debugResponse as {
+            debugInfo?: {
+                requestAnalysis?: {
+                    isCloudFront?: boolean;
+                    isProxied?: boolean;
+                    potentialIssues?: string[];
+                };
+                headers?: {
+                    authorization?: string;
+                };
+                cookies?: {
+                    present?: unknown[];
+                };
+            };
+        };
+
+        if (response?.debugInfo?.requestAnalysis?.isCloudFront) {
             issues.push("Request is being proxied through CloudFront");
-            
-            if (!debugResponse.debugInfo.headers.authorization) {
+
+            if (!response.debugInfo.headers?.authorization) {
                 issues.push("Authorization header not reaching backend");
-                recommendations.push("Configure CloudFront to forward Authorization headers");
+                recommendations.push(
+                    "Configure CloudFront to forward Authorization headers"
+                );
             }
-            
-            if (debugResponse.debugInfo.cookies.present.length === 0) {
+
+            if (response.debugInfo.cookies?.present?.length === 0) {
                 issues.push("No cookies reaching backend");
-                recommendations.push("Configure CloudFront to forward Cookie headers");
+                recommendations.push(
+                    "Configure CloudFront to forward Cookie headers"
+                );
             }
         }
 
-        if (debugResponse?.debugInfo?.requestAnalysis?.potentialIssues?.length > 0) {
-            issues.push(...debugResponse.debugInfo.requestAnalysis.potentialIssues);
+        if (
+            response?.debugInfo?.requestAnalysis?.potentialIssues?.length &&
+            response.debugInfo.requestAnalysis.potentialIssues.length > 0
+        ) {
+            issues.push(...response.debugInfo.requestAnalysis.potentialIssues);
         }
 
         return {
             issues,
             recommendations,
-            isProxied: debugResponse?.debugInfo?.requestAnalysis?.isProxied || false,
-            isCloudFront: debugResponse?.debugInfo?.requestAnalysis?.isCloudFront || false,
+            isProxied: response?.debugInfo?.requestAnalysis?.isProxied || false,
+            isCloudFront:
+                response?.debugInfo?.requestAnalysis?.isCloudFront || false,
         };
     }
 
