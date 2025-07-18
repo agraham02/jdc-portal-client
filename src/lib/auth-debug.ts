@@ -1,6 +1,8 @@
 // Debug utilities for authentication troubleshooting
 // Only active in development or when explicitly enabled
 
+import { session } from "./session";
+
 // const DEBUG_ENABLED =
 //   process.env.NODE_ENV !== 'production' ||
 //   process.env.NEXT_PUBLIC_DEBUG_AUTH === 'true';
@@ -107,9 +109,9 @@ export class AuthDebugger {
         try {
             const baseUrl =
                 process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
-            const token =
-                localStorage.getItem("accessToken") ||
-                sessionStorage.getItem("accessToken");
+
+            // Get token from memory-based session manager (not localStorage)
+            const token = session.getAccessToken();
 
             const response = await fetch(`${baseUrl}/auth/debug/token-info`, {
                 method: "GET",
@@ -120,17 +122,24 @@ export class AuthDebugger {
                 },
             });
 
-            const data = await response.json();
+            const data = await response
+                .json()
+                .catch(() => ({ error: "Failed to parse response" }));
             this.log("Token info debug response", {
                 status: response.status,
                 ok: response.ok,
                 data,
-                tokenFromStorage: token ? "Present" : "Not found",
+                tokenFromSession: token ? "Present" : "Not found",
             });
 
-            return data;
+            return {
+                status: response.status,
+                ok: response.ok,
+                data,
+                tokenFromSession: token ? "Present" : "Not found",
+            };
         } catch (error) {
-            this.error("Token info debug failed", error);
+            this.error("Token info test failed", error);
             return null;
         }
     }
@@ -138,22 +147,28 @@ export class AuthDebugger {
     static logSessionState() {
         if (!DEBUG_ENABLED) return;
 
+        const sessionDebug = session.debug ? session.debug() : null;
+
         this.log("Current session state", {
+            memorySession: sessionDebug || {
+                hasToken: session.hasValidToken(),
+                tokenExists: session.getAccessToken() ? "Yes" : "No",
+            },
             localStorage: {
-                accessToken: localStorage.getItem("accessToken")
-                    ? "Present"
-                    : "Not found",
-                refreshToken: localStorage.getItem("refreshToken")
-                    ? "Present"
-                    : "Not found",
+                keys: Object.keys(localStorage),
+                authRelated: Object.keys(localStorage).filter(
+                    (key) =>
+                        key.toLowerCase().includes("token") ||
+                        key.toLowerCase().includes("auth")
+                ),
             },
             sessionStorage: {
-                accessToken: sessionStorage.getItem("accessToken")
-                    ? "Present"
-                    : "Not found",
-                refreshToken: sessionStorage.getItem("refreshToken")
-                    ? "Present"
-                    : "Not found",
+                keys: Object.keys(sessionStorage),
+                authRelated: Object.keys(sessionStorage).filter(
+                    (key) =>
+                        key.toLowerCase().includes("token") ||
+                        key.toLowerCase().includes("auth")
+                ),
             },
             cookies: document.cookie,
             currentUrl: window.location.href,
@@ -177,7 +192,96 @@ export class AuthDebugger {
         // Test 4: Token info (if available)
         await this.testTokenInfo();
 
+        // Test 5: Login flow
+        await this.testLogin();
+
         this.log("=== FULL AUTH DIAGNOSTIC COMPLETE ===");
+    }
+
+    static async testLogin(email?: string, password?: string) {
+        if (!DEBUG_ENABLED) return null;
+
+        // Use test credentials if none provided
+        const testEmail = email || "admin.test@jdc.com";
+        const testPassword = password || "Admin123!";
+
+        this.log("Testing login flow", { email: testEmail });
+
+        try {
+            const baseUrl =
+                process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+
+            const response = await fetch(`${baseUrl}/auth/login`, {
+                method: "POST",
+                credentials: "include",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    email: testEmail,
+                    password: testPassword,
+                }),
+            });
+
+            const data = await response
+                .json()
+                .catch(() => ({ error: "Failed to parse response" }));
+
+            if (response.ok && data.accessToken) {
+                this.log("Login successful, setting token in session");
+                session.setAccessToken(data.accessToken);
+
+                // Test the /auth/me endpoint immediately after login
+                this.log("Testing /auth/me endpoint with new token");
+                const meResponse = await fetch(`${baseUrl}/auth/me`, {
+                    method: "GET",
+                    credentials: "include",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${data.accessToken}`,
+                    },
+                });
+
+                const meData = await meResponse
+                    .json()
+                    .catch(() => ({ error: "Failed to parse me response" }));
+
+                this.log("Login test complete", {
+                    loginStatus: response.status,
+                    loginOk: response.ok,
+                    tokenReceived: !!data.accessToken,
+                    meStatus: meResponse.status,
+                    meOk: meResponse.ok,
+                    userData: meData,
+                });
+
+                return {
+                    loginStatus: response.status,
+                    loginOk: response.ok,
+                    loginData: data,
+                    tokenReceived: !!data.accessToken,
+                    meStatus: meResponse.status,
+                    meOk: meResponse.ok,
+                    meData,
+                };
+            } else {
+                this.error("Login failed", {
+                    status: response.status,
+                    data,
+                });
+                return {
+                    loginStatus: response.status,
+                    loginOk: response.ok,
+                    loginData: data,
+                    tokenReceived: false,
+                };
+            }
+        } catch (error) {
+            this.error("Login test failed with exception", error);
+            return {
+                error: error instanceof Error ? error.message : "Unknown error",
+            };
+        }
     }
 }
 
