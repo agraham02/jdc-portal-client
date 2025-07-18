@@ -4,8 +4,8 @@
 import { session } from "./session";
 
 const DEBUG_ENABLED =
-    process.env.NODE_ENV !== 'production' ||
-    process.env.NEXT_PUBLIC_DEBUG_AUTH === 'true';
+    process.env.NODE_ENV !== "production" ||
+    process.env.NEXT_PUBLIC_DEBUG_AUTH === "true";
 
 export class AuthDebugger {
     private static logPrefix = "[AUTH DEBUG]";
@@ -321,16 +321,18 @@ export class AuthDebugger {
                 email = email || "admin.test@jdc.com";
                 password = password || "Admin123!";
             } else {
-                throw new Error("Email and password are required in production mode");
+                throw new Error(
+                    "Email and password are required in production mode"
+                );
             }
         }
 
         const testEmail = email;
         const testPassword = password;
 
-        this.log("Testing login flow", { 
+        this.log("Testing login flow", {
             email: testEmail,
-            isProduction: process.env.NODE_ENV === "production"
+            isProduction: process.env.NODE_ENV === "production",
         });
 
         try {

@@ -4,13 +4,15 @@ import { useState, useEffect } from "react";
 import { AuthDebugger } from "@/lib/auth-debug";
 import { apiClient } from "@/lib/api";
 import { session } from "@/lib/session";
+import { useAuth } from "@/lib/contexts/auth-context";
 
 export default function AuthDebugPage() {
+    const { user, isLoading } = useAuth();
     const [logs, setLogs] = useState<string[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isTestLoading, setIsTestLoading] = useState(false);
 
     // Only allow debug page in development or when explicitly enabled
-    const DEBUG_ENABLED = 
+    const DEBUG_ENABLED =
         process.env.NODE_ENV !== "production" ||
         process.env.NEXT_PUBLIC_DEBUG_AUTH === "true";
 
@@ -21,8 +23,11 @@ export default function AuthDebugPage() {
 
     const clearLogs = () => setLogs([]);
 
-    const runTest = async (testName: string, testFn: () => Promise<unknown>) => {
-        setIsLoading(true);
+    const runTest = async (
+        testName: string,
+        testFn: () => Promise<unknown>
+    ) => {
+        setIsTestLoading(true);
         addLog(`Starting test: ${testName}`);
         try {
             const result = await testFn();
@@ -37,7 +42,7 @@ export default function AuthDebugPage() {
                 }`
             );
         } finally {
-            setIsLoading(false);
+            setIsTestLoading(false);
         }
     };
 
@@ -57,8 +62,13 @@ export default function AuthDebugPage() {
         {
             name: "Session State",
             fn: async () => {
-                AuthDebugger.logSessionState();
-                return session.debug?.();
+                try {
+                    AuthDebugger.logSessionState();
+                    return session.debug?.() || "Debug function not available";
+                } catch (error) {
+                    console.error("Session state test error:", error);
+                    throw error;
+                }
             },
         },
         {
@@ -90,10 +100,21 @@ export default function AuthDebugPage() {
         if (DEBUG_ENABLED) {
             addLog("Auth Debug Page loaded");
             addLog(`Environment: ${process.env.NODE_ENV}`);
-            addLog(`API URL: ${process.env.NEXT_PUBLIC_API_URL || "Not set"}`);
-            addLog(
-                `Debug Auth: ${process.env.NEXT_PUBLIC_DEBUG_AUTH || "Not set"}`
-            );
+
+            // Only log API and auth info if user is already logged in
+            const hasToken = session.hasValidToken();
+            if (hasToken) {
+                addLog(
+                    `API URL: ${process.env.NEXT_PUBLIC_API_URL || "Not set"}`
+                );
+                addLog(
+                    `Debug Auth: ${
+                        process.env.NEXT_PUBLIC_DEBUG_AUTH || "Not set"
+                    }`
+                );
+            } else {
+                addLog("Not authenticated - some debug info hidden");
+            }
         }
     }, [DEBUG_ENABLED]);
 
@@ -106,11 +127,44 @@ export default function AuthDebugPage() {
                         Debug Mode Disabled
                     </h1>
                     <p className="text-gray-600 mb-4">
-                        Debug functionality is only available in development mode or when explicitly enabled.
+                        Debug functionality is only available in development
+                        mode or when explicitly enabled.
                     </p>
                     <p className="text-sm text-gray-500">
-                        To enable debug mode in production, set NEXT_PUBLIC_DEBUG_AUTH=true
+                        To enable debug mode in production, set
+                        NEXT_PUBLIC_DEBUG_AUTH=true
                     </p>
+                </div>
+            </div>
+        );
+    }
+
+    // Show loading while auth is being checked
+    if (isLoading) {
+        return (
+            <div className="container mx-auto p-6 max-w-4xl">
+                <div className="text-center">
+                    <h1 className="text-3xl font-bold mb-4">Loading...</h1>
+                    <p className="text-gray-600">Checking authentication...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Require authentication for debug page
+    if (!user) {
+        return (
+            <div className="container mx-auto p-6 max-w-4xl">
+                <div className="text-center">
+                    <h1 className="text-3xl font-bold mb-4 text-orange-600">
+                        Authentication Required
+                    </h1>
+                    <p className="text-gray-600 mb-4">
+                        Please log in to access the debug console.
+                    </p>
+                    <a href="/login" className="text-blue-600 hover:underline">
+                        Go to Login →
+                    </a>
                 </div>
             </div>
         );
@@ -131,7 +185,7 @@ export default function AuthDebugPage() {
                             <button
                                 key={index}
                                 onClick={() => runTest(test.name, test.fn)}
-                                disabled={isLoading}
+                                disabled={isTestLoading}
                                 className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 text-left"
                             >
                                 {test.name}
@@ -161,30 +215,7 @@ export default function AuthDebugPage() {
                     {/* Environment Info */}
                     <div className="mt-6 p-4 bg-gray-100 rounded">
                         <h3 className="font-semibold mb-2">Environment Info</h3>
-                        <pre className="text-sm">
-                            {JSON.stringify(
-                                {
-                                    NODE_ENV: process.env.NODE_ENV,
-                                    // Only show API URL in development
-                                    API_URL: process.env.NODE_ENV === "development" 
-                                        ? process.env.NEXT_PUBLIC_API_URL 
-                                        : "[Hidden in production]",
-                                    DEBUG_AUTH:
-                                        process.env.NEXT_PUBLIC_DEBUG_AUTH || "false",
-                                    current_url:
-                                        typeof window !== "undefined"
-                                            ? window.location.href
-                                            : "SSR",
-                                    // Sanitize user agent to avoid fingerprinting
-                                    user_agent:
-                                        typeof window !== "undefined" && process.env.NODE_ENV === "development"
-                                            ? navigator.userAgent
-                                            : process.env.NODE_ENV === "development" ? "SSR" : "[Hidden in production]",
-                                },
-                                null,
-                                2
-                            )}
-                        </pre>
+                        <EnvironmentInfo />
                     </div>
                 </div>
 
@@ -220,6 +251,40 @@ export default function AuthDebugPage() {
             </div>
         </div>
     );
+}
+
+// Component to handle client-side only environment info to prevent hydration mismatch
+function EnvironmentInfo() {
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    const envInfo = {
+        NODE_ENV: process.env.NODE_ENV,
+        // Only show API URL in development
+        API_URL:
+            process.env.NODE_ENV === "development"
+                ? process.env.NEXT_PUBLIC_API_URL
+                : "[Hidden in production]",
+        DEBUG_AUTH: process.env.NEXT_PUBLIC_DEBUG_AUTH || "false",
+        current_url:
+            mounted && typeof window !== "undefined"
+                ? window.location.href
+                : "Loading...",
+        // Sanitize user agent to avoid fingerprinting
+        user_agent:
+            mounted &&
+            typeof window !== "undefined" &&
+            process.env.NODE_ENV === "development"
+                ? navigator.userAgent
+                : process.env.NODE_ENV === "development"
+                ? "Loading..."
+                : "[Hidden in production]",
+    };
+
+    return <pre className="text-sm">{JSON.stringify(envInfo, null, 2)}</pre>;
 }
 
 function ManualApiTest({ onLog }: { onLog: (message: string) => void }) {
@@ -373,8 +438,8 @@ function LoginTest({ onLog }: { onLog: (message: string) => void }) {
 
             <div className="text-sm text-gray-600">
                 <p>
-                    {process.env.NODE_ENV === "development" 
-                        ? "Default test credentials are pre-filled. " 
+                    {process.env.NODE_ENV === "development"
+                        ? "Default test credentials are pre-filled. "
                         : "Enter your credentials to test the login flow. "}
                     This will test the complete login flow:
                 </p>

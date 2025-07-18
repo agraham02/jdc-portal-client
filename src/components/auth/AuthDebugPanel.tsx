@@ -14,14 +14,18 @@ export function AuthDebugPanel() {
         unknown
     > | null>(null);
 
-    const DEBUG_ENABLED = 
+    const DEBUG_ENABLED =
         process.env.NODE_ENV !== "production" ||
         process.env.NEXT_PUBLIC_DEBUG_AUTH === "true";
 
     useEffect(() => {
         if (DEBUG_ENABLED && session.debug) {
             const interval = setInterval(() => {
-                setSessionInfo(session.debug!());
+                try {
+                    setSessionInfo(session.debug!());
+                } catch (error) {
+                    console.error("Error updating session info:", error);
+                }
             }, 5000);
             return () => clearInterval(interval);
         }
