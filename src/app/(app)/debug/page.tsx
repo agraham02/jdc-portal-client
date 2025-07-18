@@ -9,6 +9,11 @@ export default function AuthDebugPage() {
     const [logs, setLogs] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
+    // Only allow debug page in development or when explicitly enabled
+    const DEBUG_ENABLED = 
+        process.env.NODE_ENV !== "production" ||
+        process.env.NEXT_PUBLIC_DEBUG_AUTH === "true";
+
     const addLog = (message: string) => {
         const timestamp = new Date().toLocaleTimeString();
         setLogs((prev) => [...prev, `[${timestamp}] ${message}`]);
@@ -82,13 +87,34 @@ export default function AuthDebugPage() {
     ];
 
     useEffect(() => {
-        addLog("Auth Debug Page loaded");
-        addLog(`Environment: ${process.env.NODE_ENV}`);
-        addLog(`API URL: ${process.env.NEXT_PUBLIC_API_URL || "Not set"}`);
-        addLog(
-            `Debug Auth: ${process.env.NEXT_PUBLIC_DEBUG_AUTH || "Not set"}`
+        if (DEBUG_ENABLED) {
+            addLog("Auth Debug Page loaded");
+            addLog(`Environment: ${process.env.NODE_ENV}`);
+            addLog(`API URL: ${process.env.NEXT_PUBLIC_API_URL || "Not set"}`);
+            addLog(
+                `Debug Auth: ${process.env.NEXT_PUBLIC_DEBUG_AUTH || "Not set"}`
+            );
+        }
+    }, [DEBUG_ENABLED]);
+
+    // Redirect or show error if debug is not enabled
+    if (!DEBUG_ENABLED) {
+        return (
+            <div className="container mx-auto p-6 max-w-4xl">
+                <div className="text-center">
+                    <h1 className="text-3xl font-bold mb-4 text-red-600">
+                        Debug Mode Disabled
+                    </h1>
+                    <p className="text-gray-600 mb-4">
+                        Debug functionality is only available in development mode or when explicitly enabled.
+                    </p>
+                    <p className="text-sm text-gray-500">
+                        To enable debug mode in production, set NEXT_PUBLIC_DEBUG_AUTH=true
+                    </p>
+                </div>
+            </div>
         );
-    }, []);
+    }
 
     return (
         <div className="container mx-auto p-6 max-w-4xl">
@@ -139,17 +165,21 @@ export default function AuthDebugPage() {
                             {JSON.stringify(
                                 {
                                     NODE_ENV: process.env.NODE_ENV,
-                                    API_URL: process.env.NEXT_PUBLIC_API_URL,
+                                    // Only show API URL in development
+                                    API_URL: process.env.NODE_ENV === "development" 
+                                        ? process.env.NEXT_PUBLIC_API_URL 
+                                        : "[Hidden in production]",
                                     DEBUG_AUTH:
-                                        process.env.NEXT_PUBLIC_DEBUG_AUTH,
+                                        process.env.NEXT_PUBLIC_DEBUG_AUTH || "false",
                                     current_url:
                                         typeof window !== "undefined"
                                             ? window.location.href
                                             : "SSR",
+                                    // Sanitize user agent to avoid fingerprinting
                                     user_agent:
-                                        typeof window !== "undefined"
+                                        typeof window !== "undefined" && process.env.NODE_ENV === "development"
                                             ? navigator.userAgent
-                                            : "SSR",
+                                            : process.env.NODE_ENV === "development" ? "SSR" : "[Hidden in production]",
                                 },
                                 null,
                                 2
@@ -285,8 +315,13 @@ function ManualApiTest({ onLog }: { onLog: (message: string) => void }) {
 }
 
 function LoginTest({ onLog }: { onLog: (message: string) => void }) {
-    const [email, setEmail] = useState("admin.test@jdc.com");
-    const [password, setPassword] = useState("Admin123!");
+    // Only pre-fill credentials in development
+    const [email, setEmail] = useState(
+        process.env.NODE_ENV === "development" ? "admin.test@jdc.com" : ""
+    );
+    const [password, setPassword] = useState(
+        process.env.NODE_ENV === "development" ? "Admin123!" : ""
+    );
     const [loading, setLoading] = useState(false);
 
     const testLogin = async () => {
@@ -338,8 +373,10 @@ function LoginTest({ onLog }: { onLog: (message: string) => void }) {
 
             <div className="text-sm text-gray-600">
                 <p>
-                    Default test credentials are pre-filled. This will test the
-                    complete login flow:
+                    {process.env.NODE_ENV === "development" 
+                        ? "Default test credentials are pre-filled. " 
+                        : "Enter your credentials to test the login flow. "}
+                    This will test the complete login flow:
                 </p>
                 <ul className="list-disc list-inside mt-1">
                     <li>POST /auth/login</li>
