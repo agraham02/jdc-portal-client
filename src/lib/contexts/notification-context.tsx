@@ -118,7 +118,8 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
                 setAbortController(null);
             }
         },
-        [abortController, loading]
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [loading] // abortController intentionally excluded to prevent recreation
     );
 
     const refetch = useCallback(() => {
@@ -200,14 +201,15 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
                 setLoading(false);
             }
         }
-    }, [lastParams, pagination.page, pagination.totalPages, loading]);
+    }, [pagination.page, pagination.totalPages, loading, lastParams]);
 
-    // Initial load with minimal data for badge
+    // Initial load with minimal data for badge - only run once
     useEffect(() => {
         if (!initialized) {
-            fetchNotifications({ limit: 5, page: 1 });
+            fetchNotifications({ limit: 10, page: 1 });
         }
-    }, [fetchNotifications, initialized]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [initialized]); // fetchNotifications intentionally excluded to prevent recreation
 
     // Cleanup on unmount
     useEffect(() => {
@@ -243,15 +245,15 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
             error,
             pagination,
             unreadCount,
+            hasMore,
+            lastParams,
+            initialized,
             fetchNotifications,
             refetch,
             markAsRead,
             markAllAsRead,
             deleteNotification,
             loadMore,
-            hasMore,
-            lastParams,
-            initialized,
         ]
     );
 

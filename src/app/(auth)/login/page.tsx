@@ -192,72 +192,74 @@ export default function LoginPage() {
                         </CardContent>
                     </Card>
 
-                    {/* Demo Credentials */}
-                    <Card className="mt-4 border-dashed">
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-sm">
-                                Demo Credentials
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-2 text-xs">
-                            <div className="grid grid-cols-3 gap-2">
-                                <button
-                                    type="button"
-                                    className="p-2 bg-muted/50 rounded w-full text-left hover:bg-muted transition"
-                                    onClick={() =>
-                                        autofill(
-                                            "admin.test@jdc.com",
-                                            "Admin123!"
-                                        )
-                                    }
-                                >
-                                    <p className="font-medium">Admin</p>
-                                    <p className="text-muted-foreground">
-                                        admin.test@jdc.com
-                                    </p>
-                                    <p className="text-muted-foreground">
-                                        Admin123!
-                                    </p>
-                                </button>
-                                <button
-                                    type="button"
-                                    className="p-2 bg-muted/50 rounded w-full text-left hover:bg-muted transition"
-                                    onClick={() =>
-                                        autofill(
-                                            "employee@jdc.com",
-                                            "Password123!"
-                                        )
-                                    }
-                                >
-                                    <p className="font-medium">Employee</p>
-                                    <p className="text-muted-foreground">
-                                        employee@jdc.com
-                                    </p>
-                                    <p className="text-muted-foreground">
-                                        Password123!
-                                    </p>
-                                </button>
-                                <button
-                                    type="button"
-                                    className="p-2 bg-muted/50 rounded w-full text-left hover:bg-muted transition"
-                                    onClick={() =>
-                                        autofill(
-                                            "vendor@jdc.com",
-                                            "Password123!"
-                                        )
-                                    }
-                                >
-                                    <p className="font-medium">Vendor</p>
-                                    <p className="text-muted-foreground">
-                                        vendor@jdc.com
-                                    </p>
-                                    <p className="text-muted-foreground">
-                                        Password123!
-                                    </p>
-                                </button>
-                            </div>
-                        </CardContent>
-                    </Card>
+                    {/* Demo Credentials - Only show in development */}
+                    {process.env.NODE_ENV === "development" && (
+                        <Card className="mt-4 border-dashed">
+                            <CardHeader className="pb-3">
+                                <CardTitle className="text-sm">
+                                    Demo Credentials
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-2 text-xs">
+                                <div className="grid grid-cols-3 gap-2">
+                                    <button
+                                        type="button"
+                                        className="p-2 bg-muted/50 rounded w-full text-left hover:bg-muted transition"
+                                        onClick={() =>
+                                            autofill(
+                                                "admin.test@jdc.com",
+                                                "Admin123!"
+                                            )
+                                        }
+                                    >
+                                        <p className="font-medium">Admin</p>
+                                        <p className="text-muted-foreground">
+                                            admin.test@jdc.com
+                                        </p>
+                                        <p className="text-muted-foreground">
+                                            Admin123!
+                                        </p>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="p-2 bg-muted/50 rounded w-full text-left hover:bg-muted transition"
+                                        onClick={() =>
+                                            autofill(
+                                                "employee@jdc.com",
+                                                "Password123!"
+                                            )
+                                        }
+                                    >
+                                        <p className="font-medium">Employee</p>
+                                        <p className="text-muted-foreground">
+                                            employee@jdc.com
+                                        </p>
+                                        <p className="text-muted-foreground">
+                                            Password123!
+                                        </p>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="p-2 bg-muted/50 rounded w-full text-left hover:bg-muted transition"
+                                        onClick={() =>
+                                            autofill(
+                                                "vendor@jdc.com",
+                                                "Password123!"
+                                            )
+                                        }
+                                    >
+                                        <p className="font-medium">Vendor</p>
+                                        <p className="text-muted-foreground">
+                                            vendor@jdc.com
+                                        </p>
+                                        <p className="text-muted-foreground">
+                                            Password123!
+                                        </p>
+                                    </button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
                 </motion.div>
             </div>
         </PublicRoute>

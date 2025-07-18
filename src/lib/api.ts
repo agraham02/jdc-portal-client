@@ -1,4 +1,5 @@
 import { session } from "./session";
+import { AuthDebugger } from "./auth-debug";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -49,7 +50,8 @@ const refreshAccessToken = async (): Promise<string> => {
     })
         .then(async (response) => {
             if (!response.ok) {
-                throw new Error("Token refresh failed");
+                const errorText = await response.text();
+                throw new Error("Token refresh failed: " + errorText);
             }
 
             const data = await response.json();
@@ -207,7 +209,8 @@ async function request<T>(
             return null as T;
         }
 
-        return await response.json();
+        const responseData = await response.json();
+        return responseData;
     } catch (error) {
         return Promise.reject(error);
     }
