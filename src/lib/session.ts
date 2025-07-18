@@ -4,10 +4,9 @@
 
 let accessToken: string | null = null;
 
-// const DEBUG_ENABLED =
-//     process.env.NODE_ENV !== "production" ||
-//     process.env.NEXT_PUBLIC_DEBUG_AUTH === "true";
-const DEBUG_ENABLED = true;
+const DEBUG_ENABLED =
+    process.env.NODE_ENV !== "production" ||
+    process.env.NEXT_PUBLIC_DEBUG_AUTH === "true";
 
 function debugLog(message: string, data?: unknown) {
     if (!DEBUG_ENABLED) return;

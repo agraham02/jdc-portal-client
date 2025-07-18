@@ -3,10 +3,9 @@
 
 import { session } from "./session";
 
-// const DEBUG_ENABLED =
-//   process.env.NODE_ENV !== 'production' ||
-//   process.env.NEXT_PUBLIC_DEBUG_AUTH === 'true';
-const DEBUG_ENABLED = true; // For demonstration purposes, always enabled
+const DEBUG_ENABLED =
+    process.env.NODE_ENV !== 'production' ||
+    process.env.NEXT_PUBLIC_DEBUG_AUTH === 'true';
 
 export class AuthDebugger {
     private static logPrefix = "[AUTH DEBUG]";
@@ -316,11 +315,23 @@ export class AuthDebugger {
     static async testLogin(email?: string, password?: string) {
         if (!DEBUG_ENABLED) return null;
 
-        // Use test credentials if none provided
-        const testEmail = email || "admin.test@jdc.com";
-        const testPassword = password || "Admin123!";
+        // Only use test credentials in development, require them in production
+        if (!email || !password) {
+            if (process.env.NODE_ENV === "development") {
+                email = email || "admin.test@jdc.com";
+                password = password || "Admin123!";
+            } else {
+                throw new Error("Email and password are required in production mode");
+            }
+        }
 
-        this.log("Testing login flow", { email: testEmail });
+        const testEmail = email;
+        const testPassword = password;
+
+        this.log("Testing login flow", { 
+            email: testEmail,
+            isProduction: process.env.NODE_ENV === "production"
+        });
 
         try {
             const baseUrl =
