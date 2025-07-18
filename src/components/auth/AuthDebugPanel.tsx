@@ -14,7 +14,9 @@ export function AuthDebugPanel() {
         unknown
     > | null>(null);
 
-    const DEBUG_ENABLED = true;
+    const DEBUG_ENABLED = 
+        process.env.NODE_ENV !== "production" ||
+        process.env.NEXT_PUBLIC_DEBUG_AUTH === "true";
 
     useEffect(() => {
         if (DEBUG_ENABLED && session.debug) {
