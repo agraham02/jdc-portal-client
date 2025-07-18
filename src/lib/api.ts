@@ -1,4 +1,5 @@
 import { session } from "./session";
+import { AuthDebugger } from "./auth-debug";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -38,6 +39,7 @@ const refreshAccessToken = async (): Promise<string> => {
     }
 
     isRefreshing = true;
+    AuthDebugger.log('Starting token refresh...');
 
     refreshPromise = fetch(`${BASE_URL}/auth/refresh`, {
         method: "POST",
@@ -48,7 +50,19 @@ const refreshAccessToken = async (): Promise<string> => {
         body: JSON.stringify({}),
     })
         .then(async (response) => {
+            AuthDebugger.log('Token refresh response received', {
+                status: response.status,
+                ok: response.ok,
+                headers: Object.fromEntries(response.headers.entries())
+            });
+
             if (!response.ok) {
+                const errorText = await response.text();
+                AuthDebugger.error('Token refresh failed', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    body: errorText
+                });
                 throw new Error("Token refresh failed");
             }
 
@@ -56,18 +70,23 @@ const refreshAccessToken = async (): Promise<string> => {
             const newToken = data.accessToken;
 
             if (!newToken) {
+                AuthDebugger.error('No access token received in refresh response', data);
                 throw new Error("No access token received");
             }
 
             session.setAccessToken(newToken);
+            AuthDebugger.log('Token refresh successful, new token set');
             return newToken;
         })
         .catch((error) => {
+            AuthDebugger.error('Token refresh error', error);
+            
             // Clear session on refresh failure
             session.destroy();
 
             // Redirect to login page
             if (typeof window !== "undefined") {
+                AuthDebugger.log('Redirecting to login due to refresh failure');
                 window.location.href = "/login";
             }
 
@@ -76,6 +95,7 @@ const refreshAccessToken = async (): Promise<string> => {
         .finally(() => {
             isRefreshing = false;
             refreshPromise = null;
+            AuthDebugger.log('Token refresh process completed');
         });
 
     return refreshPromise;
@@ -151,7 +171,23 @@ async function request<T>(
     };
 
     try {
+        AuthDebugger.log(`Making API request: ${endpoint}`, {
+            method: config.method,
+            hasToken: !!token,
+            credentials: config.credentials,
+            headers: {
+                ...defaultHeaders,
+                Authorization: token ? 'Bearer [TOKEN]' : 'Not present'
+            }
+        });
+
         const response = await fetch(url, config);
+
+        AuthDebugger.log(`API response received: ${endpoint}`, {
+            status: response.status,
+            ok: response.ok,
+            statusText: response.statusText
+        });
 
         // Debug logging in development
         if (
@@ -168,10 +204,18 @@ async function request<T>(
                 .json()
                 .catch(() => ({ message: response.statusText }));
 
+            AuthDebugger.error(`API request failed: ${endpoint}`, {
+                status: response.status,
+                errorData
+            });
+
             // Handle 401 Unauthorized - Token expired
             if (response.status === 401 && endpoint !== "/auth/refresh") {
+                AuthDebugger.log('401 detected, attempting token refresh');
+                
                 // If already refreshing, queue this request
                 if (isRefreshing) {
+                    AuthDebugger.log('Token refresh in progress, queueing request');
                     return new Promise<T>((resolve, reject) => {
                         requestQueue.push({
                             resolve: resolve as (value: unknown) => void,
@@ -189,10 +233,12 @@ async function request<T>(
                     processQueue();
 
                     // Retry original request with new token
+                    AuthDebugger.log('Retrying original request with new token');
                     return request<T>(endpoint, options);
                 } catch (refreshError) {
                     // Process queue with error
                     processQueue(refreshError);
+                    AuthDebugger.error('Token refresh failed, authentication failed');
                     throw new Error(
                         "Authentication failed - please log in again"
                     );
@@ -207,8 +253,11 @@ async function request<T>(
             return null as T;
         }
 
-        return await response.json();
+        const responseData = await response.json();
+        AuthDebugger.log(`API request successful: ${endpoint}`);
+        return responseData;
     } catch (error) {
+        AuthDebugger.error(`API request exception: ${endpoint}`, error);
         return Promise.reject(error);
     }
 }
