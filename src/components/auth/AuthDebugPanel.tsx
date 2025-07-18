@@ -9,17 +9,18 @@ import { useState, useEffect } from "react";
 
 export function AuthDebugPanel() {
     const { user, refreshToken, refreshUser, logout } = useAuth();
-    const [sessionInfo, setSessionInfo] = useState<any>(null);
+    const [sessionInfo, setSessionInfo] = useState<Record<
+        string,
+        unknown
+    > | null>(null);
 
-    const DEBUG_ENABLED = 
-        process.env.NODE_ENV !== 'production' || 
-        process.env.NEXT_PUBLIC_DEBUG_AUTH === 'true';
+    const DEBUG_ENABLED = true;
 
     useEffect(() => {
         if (DEBUG_ENABLED && session.debug) {
             const interval = setInterval(() => {
                 setSessionInfo(session.debug!());
-            }, 1000);
+            }, 5000);
             return () => clearInterval(interval);
         }
     }, [DEBUG_ENABLED]);
@@ -47,7 +48,10 @@ export function AuthDebugPanel() {
     const checkToken = () => {
         const token = session.getAccessToken();
         console.log("Current access token:", token ? "exists" : "not found");
-        AuthDebugger.log("Token check", { exists: !!token, length: token?.length });
+        AuthDebugger.log("Token check", {
+            exists: !!token,
+            length: token?.length,
+        });
     };
 
     const runFullDiagnostic = async () => {
@@ -65,7 +69,13 @@ export function AuthDebugPanel() {
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     Auth Debug Panel
-                    <div className={`w-2 h-2 rounded-full ${sessionInfo?.hasToken ? 'bg-green-400' : 'bg-red-400'}`}></div>
+                    <div
+                        className={`w-2 h-2 rounded-full ${
+                            sessionInfo?.hasToken
+                                ? "bg-green-400"
+                                : "bg-red-400"
+                        }`}
+                    ></div>
                 </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
@@ -79,13 +89,21 @@ export function AuthDebugPanel() {
                     <Button onClick={checkToken} variant="outline" size="sm">
                         Check Token
                     </Button>
-                    <Button onClick={handleManualRefresh} variant="outline" size="sm">
+                    <Button
+                        onClick={handleManualRefresh}
+                        variant="outline"
+                        size="sm"
+                    >
                         Manual Refresh
                     </Button>
                     <Button onClick={testBackend} variant="outline" size="sm">
                         Test Backend
                     </Button>
-                    <Button onClick={runFullDiagnostic} variant="outline" size="sm">
+                    <Button
+                        onClick={runFullDiagnostic}
+                        variant="outline"
+                        size="sm"
+                    >
                         Full Diagnostic
                     </Button>
                     <Button onClick={clearToken} variant="outline" size="sm">

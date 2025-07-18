@@ -9,7 +9,7 @@ let accessToken: string | null = null;
 //     process.env.NEXT_PUBLIC_DEBUG_AUTH === "true";
 const DEBUG_ENABLED = true;
 
-function debugLog(message: string, data?: any) {
+function debugLog(message: string, data?: unknown) {
     if (!DEBUG_ENABLED) return;
     console.log(`[SESSION DEBUG] ${message}`, data || "");
 }

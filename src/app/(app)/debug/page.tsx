@@ -16,7 +16,7 @@ export default function AuthDebugPage() {
 
   const clearLogs = () => setLogs([]);
 
-  const runTest = async (testName: string, testFn: () => Promise<any>) => {
+  const runTest = async (testName: string, testFn: () => Promise<unknown>) => {
     setIsLoading(true);
     addLog(`Starting test: ${testName}`);
     try {
