@@ -1,5 +1,4 @@
 import { session } from "./session";
-import { AuthDebugger } from "./auth-debug";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
