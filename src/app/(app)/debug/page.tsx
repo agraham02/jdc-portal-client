@@ -42,6 +42,10 @@ export default function AuthDebugPage() {
             fn: () => AuthDebugger.testConnection(),
         },
         {
+            name: "CloudFront Configuration",
+            fn: () => AuthDebugger.testCloudFrontConfig(),
+        },
+        {
             name: "Debug Headers",
             fn: () => AuthDebugger.debugHeaders({ testSource: "debug-page" }),
         },
