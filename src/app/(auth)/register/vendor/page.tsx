@@ -91,9 +91,11 @@ export default function VendorRegisterPage() {
             setSuccess(true);
         } catch (err: unknown) {
             console.error("Registration failed:", err);
+            console.log(err);
             const error = err as { response?: { data?: { message?: string } } };
             setError(
                 error.response?.data?.message ||
+                    err + "" ||
                     "Registration failed. Please try again."
             );
         } finally {
