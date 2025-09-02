@@ -208,7 +208,7 @@ export default function LoginPage() {
                                         onClick={() =>
                                             autofill(
                                                 "admin.test@jdc.com",
-                                                "Admin123!"
+                                                "Password123!"
                                             )
                                         }
                                     >
@@ -217,7 +217,7 @@ export default function LoginPage() {
                                             admin.test@jdc.com
                                         </p>
                                         <p className="text-muted-foreground">
-                                            Admin123!
+                                            Password123!
                                         </p>
                                     </button>
                                     <button
