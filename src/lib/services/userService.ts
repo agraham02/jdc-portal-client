@@ -1,21 +1,6 @@
 import { apiClient } from "@/lib/api";
 import { User } from "@/lib/types/auth";
 
-export interface UserListResponse {
-    data: User[];
-    total: number;
-    totalPages: number;
-    currentPage: number;
-}
-
-export interface UserQueryParams {
-    page?: number;
-    limit?: number;
-    search?: string;
-    role?: string;
-    status?: string;
-}
-
 class UserService {
     /**
      * Get all users with pagination and filtering (admin only)

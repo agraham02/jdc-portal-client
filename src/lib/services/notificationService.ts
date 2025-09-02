@@ -1,5 +1,4 @@
 import { apiClient } from "@/lib/api";
-import { API_CONFIG } from "@/lib/config";
 import type {
     Notification,
     NotificationListResponse,
