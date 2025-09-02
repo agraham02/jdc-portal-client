@@ -1,8 +1,8 @@
 "use client";
 
 import { ReactNode } from "react";
-import { PermissionGuard } from "@/components/auth/PermissionGuard";
-import { RBAC_PERMISSIONS } from "@/lib/constants/permissions";
+import { ProtectedRoute } from "@/components/routing/ProtectedRoute";
+import { PermissionName as P } from "@/lib/constants/permission-names";
 import {
     Card,
     CardContent,
@@ -11,10 +11,14 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 
-export default function RBACLayout({ children }: { children: ReactNode }) {
+export default function RBACLayout({
+    children,
+}: {
+    children: React.ReactNode;
+}) {
     return (
-        <PermissionGuard
-            requiredPermissions={RBAC_PERMISSIONS.ROLE_MANAGE}
+        <ProtectedRoute
+            anyOf={[P.RBAC_ROLE_MANAGE, P.RBAC_ROLE_READ]}
             fallback={
                 <Card className="max-w-md mx-auto mt-8">
                     <CardHeader>
@@ -44,6 +48,6 @@ export default function RBACLayout({ children }: { children: ReactNode }) {
                 </div>
                 {children}
             </div>
-        </PermissionGuard>
+        </ProtectedRoute>
     );
 }
