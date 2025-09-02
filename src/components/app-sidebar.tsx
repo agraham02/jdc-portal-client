@@ -1,69 +1,31 @@
-import { Calendar, Home, Inbox, Search, Settings } from "lucide-react";
+"use client";
 
 import {
     Sidebar,
     SidebarContent,
     SidebarFooter,
-    SidebarGroup,
-    SidebarGroupContent,
-    SidebarGroupLabel,
     SidebarHeader,
-    SidebarMenu,
-    SidebarMenuButton,
-    SidebarMenuItem,
+    SidebarSeparator,
 } from "@/components/ui/sidebar";
-
-const menuItems = [
-    {
-        title: "Home",
-        url: "#",
-        icon: Home,
-    },
-    {
-        title: "Inbox",
-        url: "#",
-        icon: Inbox,
-    },
-    {
-        title: "Calendar",
-        url: "#",
-        icon: Calendar,
-    },
-    {
-        title: "Search",
-        url: "#",
-        icon: Search,
-    },
-    {
-        title: "Settings",
-        url: "#",
-        icon: Settings,
-    },
-];
+import { NavSection } from "@/components/navigation/NavSection";
+import { menu } from "@/components/navigation/menu-config";
 
 export function AppSidebar() {
     return (
         <Sidebar>
             <SidebarHeader />
             <SidebarContent>
-                <SidebarGroup>
-                    <SidebarGroupLabel>Application</SidebarGroupLabel>
-                    <SidebarGroupContent>
-                        <SidebarMenu>
-                            {menuItems.map((item) => (
-                                <SidebarMenuItem key={item.title}>
-                                    <SidebarMenuButton asChild>
-                                        <a href={item.url}>
-                                            <item.icon />
-                                            <span>{item.title}</span>
-                                        </a>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                            ))}
-                        </SidebarMenu>
-                    </SidebarGroupContent>
-                </SidebarGroup>
-                <SidebarGroup />
+                <NavSection label="Application" items={menu.application} />
+
+                <SidebarSeparator />
+
+                <NavSection label="Procurement" items={menu.procurement} />
+                <NavSection label="People" items={menu.people} />
+                <NavSection label="Admin" items={menu.admin} />
+
+                <SidebarSeparator />
+
+                <NavSection label="Account" items={menu.account} />
             </SidebarContent>
             <SidebarFooter />
         </Sidebar>
