@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactNode } from "react";
-import { useAuth } from "@/lib/contexts/auth-context";
+import { useAuthz } from "@/lib/authz/useAuthz";
 
 interface PermissionGuardProps {
     children: ReactNode;
@@ -16,15 +16,13 @@ export function PermissionGuard({
     requireAll = true,
     fallback = null,
 }: PermissionGuardProps) {
-    const { hasPermission } = useAuth();
+    const { hasAll, hasAny } = useAuthz();
 
     const permissions = Array.isArray(requiredPermissions)
         ? requiredPermissions
         : [requiredPermissions];
 
-    const hasAccess = requireAll
-        ? permissions.every((permission) => hasPermission(permission))
-        : permissions.some((permission) => hasPermission(permission));
+    const hasAccess = requireAll ? hasAll(permissions) : hasAny(permissions);
 
     if (!hasAccess) {
         return <>{fallback}</>;
