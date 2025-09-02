@@ -10,8 +10,12 @@ import {
 import { NavSection } from "@/components/navigation/NavSection";
 import { menu } from "@/components/navigation/menu-config";
 import { ThemeToggle } from "@/components/navigation/ThemeToggle";
+import Link from "next/link";
 
 export function AppSidebar() {
+    const DEBUG_ENABLED =
+        process.env.NODE_ENV !== "production" ||
+        process.env.NEXT_PUBLIC_DEBUG_AUTH === "true";
     return (
         <Sidebar>
             <SidebarHeader />
@@ -30,6 +34,16 @@ export function AppSidebar() {
             </SidebarContent>
             <SidebarFooter>
                 <ThemeToggle />
+                {DEBUG_ENABLED && (
+                    <div className="mt-2 text-xs">
+                        <Link
+                            href="/debug"
+                            className="text-blue-600 hover:underline"
+                        >
+                            Debug
+                        </Link>
+                    </div>
+                )}
             </SidebarFooter>
         </Sidebar>
     );

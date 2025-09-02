@@ -4,31 +4,30 @@ import { useAuth } from "@/lib/contexts/auth-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { session } from "@/lib/session";
-import { AuthDebugger } from "@/lib/auth-debug";
 import { useState, useEffect } from "react";
+import { AuthService } from "@/lib/services/auth";
+import Link from "next/link";
 
 export function AuthDebugPanel() {
-    const { user, refreshToken, refreshUser, logout } = useAuth();
-    const [sessionInfo, setSessionInfo] = useState<Record<
-        string,
-        unknown
-    > | null>(null);
+    const { user, refresh, logout } = useAuth();
+    const [hasToken, setHasToken] = useState<boolean>(
+        !!session.getAccessToken()
+    );
 
     const DEBUG_ENABLED =
         process.env.NODE_ENV !== "production" ||
         process.env.NEXT_PUBLIC_DEBUG_AUTH === "true";
 
     useEffect(() => {
-        if (DEBUG_ENABLED && session.debug) {
-            const interval = setInterval(() => {
-                try {
-                    setSessionInfo(session.debug!());
-                } catch (error) {
-                    console.error("Error updating session info:", error);
-                }
-            }, 5000);
-            return () => clearInterval(interval);
-        }
+        if (!DEBUG_ENABLED) return;
+        const interval = setInterval(() => {
+            try {
+                setHasToken(!!session.getAccessToken());
+            } catch (error) {
+                console.error("Error updating token state:", error);
+            }
+        }, 5000);
+        return () => clearInterval(interval);
     }, [DEBUG_ENABLED]);
 
     if (!DEBUG_ENABLED) {
@@ -37,37 +36,43 @@ export function AuthDebugPanel() {
 
     const handleManualRefresh = async () => {
         console.log("Manual refresh triggered");
-        AuthDebugger.log("Manual refresh triggered from debug panel");
-        const success = await refreshToken();
-        console.log("Manual refresh result:", success);
-        if (success) {
-            await refreshUser();
+        try {
+            await refresh();
+            console.log("Manual refresh complete");
+        } catch (e) {
+            console.error("Manual refresh failed", e);
         }
     };
 
     const clearToken = () => {
-        session.destroy();
-        AuthDebugger.log("Access token cleared from debug panel");
+        session.clear();
+        setHasToken(false);
         console.log("Access token cleared");
     };
 
     const checkToken = () => {
         const token = session.getAccessToken();
         console.log("Current access token:", token ? "exists" : "not found");
-        AuthDebugger.log("Token check", {
-            exists: !!token,
-            length: token?.length,
-        });
     };
 
     const runFullDiagnostic = async () => {
-        AuthDebugger.log("Running full diagnostic from debug panel");
-        await AuthDebugger.runFullDiagnostic();
+        console.log("Running lightweight diagnostic...");
+        try {
+            const me = await AuthService.getProfile();
+            console.log("/auth/me response:", me);
+        } catch (e) {
+            console.error("/auth/me failed", e);
+        }
     };
 
     const testBackend = async () => {
-        AuthDebugger.log("Testing backend connection from debug panel");
-        await AuthDebugger.testConnection();
+        console.log("Testing backend connection (/auth/refresh) ...");
+        try {
+            const res = await AuthService.refreshToken();
+            console.log("/auth/refresh OK", res);
+        } catch (e) {
+            console.error("/auth/refresh failed", e);
+        }
     };
 
     return (
@@ -77,9 +82,7 @@ export function AuthDebugPanel() {
                     Auth Debug Panel
                     <div
                         className={`w-2 h-2 rounded-full ${
-                            sessionInfo?.hasToken
-                                ? "bg-green-400"
-                                : "bg-red-400"
+                            hasToken ? "bg-green-400" : "bg-red-400"
                         }`}
                     ></div>
                 </CardTitle>
@@ -88,7 +91,7 @@ export function AuthDebugPanel() {
                 <div className="text-sm space-y-1">
                     <p>User: {user ? user.email : "Not logged in"}</p>
                     <p>Status: {user ? user.status : "N/A"}</p>
-                    <p>Token: {sessionInfo?.hasToken ? "Present" : "None"}</p>
+                    <p>Token: {hasToken ? "Present" : "None"}</p>
                     <p>Env: {process.env.NODE_ENV}</p>
                 </div>
                 <div className="flex flex-col gap-2">
@@ -120,9 +123,12 @@ export function AuthDebugPanel() {
                     </Button>
                 </div>
                 <div className="text-center text-xs">
-                    <a href="/debug" className="text-blue-600 hover:underline">
+                    <Link
+                        href="/debug"
+                        className="text-blue-600 hover:underline"
+                    >
                         Full Debug Page →
-                    </a>
+                    </Link>
                 </div>
             </CardContent>
         </Card>
