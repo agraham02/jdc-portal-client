@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { ThemeIconButton } from "@/components/navigation/ThemeIconButton";
 import {
     Card,
     CardContent,
@@ -107,13 +108,14 @@ export default function Home() {
                             </p>
                         </div>
                     </div>
-                    <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
                         <Button variant="ghost" asChild>
                             <Link href="/login">Sign In</Link>
                         </Button>
                         <Button asChild>
                             <Link href="/register">Get Started</Link>
                         </Button>
+                        <ThemeIconButton />
                     </div>
                 </div>
             </header>

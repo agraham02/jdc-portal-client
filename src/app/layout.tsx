@@ -5,6 +5,7 @@ import { AuthProvider } from "@/lib/contexts/auth-context";
 import { AuthorizationProvider } from "@/lib/authz/AuthorizationProvider";
 import { Toaster } from "@/components/ui/sonner";
 import ApiErrorListener from "@/components/ApiErrorListener";
+import { ThemeScript } from "@/components/navigation/ThemeScript";
 
 const geistSans = Geist({
     variable: "--font-geist-sans",
@@ -27,7 +28,11 @@ export default function RootLayout({
     children: React.ReactNode;
 }>) {
     return (
-        <html lang="en">
+        <html lang="en" suppressHydrationWarning>
+            <head>
+                {/* Set initial theme before paint to avoid FOUC */}
+                <ThemeScript />
+            </head>
             <body
                 className={`${geistSans.variable} ${geistMono.variable} antialiased`}
             >
