@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
@@ -20,14 +20,17 @@ import {
 
 import { LoginFormData, loginSchema } from "@/lib/validations";
 import { useAuth } from "@/lib/contexts/auth-context";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import type { StandardError } from "@/lib/types/errors";
 
 export default function LoginPage() {
     const { login } = useAuth();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [requestId, setRequestId] = useState<string | undefined>();
 
     const {
         register,
@@ -41,6 +44,7 @@ export default function LoginPage() {
     const onSubmit = async (data: LoginFormData) => {
         setIsLoading(true);
         setError(null);
+        setRequestId(undefined);
 
         try {
             const user = await login(data);
@@ -49,10 +53,31 @@ export default function LoginPage() {
                 throw new Error("Invalid email or password");
             }
             router.push("/dashboard");
-        } catch (error) {
-            if (error instanceof Error) {
-                console.error(error);
-                setError(error.message || "Login failed. Please try again.");
+        } catch (e: any) {
+            // Map backend standard errors to friendly messages
+            const std = e as Partial<StandardError>;
+            setRequestId(std.requestId);
+            if (
+                std.status === 401 &&
+                /locked|temporarily/i.test(String(std.message))
+            ) {
+                setError(
+                    "Your account is temporarily locked due to failed sign-in attempts. Please try again later."
+                );
+            } else if (
+                std.status === 403 &&
+                /not active|inactive/i.test(String(std.message))
+            ) {
+                setError(
+                    "Your account is not active. If this is unexpected, contact an administrator."
+                );
+            } else if (
+                typeof std.message === "string" &&
+                std.message.length > 0
+            ) {
+                setError(std.message);
+            } else if (e instanceof Error) {
+                setError(e.message || "Login failed. Please try again.");
             } else {
                 setError("Login failed. Please try again.");
             }
@@ -68,8 +93,13 @@ export default function LoginPage() {
         setValue("password", password);
     };
 
+    const registeredBanner = useMemo(
+        () => searchParams?.get("registered") === "1",
+        [searchParams]
+    );
+
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/20 p-4">
+        <div className="min-h-screen flex items-center justify-center p-0">
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -99,6 +129,16 @@ export default function LoginPage() {
                             onSubmit={handleSubmit(onSubmit)}
                             className="space-y-4"
                         >
+                            {registeredBanner && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: -10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="p-3 text-sm rounded-md border bg-muted"
+                                >
+                                    Registration submitted. Once approved, you
+                                    can sign in using your email and password.
+                                </motion.div>
+                            )}
                             {error && (
                                 <motion.div
                                     initial={{ opacity: 0, y: -10 }}
@@ -106,7 +146,12 @@ export default function LoginPage() {
                                     className="flex items-center gap-2 p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md"
                                 >
                                     <AlertCircle className="w-4 h-4" />
-                                    {error}
+                                    <span className="flex-1">{error}</span>
+                                    {requestId && (
+                                        <span className="ml-2 text-xs text-muted-foreground">
+                                            Request ID: {requestId}
+                                        </span>
+                                    )}
                                 </motion.div>
                             )}{" "}
                             <div className="space-y-2">

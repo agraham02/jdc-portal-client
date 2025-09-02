@@ -14,8 +14,10 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Building2 } from "lucide-react";
 import { ProtectedRoute } from "@/components/routing/ProtectedRoute";
+import { useAuth } from "@/lib/contexts/auth-context";
 
 export default function AppLayout({ children }: { children: ReactNode }) {
+    const { logout } = useAuth();
     const DEBUG_ENABLED =
         process.env.NODE_ENV !== "production" ||
         process.env.NEXT_PUBLIC_DEBUG_AUTH === "true";
@@ -39,6 +41,13 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                             </Button>
                             <Button variant="outline" size="sm" asChild>
                                 <Link href="/profile">Profile</Link>
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => logout()}
+                            >
+                                Logout
                             </Button>
                         </div>
                     </div>
