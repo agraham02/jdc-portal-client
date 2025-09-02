@@ -11,6 +11,7 @@ import {
     Users,
 } from "lucide-react";
 import type { MenuItem } from "./types";
+import { PermissionName as P } from "@/lib/constants/permission-names";
 
 export const menu = {
     application: [
@@ -25,13 +26,29 @@ export const menu = {
             title: "My Applications",
             url: "/contracts/my-applications",
             icon: FileText,
+            anyOf: [P.CONTRACT_APPLY],
         },
-        { title: "HR Resources", url: "/hr-resources", icon: FileText },
+        {
+            title: "HR Resources",
+            url: "/hr-resources",
+            icon: FileText,
+            anyOf: [P.FILE_READ, P.FILE_READ_ALL],
+        },
     ] satisfies MenuItem[],
 
     people: [
-        { title: "Employees", url: "/employees", icon: Users },
-        { title: "Vendors", url: "/vendors", icon: Building2 },
+        {
+            title: "Employees",
+            url: "/employees",
+            icon: Users,
+            anyOf: [P.EMPLOYEE_READ, P.EMPLOYEE_READ_ALL],
+        },
+        {
+            title: "Vendors",
+            url: "/vendors",
+            icon: Building2,
+            anyOf: [P.VENDOR_READ, P.VENDOR_READ_ALL],
+        },
     ] satisfies MenuItem[],
 
     admin: [
@@ -40,14 +57,30 @@ export const menu = {
             url: "/admin/dashboard",
             icon: LayoutDashboard,
         },
-        { title: "RBAC", url: "/admin/rbac", icon: Shield },
-        { title: "Roles", url: "/admin/rbac/roles", icon: ShieldCheck },
+        {
+            title: "RBAC",
+            url: "/admin/rbac",
+            icon: Shield,
+            anyOf: [P.RBAC_ROLE_READ, P.RBAC_ROLE_MANAGE],
+        },
+        {
+            title: "Roles",
+            url: "/admin/rbac/roles",
+            icon: ShieldCheck,
+            anyOf: [P.RBAC_ROLE_READ],
+        },
         {
             title: "Permissions",
             url: "/admin/rbac/permissions",
             icon: ShieldCheck,
+            anyOf: [P.RBAC_PERMISSION_READ],
         },
-        { title: "Users", url: "/admin/rbac/users", icon: Users },
+        {
+            title: "Users",
+            url: "/admin/rbac/users",
+            icon: Users,
+            anyOf: [P.RBAC_USER_ASSIGN_ROLES],
+        },
     ] satisfies MenuItem[],
 
     account: [

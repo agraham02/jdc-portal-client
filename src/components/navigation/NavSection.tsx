@@ -11,6 +11,7 @@ import {
     SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import type { MenuItem } from "./types";
+import { Can } from "@/components/authz/Can";
 
 function isActive(pathname: string, url: string) {
     if (url === "/") return pathname === "/";
@@ -30,19 +31,33 @@ export function NavSection({
             <SidebarGroupLabel>{label}</SidebarGroupLabel>
             <SidebarGroupContent>
                 <SidebarMenu>
-                    {items.map((item) => (
-                        <SidebarMenuItem key={item.title}>
-                            <SidebarMenuButton
-                                asChild
-                                isActive={isActive(pathname, item.url)}
-                            >
-                                <Link href={item.url}>
-                                    <item.icon />
-                                    <span>{item.title}</span>
-                                </Link>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
-                    ))}
+                    {items.map((item) => {
+                        const content = (
+                            <SidebarMenuItem key={item.title}>
+                                <SidebarMenuButton
+                                    asChild
+                                    isActive={isActive(pathname, item.url)}
+                                >
+                                    <Link href={item.url}>
+                                        <item.icon />
+                                        <span>{item.title}</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        );
+                        if (item.anyOf || item.allOf) {
+                            return (
+                                <Can
+                                    key={item.title}
+                                    anyOf={item.anyOf}
+                                    allOf={item.allOf}
+                                >
+                                    {content}
+                                </Can>
+                            );
+                        }
+                        return content;
+                    })}
                 </SidebarMenu>
             </SidebarGroupContent>
         </SidebarGroup>
