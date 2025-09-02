@@ -13,6 +13,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Building2 } from "lucide-react";
+import { ProtectedRoute } from "@/components/routing/ProtectedRoute";
 
 export default function AppLayout({ children }: { children: ReactNode }) {
     const DEBUG_ENABLED =
@@ -42,7 +43,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                         </div>
                     </div>
                 </header>
-                <div className="p-4">{children}</div>
+                <ProtectedRoute>
+                    <div className="p-4">{children}</div>
+                </ProtectedRoute>
             </SidebarInset>
         </SidebarProvider>
     );

@@ -1,10 +1,12 @@
-import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
-import { RoleName } from "@/lib/types/auth";
+import { ProtectedRoute } from "@/components/routing/ProtectedRoute";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PermissionName as P } from "@/lib/constants/permission-names";
 
 export default function AdminDashboardPage() {
     return (
-        <ProtectedRoute requiredRoles={RoleName.ADMIN}>
+        <ProtectedRoute
+            anyOf={[P.SYSTEM_ADMIN, P.RBAC_ROLE_READ, P.RBAC_ROLE_MANAGE]}
+        >
             <div className="container mx-auto p-6 space-y-6">
                 <h1 className="text-3xl font-bold">Admin Dashboard</h1>
 
