@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useAuth } from "@/lib/contexts/auth-context";
-import { RoleGuard } from "@/components/auth/RoleGuard";
-import { PermissionGuard } from "@/components/auth/PermissionGuard";
+// TODO: delete file
+// Legacy Navigation component. We no longer gate by roles here; AppSidebar handles RBAC.
+// Keep PermissionGuard available for items that declare a specific permission.
+// RBAC filtering has moved to the AppSidebar. This legacy nav renders items directly.
 import { RoleName } from "@/lib/types/auth";
-import { RBAC_PERMISSIONS } from "@/lib/constants/permissions";
 import { Button } from "@/components/ui/button";
 import { NotificationBadge } from "@/components/notifications/NotificationBadge";
 import { NotificationDropdown } from "@/components/notifications/NotificationDropdown";
@@ -71,7 +72,7 @@ export function Navigation() {
             href: "/admin/rbac",
             icon: Shield,
             roles: [RoleName.ADMIN],
-            permission: RBAC_PERMISSIONS.ROLE_MANAGE,
+            // permission gating now driven from sidebar menu-config and route guards
         },
         {
             label: "Settings",
@@ -127,24 +128,8 @@ export function Navigation() {
                         </Link>
                     );
 
-                    // If item has a specific permission requirement, use PermissionGuard
-                    if ("permission" in item && item.permission) {
-                        return (
-                            <PermissionGuard
-                                key={item.href}
-                                requiredPermissions={item.permission}
-                            >
-                                {navigationItem}
-                            </PermissionGuard>
-                        );
-                    }
-
-                    // Otherwise use RoleGuard
-                    return (
-                        <RoleGuard key={item.href} requiredRoles={item.roles}>
-                            {navigationItem}
-                        </RoleGuard>
-                    );
+                    // Render directly (RBAC now handled by AppSidebar + route guards)
+                    return <div key={item.href}>{navigationItem}</div>;
                 })}
                 <div className="pt-4 mt-4 border-t border-border">
                     <Button

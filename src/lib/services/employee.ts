@@ -1,5 +1,22 @@
-import { apiClient } from "../api";
-import { Employee, User } from "../types/auth";
+import { apiClient } from "@/lib/api";
+import { Employee, User, UserStatus } from "../types/auth";
+
+export type EmployeeWithUser = Omit<Employee, "userId"> & {
+    userId: User & { status: UserStatus };
+};
+
+export type EmployeeResponseWithUser = {
+    data: EmployeeWithUser[];
+    total: number;
+    page?: number;
+    limit?: number;
+};
+
+export type CreateEmployeeRequest = Partial<Employee> & {
+    userId: string;
+};
+
+export type UpdateEmployeeRequest = Partial<Employee>;
 
 export class EmployeeService {
     /**
