@@ -1,9 +1,9 @@
 "use client";
 
 import { ReactNode } from "react";
-import { Navigation } from "@/components/Navigation";
-import { ToastProvider } from "@/components/ui/use-toast";
-import { AuthDebugPanel } from "@/components/auth/AuthDebugPanel";
+// import { Navigation } from "@/components/Navigation";
+// import { ToastProvider } from "@/components/ui/use-toast";
+// import { AuthDebugPanel } from "@/components/auth/AuthDebugPanel";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 

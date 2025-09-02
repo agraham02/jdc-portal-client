@@ -1,9 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
-import { AccountType } from "@/lib/types/auth";
 import { useRouter } from "next/navigation";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { motion } from "motion/react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -25,8 +22,6 @@ import {
 } from "lucide-react";
 
 export default function Home() {
-    const router = useRouter();
-
     const features = [
         {
             icon: Building2,

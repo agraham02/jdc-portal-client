@@ -10,7 +10,7 @@ import React, {
     useState,
 } from "react";
 import { apiClient } from "../api";
-import { session } from "../session";
+// import { session } from "../session";
 
 type AuthorizationContextValue = {
     permissions: Set<string>;

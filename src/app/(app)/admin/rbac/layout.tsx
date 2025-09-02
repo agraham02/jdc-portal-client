@@ -1,6 +1,5 @@
 "use client";
 
-import { ReactNode } from "react";
 import { ProtectedRoute } from "@/components/routing/ProtectedRoute";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 import {
