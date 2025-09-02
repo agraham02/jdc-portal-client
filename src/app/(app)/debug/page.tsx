@@ -68,7 +68,9 @@ export default function AuthDebugPage() {
                 const token = session.getAccessToken();
                 if (!token) throw new Error("No access token in session");
                 const [, payload] = token.split(".");
-                const json = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
+                const json = JSON.parse(
+                    atob(payload.replace(/-/g, "+").replace(/_/g, "/"))
+                );
                 return json;
             },
         },
@@ -87,7 +89,8 @@ export default function AuthDebugPage() {
                 try {
                     out.refresh = await AuthService.refreshToken();
                 } catch (e) {
-                    out.refreshError = e instanceof Error ? e.message : String(e);
+                    out.refreshError =
+                        e instanceof Error ? e.message : String(e);
                 }
                 try {
                     out.me = await AuthService.getProfile();
@@ -165,7 +168,10 @@ export default function AuthDebugPage() {
                     <p className="text-gray-600 mb-4">
                         Please log in to access the debug console.
                     </p>
-                    <Link href="/login" className="text-blue-600 hover:underline">
+                    <Link
+                        href="/login"
+                        className="text-blue-600 hover:underline"
+                    >
                         Go to Login →
                     </Link>
                 </div>
