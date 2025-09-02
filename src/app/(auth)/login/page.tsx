@@ -243,14 +243,14 @@ export default function LoginPage() {
                                         className="p-2 bg-muted/50 rounded w-full text-left hover:bg-muted transition"
                                         onClick={() =>
                                             autofill(
-                                                "vendor@jdc.com",
+                                                "vendor@example.com",
                                                 "Password123!"
                                             )
                                         }
                                     >
                                         <p className="font-medium">Vendor</p>
                                         <p className="text-muted-foreground">
-                                            vendor@jdc.com
+                                            vendor@example.com
                                         </p>
                                         <p className="text-muted-foreground">
                                             Password123!
