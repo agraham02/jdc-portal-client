@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { motion } from "motion/react";
-import { User, Building2, ArrowRight } from "lucide-react";
+import { Building2, ArrowRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -11,11 +11,9 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
-import { PublicRoute } from "@/components/auth/PublicRoute";
 
 export default function RegisterPage() {
     return (
-        // <PublicRoute>
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -108,6 +106,5 @@ export default function RegisterPage() {
                 </motion.div>
             </motion.div>
         </div>
-        // </PublicRoute>
     );
 }
