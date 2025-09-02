@@ -13,6 +13,7 @@ import { AuthService } from "../services/auth";
 import { session } from "../session";
 import type { Role, User } from "../types/auth";
 import { UserStatus } from "../types/auth";
+import { useAuthz } from "@/lib/authz/useAuthz";
 
 type AuthContextValue = {
     user: User | null;
@@ -32,6 +33,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const refreshingRef = useRef<Promise<void> | null>(null);
+    const { refresh: refreshPermissions, hasAny } = useAuthz();
 
     // Load session on mount
     useEffect(() => {
@@ -49,6 +51,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     return AuthService.getProfile();
                 });
                 if (!cancelled) setUser(me);
+                // Refresh permissions in parallel
+                refreshPermissions().catch(() => {});
             } catch {
                 // Not signed in
                 session.clear();
@@ -81,9 +85,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         async (data: { email: string; password: string }) => {
             const res = await AuthService.login(data);
             setUser(res.user);
+            // Ensure permissions are up to date post-login
+            refreshPermissions().catch(() => {});
             return res.user ?? null;
         },
-        []
+        [refreshPermissions]
     );
 
     const logout = useCallback(async () => {
@@ -100,7 +106,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Optionally refresh profile if needed
         const me = await AuthService.getProfile();
         setUser(me);
-    }, [safeRefresh]);
+        // Also refresh permissions
+        await refreshPermissions();
+    }, [safeRefresh, refreshPermissions]);
 
     const hasRole = useCallback(
         (required: string | string[]) => {
@@ -116,11 +124,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         [user]
     );
 
-    const hasPermission = useCallback((_perm: string) => {
-        // Placeholder until server exposes /me/permissions consumption on client
-        // For now, rely on role gates. Extend later by fetching permissions and caching.
-        return true;
-    }, []);
+    const hasPermission = useCallback(
+        (perm: string) => {
+            return hasAny(perm);
+        },
+        [hasAny]
+    );
 
     const isAccountActive = useCallback(() => {
         return (
