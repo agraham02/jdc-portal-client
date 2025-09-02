@@ -1,6 +1,7 @@
 // Lightweight fetch-based API client with JWT attach and auto-refresh
 import { session } from "./session";
 import { AuthService } from "./services/auth";
+import { emitApiError } from "./api-events";
 
 type HttpMethod = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
 
@@ -59,7 +60,7 @@ class ApiClient {
         const res = await fetch(url, {
             method,
             headers: this.buildHeaders(options?.headers),
-            credentials: "include", // send/receive httpOnly cookies
+            credentials: "include",
             body: body != null ? JSON.stringify(body) : undefined,
         });
 
@@ -71,7 +72,11 @@ class ApiClient {
             } catch {
                 // Ensure we clear session on hard 401
                 session.clear();
-                throw new Error("Unauthorized");
+                const err: any = new Error("Unauthorized");
+                err.status = 401;
+                err.path = path;
+                emitApiError({ status: 401, message: "Unauthorized", path });
+                throw err;
             }
             return this.request<T>(method, path, body, {
                 ...options,
@@ -83,14 +88,25 @@ class ApiClient {
             let message = `Request failed (${res.status})`;
             try {
                 const data = (await res.json()) as {
-                    message?: string;
+                    message?: string | string[];
                     error?: string;
                 };
-                message = data.message || data.error || message;
+                if (Array.isArray(data?.message)) {
+                    message = data.message.join(", ");
+                } else if (data?.message) {
+                    message = data.message;
+                } else if (data?.error) {
+                    message = data.error;
+                }
             } catch {
                 // swallow JSON parse error
             }
-            throw new Error(message);
+            // Throw typed errors for consumers to handle 401/403 gracefully in UI
+            const err: any = new Error(message);
+            err.status = res.status;
+            err.path = path;
+            emitApiError({ status: res.status, message, path });
+            throw err;
         }
 
         // No content
