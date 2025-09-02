@@ -16,7 +16,7 @@ class ApiClient {
 
     constructor() {
         this.baseUrl =
-            process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+            process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
         this.deviceFingerprint = this.ensureFingerprint();
     }
 
@@ -40,7 +40,7 @@ class ApiClient {
             "x-device-fingerprint": this.deviceFingerprint,
             ...extra,
         };
-        
+
         const token = session.getAccessToken();
         if (token) {
             headers["Authorization"] = `Bearer ${token}`;
