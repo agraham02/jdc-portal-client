@@ -34,7 +34,8 @@ export function ProtectedRoute({
     fallback = <AccessDenied />,
 }: ProtectedRouteProps) {
     const router = useRouter();
-    const { user, isAuthenticated, isLoading, hasRole, isAccountActive } = useAuth();
+    const { user, isAuthenticated, isLoading, hasRole, isAccountActive } =
+        useAuth();
     const { loading: authzLoading, hasAny, hasAll } = useAuthz();
 
     // Redirect unauthenticated users to landing
@@ -59,10 +60,7 @@ export function ProtectedRoute({
     }
 
     // Permission checks
-    const mergedAllOf = [
-        ...(allOf ?? []),
-        ...(requiredPermissions ?? []),
-    ];
+    const mergedAllOf = [...(allOf ?? []), ...(requiredPermissions ?? [])];
     const allowedAny = anyOf ? hasAny(anyOf) : true;
     const allowedAll = mergedAllOf.length ? hasAll(mergedAllOf) : true;
     const allowed = allowedAny && allowedAll;
