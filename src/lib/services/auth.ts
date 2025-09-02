@@ -58,8 +58,12 @@ const getProfile = (): Promise<User> => {
     return apiClient.get("/auth/me");
 };
 
-const refreshToken = async (): Promise<{ accessToken: string }> => {
-    return apiClient.post("/auth/refresh", {});
+const refreshToken = async (): Promise<{
+    accessToken: string;
+    expiresIn?: string;
+}> => {
+    // Avoid nested 401 refresh loops when calling /auth/refresh
+    return apiClient.post("/auth/refresh", {}, { skipAuthRetry: true });
 };
 
 export const AuthService = {
