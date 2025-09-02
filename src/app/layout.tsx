@@ -4,10 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/contexts/auth-context";
 import { AuthorizationProvider } from "@/lib/authz/AuthorizationProvider";
 import { Toaster } from "@/components/ui/sonner";
-import { useEffect } from "react";
-import { onApiError } from "@/lib/api-events";
-import { useAuthz } from "@/lib/authz/useAuthz";
-import { toast } from "sonner";
+import ApiErrorListener from "@/components/ApiErrorListener";
 
 const geistSans = Geist({
     variable: "--font-geist-sans",
@@ -29,36 +26,17 @@ export default function RootLayout({
 }: Readonly<{
     children: React.ReactNode;
 }>) {
-    // Install a global API error listener to improve UX for 401/403
-    function ApiErrorListener() {
-        const { refresh } = useAuthz();
-        useEffect(() => {
-            const off = onApiError(async ({ status, message }) => {
-                if (status === 401) {
-                    toast.error(message || "Session expired. Please sign in.");
-                } else if (status === 403) {
-                    toast.error(message || "Not allowed.");
-                    // Permissions may have changed; refresh in background
-                    refresh().catch(() => {});
-                }
-            });
-            return () => {
-                off?.();
-            };
-        }, [refresh]);
-        return null;
-    }
     return (
         <html lang="en">
             <body
                 className={`${geistSans.variable} ${geistMono.variable} antialiased`}
             >
-                <AuthProvider>
-                    <AuthorizationProvider>
+                <AuthorizationProvider>
+                    <AuthProvider>
                         <ApiErrorListener />
                         {children}
-                    </AuthorizationProvider>
-                </AuthProvider>
+                    </AuthProvider>
+                </AuthorizationProvider>
                 <Toaster />
             </body>
         </html>
