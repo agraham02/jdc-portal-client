@@ -2,6 +2,7 @@
 import { session } from "./session";
 import { AuthService } from "./services/auth";
 import { emitApiError } from "./api-events";
+import type { StandardError } from "./types/errors";
 
 type HttpMethod = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
 
@@ -9,6 +10,8 @@ type RequestOptions = {
     headers?: Record<string, string>;
     // When true, skips the global 401 refresh+retry flow (used by refresh itself)
     skipAuthRetry?: boolean;
+    // Optional controller to cancel requests
+    signal?: AbortSignal;
 };
 
 class ApiClient {
@@ -37,7 +40,6 @@ class ApiClient {
 
     private buildHeaders(extra?: Record<string, string>) {
         const headers: Record<string, string> = {
-            "Content-Type": "application/json",
             "x-device-fingerprint": this.deviceFingerprint,
             ...extra,
         };
@@ -46,8 +48,70 @@ class ApiClient {
         if (token) {
             headers["Authorization"] = `Bearer ${token}`;
         }
+        if (extra?.["Content-Type"] == null) {
+            // Allow callers to override; default to JSON
+            headers["Content-Type"] = "application/json";
+        }
         return headers;
     }
+
+    private parseStandardError = async (
+        res: Response,
+        fallbackPath: string,
+        method: string
+    ): Promise<StandardError> => {
+        let body: any = null;
+        try {
+            body = await res.clone().json();
+        } catch {}
+        const status = res.status;
+        const code =
+            (typeof body?.error === "string" && body.error) ||
+            (status === 401
+                ? "Unauthorized"
+                : status === 403
+                ? "Forbidden"
+                : status === 404
+                ? "NotFound"
+                : status === 409
+                ? "Conflict"
+                : status === 429
+                ? "TooManyRequests"
+                : status >= 500
+                ? "ServerError"
+                : "HttpError");
+        const message =
+            (typeof body?.message === "string" && body.message) ||
+            (Array.isArray(body?.message)
+                ? body.message.join(", ")
+                : undefined) ||
+            `${code} (${status})`;
+        const requestId =
+            (res.headers.get("x-request-id") || body?.requestId) ?? undefined;
+        const details =
+            body && typeof body === "object"
+                ? (body.details as Record<string, unknown> | undefined)
+                : undefined;
+        const fieldErrors = Array.isArray(body?.fieldErrors)
+            ? (body.fieldErrors as {
+                  field: string;
+                  message: string;
+                  code?: string;
+              }[])
+            : undefined;
+        const path = (body?.path as string) || fallbackPath;
+        const methodFromBody = (body?.method as string) || method;
+        return {
+            code,
+            message,
+            requestId,
+            details,
+            fieldErrors,
+            status,
+            path,
+            method: methodFromBody,
+        };
+    };
 
     private async request<T>(
         method: HttpMethod,
@@ -56,12 +120,26 @@ class ApiClient {
         options?: RequestOptions
     ): Promise<T> {
         const url = `${this.baseUrl}${path}`;
+        const headers = this.buildHeaders({
+            ...(options?.headers || {}),
+        });
+
+        // If sending FormData, let the browser set the multipart boundary
+        if (body instanceof FormData && headers["Content-Type"]) {
+            delete headers["Content-Type"];
+        }
 
         const res = await fetch(url, {
             method,
-            headers: this.buildHeaders(options?.headers),
+            headers,
             credentials: "include",
-            body: body != null ? JSON.stringify(body) : undefined,
+            body:
+                body instanceof FormData
+                    ? body
+                    : body != null
+                    ? JSON.stringify(body)
+                    : undefined,
+            signal: options?.signal,
         });
 
         if (res.status === 401 && !options?.skipAuthRetry) {
@@ -75,7 +153,13 @@ class ApiClient {
                 const err: any = new Error("Unauthorized");
                 err.status = 401;
                 err.path = path;
-                emitApiError({ status: 401, message: "Unauthorized", path });
+                const stdErr: StandardError = {
+                    code: "Unauthorized",
+                    message: "Unauthorized",
+                    status: 401,
+                    path,
+                };
+                emitApiError({ ...stdErr, status: stdErr.status ?? 401 });
                 throw err;
             }
             return this.request<T>(method, path, body, {
@@ -85,34 +169,19 @@ class ApiClient {
         }
 
         if (!res.ok) {
-            let message = `Request failed (${res.status})`;
-            try {
-                const data = (await res.json()) as {
-                    message?: string | string[];
-                    error?: string;
-                };
-                if (Array.isArray(data?.message)) {
-                    message = data.message.join(", ");
-                } else if (data?.message) {
-                    message = data.message;
-                } else if (data?.error) {
-                    message = data.error;
-                }
-            } catch {
-                // swallow JSON parse error
-            }
-            // Throw typed errors for consumers to handle 401/403 gracefully in UI
-            const err: any = new Error(message);
-            err.status = res.status;
-            err.path = path;
-            emitApiError({ status: res.status, message, path });
+            const std = await this.parseStandardError(res, path, method);
+            const err: any = new Error(std.message);
+            Object.assign(err, std);
+            emitApiError({ ...std, status: std.status ?? res.status });
             throw err;
         }
 
         // No content
-        if (res.status === 204) return undefined as unknown as T;
-
-        return (await res.json()) as T;
+        if (res.status === 204) {
+            return undefined as unknown as T;
+        }
+        const data = (await res.json()) as T;
+        return data;
     }
 
     get<T>(path: string, options?: RequestOptions) {
@@ -120,6 +189,16 @@ class ApiClient {
     }
     post<T>(path: string, body?: unknown, options?: RequestOptions) {
         return this.request<T>("POST", path, body, options);
+    }
+    postFormData<T>(
+        path: string,
+        formData: FormData,
+        options?: RequestOptions
+    ) {
+        const headers = { ...(options?.headers || {}) };
+        // Let browser set multipart boundary
+        delete headers["Content-Type"];
+        return this.request<T>("POST", path, formData, { ...options, headers });
     }
     patch<T>(path: string, body?: unknown, options?: RequestOptions) {
         return this.request<T>("PATCH", path, body, options);

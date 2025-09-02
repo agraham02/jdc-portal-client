@@ -1,14 +1,12 @@
-export type ApiErrorDetail = {
-    status: number;
-    message?: string;
-    path?: string;
-};
+import type { StandardError } from "./types/errors";
 
-const EVENT_NAME = "api:error";
+export type ApiErrorDetail = StandardError & { status: number };
+
+const EVENT_ERROR = "api:error";
 
 export function emitApiError(detail: ApiErrorDetail) {
     if (typeof window === "undefined") return;
-    const event = new CustomEvent<ApiErrorDetail>(EVENT_NAME, { detail });
+    const event = new CustomEvent<ApiErrorDetail>(EVENT_ERROR, { detail });
     window.dispatchEvent(event);
 }
 
@@ -18,7 +16,7 @@ export function onApiError(listener: (detail: ApiErrorDetail) => void) {
         const ce = e as CustomEvent<ApiErrorDetail>;
         listener(ce.detail);
     };
-    window.addEventListener(EVENT_NAME, handler as EventListener);
+    window.addEventListener(EVENT_ERROR, handler as EventListener);
     return () =>
-        window.removeEventListener(EVENT_NAME, handler as EventListener);
+        window.removeEventListener(EVENT_ERROR, handler as EventListener);
 }
