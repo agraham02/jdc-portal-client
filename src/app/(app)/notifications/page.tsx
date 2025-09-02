@@ -4,8 +4,8 @@ import { useState } from "react";
 import { NotificationList } from "@/components/notifications/NotificationList";
 import { NotificationCreationPanel } from "@/components/notifications/NotificationCreationPanel";
 import { NotificationCreationPanelAdvanced } from "@/components/notifications/NotificationCreationPanelAdvanced";
-import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
-import { RoleName } from "@/lib/types/auth";
+import { ProtectedRoute } from "@/components/routing/ProtectedRoute";
+import { PermissionName as P } from "@/lib/constants/permission-names";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Settings, Users } from "lucide-react";
@@ -14,9 +14,7 @@ export default function NotificationsPage() {
     const [useAdvancedPanel, setUseAdvancedPanel] = useState(false);
 
     return (
-        <ProtectedRoute
-            requiredRoles={[RoleName.ADMIN, RoleName.EMPLOYEE, RoleName.VENDOR]}
-        >
+        <ProtectedRoute anyOf={[P.NOTIFICATIONS_READ]}>
             <div className="container mx-auto p-6 space-y-6">
                 {/* Header with toggle */}
                 <Card>
@@ -26,7 +24,12 @@ export default function NotificationsPage() {
                                 <Users className="h-5 w-5" />
                                 Notification Management
                             </span>
-                            <ProtectedRoute requiredRoles={[RoleName.ADMIN]}>
+                            <ProtectedRoute
+                                anyOf={[
+                                    P.NOTIFICATIONS_MANAGE,
+                                    P.NOTIFICATIONS_BROADCAST,
+                                ]}
+                            >
                                 <div className="flex items-center gap-2">
                                     <span className="text-sm text-muted-foreground">
                                         {useAdvancedPanel
@@ -63,11 +66,18 @@ export default function NotificationsPage() {
                 <div className="flex flex-col lg:flex-row gap-6">
                     {/* Creation Panel - Only visible to admins */}
                     <div className="lg:w-1/2">
-                        {useAdvancedPanel ? (
-                            <NotificationCreationPanelAdvanced />
-                        ) : (
-                            <NotificationCreationPanel />
-                        )}
+                        <ProtectedRoute
+                            anyOf={[
+                                P.NOTIFICATIONS_MANAGE,
+                                P.NOTIFICATIONS_BROADCAST,
+                            ]}
+                        >
+                            {useAdvancedPanel ? (
+                                <NotificationCreationPanelAdvanced />
+                            ) : (
+                                <NotificationCreationPanel />
+                            )}
+                        </ProtectedRoute>
                     </div>
 
                     {/* Notification List */}

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
-import { RoleName } from "@/lib/types/auth";
+import { ProtectedRoute } from "@/components/routing/ProtectedRoute";
+import { PermissionName as P } from "@/lib/constants/permission-names";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -186,7 +186,7 @@ export default function EmployeesPage() {
     const totalPages = Math.ceil(totalEmployees / limit);
 
     return (
-        <ProtectedRoute requiredRoles={RoleName.ADMIN}>
+        <ProtectedRoute anyOf={[P.EMPLOYEE_READ, P.EMPLOYEE_READ_ALL]}>
             <div className="container mx-auto p-6 space-y-6">
                 <div className="flex items-center justify-between">
                     <div>

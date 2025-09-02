@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { PermissionName as P } from "@/lib/constants/permission-names";
 import { FileService } from "@/lib/services/file";
 import { UploadedFile, FileQueryDto } from "@/lib/types/file";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -128,7 +129,7 @@ export default function HrResourcesPage() {
                     </p>
                 </div>
 
-                <PermissionGuard requiredPermissions="hr_document:create">
+                <PermissionGuard requiredPermissions={P.HR_DOCUMENT_CREATE}>
                     <Button
                         onClick={() => setShowUploadModal(true)}
                         className="flex items-center gap-2"
