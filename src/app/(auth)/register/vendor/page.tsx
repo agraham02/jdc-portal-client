@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
@@ -49,8 +49,12 @@ export default function VendorRegisterPage() {
             } catch {
                 // no-op; Next router push can be ignored in tests
             }
-        } catch (e) {
-            const anyErr = e as any;
+        } catch (e: unknown) {
+            const anyErr = e as {
+                status?: number;
+                message?: unknown;
+                requestId?: string;
+            };
             setRequestId(anyErr?.requestId);
             if (anyErr?.status === 409) {
                 setError("An account with this email already exists.");

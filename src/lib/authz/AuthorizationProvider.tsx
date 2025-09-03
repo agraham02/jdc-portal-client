@@ -40,7 +40,7 @@ export function AuthorizationProvider({
                 "/auth/me/permissions"
             );
             setPermissions(new Set(resp.permissions || []));
-        } catch (e) {
+        } catch {
             // Fallback: some backends might embed effectivePermissions in /auth/me
             try {
                 const me = await apiClient.get<{

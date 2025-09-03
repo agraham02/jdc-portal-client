@@ -53,9 +53,9 @@ export default function LoginPage() {
                 throw new Error("Invalid email or password");
             }
             router.push("/dashboard");
-        } catch (e: any) {
+        } catch (e: unknown) {
             // Map backend standard errors to friendly messages
-            const std = e as Partial<StandardError>;
+            const std = (e ?? {}) as Partial<StandardError>;
             setRequestId(std.requestId);
             if (
                 std.status === 401 &&

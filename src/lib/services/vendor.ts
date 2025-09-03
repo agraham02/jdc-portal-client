@@ -19,7 +19,7 @@ export interface CreateVendorRequest {
     servicesOffered?: string[];
 }
 
-export interface UpdateVendorRequest extends Partial<CreateVendorRequest> {}
+export type UpdateVendorRequest = Partial<CreateVendorRequest>;
 
 export class VendorService {
     /**

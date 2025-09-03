@@ -60,13 +60,17 @@ class ApiClient {
         fallbackPath: string,
         method: string
     ): Promise<StandardError> => {
-        let body: any = null;
+        let body: unknown = null;
         try {
             body = await res.clone().json();
         } catch {}
         const status = res.status;
+        const b =
+            body && typeof body === "object"
+                ? (body as Record<string, unknown>)
+                : undefined;
         const code =
-            (typeof body?.error === "string" && body.error) ||
+            (b && typeof b["error"] === "string" && (b["error"] as string)) ||
             (status === 401
                 ? "Unauthorized"
                 : status === 403
@@ -81,18 +85,20 @@ class ApiClient {
                 ? "ServerError"
                 : "HttpError");
         const message =
-            (typeof body?.message === "string" && body.message) ||
-            (Array.isArray(body?.message)
-                ? body.message.join(", ")
+            (b &&
+                typeof b["message"] === "string" &&
+                (b["message"] as string)) ||
+            (b && Array.isArray(b["message"])
+                ? (b["message"] as unknown[]).join(", ")
                 : undefined) ||
             `${code} (${status})`;
         const requestId =
-            (res.headers.get("x-request-id") || body?.requestId) ?? undefined;
+            (res.headers.get("x-request-id") ||
+                (b && (b["requestId"] as string))) ??
+            undefined;
         // Merge server-provided details with selected response headers for better UX (e.g., 429 retry-after)
         const serverDetails =
-            body && typeof body === "object"
-                ? (body.details as Record<string, unknown> | undefined)
-                : undefined;
+            b && (b["details"] as Record<string, unknown> | undefined);
         const retryAfterHeader = res.headers.get("retry-after");
         const retryAfterSeconds = retryAfterHeader
             ? Number(retryAfterHeader)
@@ -103,15 +109,16 @@ class ApiClient {
                 ? { retryAfterSeconds }
                 : {}),
         };
-        const fieldErrors = Array.isArray(body?.fieldErrors)
-            ? (body.fieldErrors as {
+        const fieldErrorsRaw = b?.["fieldErrors"] as unknown;
+        const fieldErrors = Array.isArray(fieldErrorsRaw)
+            ? (fieldErrorsRaw as {
                   field: string;
                   message: string;
                   code?: string;
               }[])
             : undefined;
-        const path = (body?.path as string) || fallbackPath;
-        const methodFromBody = (body?.method as string) || method;
+        const path = (b?.["path"] as string) || fallbackPath;
+        const methodFromBody = (b?.["method"] as string) || method;
         return {
             code,
             message,
@@ -161,9 +168,6 @@ class ApiClient {
             } catch {
                 // Ensure we clear session on hard 401
                 session.clear();
-                const err: any = new Error("Unauthorized");
-                err.status = 401;
-                err.path = path;
                 const stdErr: StandardError = {
                     code: "Unauthorized",
                     message: "Unauthorized",
@@ -171,7 +175,8 @@ class ApiClient {
                     path,
                 };
                 emitApiError({ ...stdErr, status: stdErr.status ?? 401 });
-                throw err;
+                const error = new Error(stdErr.message);
+                throw Object.assign(error, stdErr);
             }
             return this.request<T>(method, path, body, {
                 ...options,
@@ -181,8 +186,8 @@ class ApiClient {
 
         if (!res.ok) {
             const std = await this.parseStandardError(res, path, method);
-            const err: any = new Error(std.message);
-            Object.assign(err, std);
+            const err = new Error(std.message);
+            Object.assign(err as unknown as object, std);
             emitApiError({ ...std, status: std.status ?? res.status });
             throw err;
         }

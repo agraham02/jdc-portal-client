@@ -87,7 +87,11 @@ export default function EmployeeRegisterPage() {
             await AuthService.registerEmployee(cleanData);
             setSuccess(true);
         } catch (err: unknown) {
-            const anyErr = err as any;
+            const anyErr = err as {
+                status?: number;
+                message?: unknown;
+                requestId?: string;
+            };
             setRequestId(anyErr?.requestId);
             if (anyErr?.status === 409) {
                 setError("An account with this email already exists.");

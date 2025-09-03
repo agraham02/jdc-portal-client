@@ -16,9 +16,6 @@ import { useAuth } from "@/lib/contexts/auth-context";
 
 export default function AppLayout({ children }: { children: ReactNode }) {
     const { logout } = useAuth();
-    const DEBUG_ENABLED =
-        process.env.NODE_ENV !== "production" ||
-        process.env.NEXT_PUBLIC_DEBUG_AUTH === "true";
 
     return (
         <SidebarProvider>

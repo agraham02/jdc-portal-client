@@ -35,6 +35,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const refreshingRef = useRef<Promise<void> | null>(null);
     const { refresh: refreshPermissions, hasAny } = useAuthz();
 
+    const safeRefresh = useCallback(async () => {
+        if (refreshingRef.current) return refreshingRef.current;
+        const p = (async () => {
+            try {
+                const { accessToken } = await AuthService.refreshToken();
+                session.setAccessToken(accessToken);
+            } finally {
+                refreshingRef.current = null;
+            }
+        })();
+        refreshingRef.current = p;
+        return p;
+    }, []);
+
     // Load session on mount
     useEffect(() => {
         let cancelled = false;
@@ -45,7 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     // Try refresh once on cold start (httpOnly cookie may exist)
                     await safeRefresh();
                 }
-                const me = await AuthService.getProfile().catch(async (e) => {
+                const me = await AuthService.getProfile().catch(async () => {
                     // If 401, attempt one refresh then retry
                     await safeRefresh();
                     return AuthService.getProfile();
@@ -65,21 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return () => {
             cancelled = true;
         };
-    }, []);
-
-    const safeRefresh = useCallback(async () => {
-        if (refreshingRef.current) return refreshingRef.current;
-        const p = (async () => {
-            try {
-                const { accessToken } = await AuthService.refreshToken();
-                session.setAccessToken(accessToken);
-            } finally {
-                refreshingRef.current = null;
-            }
-        })();
-        refreshingRef.current = p;
-        return p;
-    }, []);
+    }, [refreshPermissions, safeRefresh]);
 
     const login = useCallback(
         async (data: { email: string; password: string }) => {
@@ -132,10 +132,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
 
     const isAccountActive = useCallback(() => {
-        return (
-            user?.status === (UserStatus as any).ACTIVE ||
-            user?.status === "Active"
-        );
+        return user?.status === UserStatus.ACTIVE;
     }, [user]);
 
     const value = useMemo<AuthContextValue>(

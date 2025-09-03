@@ -102,8 +102,8 @@ export default function Page() {
             toast.success("Profile updated");
             await refresh();
             setAvatarFile(null);
-        } catch (e: any) {
-            const msg: string = e?.message || "Update failed";
+        } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : "Update failed";
             toast.error(msg);
         } finally {
             setSubmitting(false);

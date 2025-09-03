@@ -37,12 +37,15 @@ export default function VerifyEmailPage() {
                 const res = await AuthService.verifyEmail(token);
                 setVerified(true);
                 setMessage(res?.message || "Email verified successfully.");
-            } catch (e: any) {
+            } catch (e: unknown) {
                 setVerified(false);
+                const anyErr = e as { status?: number; message?: unknown };
                 const msg =
-                    e?.status === 404
+                    anyErr?.status === 404
                         ? "Email verification is not enabled in this environment. If you submitted a registration, please await approval."
-                        : e?.message ||
+                        : (typeof anyErr?.message === "string"
+                              ? anyErr.message
+                              : undefined) ||
                           "Verification failed. The link may be expired or already used.";
                 setMessage(msg);
             } finally {
@@ -71,14 +74,19 @@ export default function VerifyEmailPage() {
             );
             // Respect server rate limit hints if provided
             // Our api client also exposes Retry-After seconds as details.retryAfterSeconds
-        } catch (e: any) {
-            if (e?.status === 404) {
+        } catch (e: unknown) {
+            const anyErr = e as {
+                status?: number;
+                details?: { retryAfterSeconds?: unknown };
+                message?: unknown;
+            };
+            if (anyErr?.status === 404) {
                 setMessage(
                     "Email verification is not enabled in this environment. If you submitted a registration, please await approval."
                 );
                 return;
             }
-            const retry = Number(e?.details?.retryAfterSeconds);
+            const retry = Number(anyErr?.details?.retryAfterSeconds);
             if (!Number.isNaN(retry) && retry > 0) {
                 setCooldown(retry);
                 setMessage(
@@ -86,7 +94,9 @@ export default function VerifyEmailPage() {
                 );
             } else {
                 setMessage(
-                    e?.message ||
+                    (typeof anyErr?.message === "string"
+                        ? anyErr.message
+                        : undefined) ||
                         "Could not resend verification. Try again later."
                 );
             }
