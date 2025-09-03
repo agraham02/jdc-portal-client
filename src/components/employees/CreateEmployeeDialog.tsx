@@ -1,6 +1,7 @@
 import React from 'react'
 
-export default function CreateEmployeeDialog() {
+// TODO: Implement CreateEmployeeDialog functionality
+export function CreateEmployeeDialog() {
   return (
     <div>CreateEmployeeDialog</div>
   )

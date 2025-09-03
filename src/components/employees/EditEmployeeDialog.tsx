@@ -1,6 +1,7 @@
 import React from 'react'
 
-export default function EditEmployeeDialog() {
+// TODO: Implement EditEmployeeDialog functionality
+export function EditEmployeeDialog() {
   return (
     <div>EditEmployeeDialog</div>
   )

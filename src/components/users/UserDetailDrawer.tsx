@@ -39,9 +39,12 @@ export function UserDetailDrawer({ userId, open, onClose }: Props) {
         async function load() {
             setLoading(true);
             try {
+                const checkedUserId = userId;
                 const [allRoles, userRolesResp] = await Promise.all([
                     RBACService.getAllRoles(),
-                    RBACService.getUserRoles(userId!),
+                    checkedUserId
+                        ? RBACService.getUserRoles(checkedUserId)
+                        : Promise.resolve(null),
                 ]);
                 if (cancelled) return;
                 setRoles(allRoles);

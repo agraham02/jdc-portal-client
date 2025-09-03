@@ -14,6 +14,16 @@ import { AddressForm } from "@/components/auth/AddressForm";
 import PasswordPolicyHints from "@/components/auth/PasswordPolicyHints";
 import { AuthService } from "@/lib/services/auth";
 
+function commaSeparatedToArray(v: unknown): string[] | unknown {
+    if (typeof v === "string") {
+        return v
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean);
+    }
+    return v;
+}
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -215,15 +225,7 @@ export default function VendorRegisterPage() {
                                             id="servicesOffered"
                                             placeholder="Consulting, IT Services"
                                             {...register("servicesOffered", {
-                                                setValueAs: (v) =>
-                                                    typeof v === "string"
-                                                        ? v
-                                                              .split(",")
-                                                              .map((s) =>
-                                                                  s.trim()
-                                                              )
-                                                              .filter(Boolean)
-                                                        : v,
+                                                setValueAs: commaSeparatedToArray,
                                             })}
                                         />
                                         {errors.servicesOffered && (
