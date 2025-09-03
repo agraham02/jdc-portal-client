@@ -1,8 +1,6 @@
 "use client";
 
 import { ReactNode } from "react";
-// import { Navigation } from "@/components/Navigation";
-// Note: legacy ToastProvider removed; using Sonner Toaster in root layout.
 // import { AuthDebugPanel } from "@/components/auth/AuthDebugPanel";
 import {
     SidebarInset,
