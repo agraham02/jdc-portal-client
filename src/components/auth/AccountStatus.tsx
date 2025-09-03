@@ -3,11 +3,11 @@
 import { AlertTriangle, Clock, XCircle, Archive, Ban } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useAuth, AuthUser } from "@/lib/contexts/auth-context";
-import { UserStatus } from "@/lib/types/auth";
+import { useAuth } from "@/lib/contexts/auth-context";
+import { UserStatus, type User } from "@/lib/types/auth";
 
 interface AccountStatusProps {
-    user: AuthUser | null;
+    user: User | null;
 }
 
 export function AccountStatusPage({ user }: AccountStatusProps) {

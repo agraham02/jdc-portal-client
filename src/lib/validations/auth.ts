@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PASSWORD_MIN_LENGTH } from "@/lib/constants/auth";
 
 export const loginSchema = z.object({
     email: z.string().email("Invalid email address"),
@@ -16,11 +17,30 @@ export const addressSchema = z.object({
     zip: z.string().min(5, "ZIP code must be at least 5 characters"),
 });
 
-// Employee registration schema
+// Password policy used across registration, reset, and change flows
+export const passwordComplexity = z
+    .string()
+    .min(
+        PASSWORD_MIN_LENGTH,
+        `Password must be at least ${PASSWORD_MIN_LENGTH} characters`
+    )
+    .refine((v) => /[A-Z]/.test(v), {
+        message: "Must include at least one uppercase letter",
+    })
+    .refine((v) => /[a-z]/.test(v), {
+        message: "Must include at least one lowercase letter",
+    })
+    .refine((v) => /\d/.test(v), {
+        message: "Must include at least one number",
+    })
+    .refine((v) => /[^A-Za-z0-9]/.test(v), {
+        message: "Must include at least one special character",
+    });
+
 export const employeeRegistrationSchema = z
     .object({
         email: z.string().email("Invalid email address"),
-        password: z.string().min(8, "Password must be at least 8 characters"),
+        password: passwordComplexity,
         confirmPassword: z.string(),
         firstName: z.string().min(1, "First name is required"),
         lastName: z.string().min(1, "Last name is required"),
@@ -46,7 +66,7 @@ export const employeeRegistrationSchema = z
 export const vendorRegistrationSchema = z
     .object({
         email: z.string().email("Invalid email address"),
-        password: z.string().min(8, "Password must be at least 8 characters"),
+        password: passwordComplexity,
         confirmPassword: z.string(),
         companyName: z.string().min(1, "Company name is required"),
         website: z
@@ -77,3 +97,38 @@ export type VendorRegistrationFormData = z.infer<
     typeof vendorRegistrationSchema
 >;
 export type AddressFormData = z.infer<typeof addressSchema>;
+
+// Forgot password schema
+export const forgotPasswordSchema = z.object({
+    email: z.string().email("Invalid email address"),
+});
+export type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
+
+// Reset password schema
+export const resetPasswordSchema = z
+    .object({
+        newPassword: passwordComplexity,
+        confirmPassword: z.string(),
+    })
+    .refine((data) => data.newPassword === data.confirmPassword, {
+        message: "Passwords don't match",
+        path: ["confirmPassword"],
+    });
+export type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
+
+// Change password schema (when signed in)
+export const changePasswordSchema = z
+    .object({
+        oldPassword: z.string().min(1, "Current password is required"),
+        newPassword: passwordComplexity,
+        confirmPassword: z.string(),
+    })
+    .refine((data) => data.newPassword === data.confirmPassword, {
+        message: "Passwords don't match",
+        path: ["confirmPassword"],
+    })
+    .refine((data) => data.newPassword !== data.oldPassword, {
+        message: "New password must be different from current password",
+        path: ["newPassword"],
+    });
+export type ChangePasswordFormData = z.infer<typeof changePasswordSchema>;

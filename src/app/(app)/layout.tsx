@@ -1,35 +1,56 @@
 "use client";
 
 import { ReactNode } from "react";
-import { Navigation } from "@/components/Navigation";
-import { AuthProvider } from "@/lib/contexts/auth-context";
-import { NotificationProvider } from "@/lib/contexts/notification-context";
-import { ToastProvider } from "@/components/ui/use-toast";
-import { AuthDebugPanel } from "@/components/auth/AuthDebugPanel";
+// import { AuthDebugPanel } from "@/components/auth/AuthDebugPanel";
+import {
+    SidebarInset,
+    SidebarProvider,
+    SidebarTrigger,
+} from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { Building2 } from "lucide-react";
+import { ProtectedRoute } from "@/components/routing/ProtectedRoute";
+import { useAuth } from "@/lib/contexts/auth-context";
 
 export default function AppLayout({ children }: { children: ReactNode }) {
-    const DEBUG_ENABLED =
-        process.env.NODE_ENV !== "production" ||
-        process.env.NEXT_PUBLIC_DEBUG_AUTH === "true";
+    const { logout } = useAuth();
 
     return (
-        <AuthProvider>
-            <NotificationProvider>
-                <ToastProvider>
-                    <div className="flex min-h-screen bg-background">
-                        <Navigation />
-                        <main className="flex-1 p-6 overflow-auto">
-                            {children}
-                        </main>
-                        {/* Debug panel - only shows in development or when debug is enabled */}
-                        {DEBUG_ENABLED && (
-                            <div className="fixed bottom-4 right-4 z-50">
-                                <AuthDebugPanel />
+        <SidebarProvider>
+            <AppSidebar />
+            <SidebarInset>
+                <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+                    <div className="flex h-14 items-center gap-2 px-4">
+                        <SidebarTrigger />
+                        <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 bg-primary rounded flex items-center justify-center">
+                                <Building2 className="w-4 h-4 text-primary-foreground" />
                             </div>
-                        )}
+                            <span className="font-semibold">JDC Portal</span>
+                        </div>
+                        <div className="ml-auto flex items-center gap-2">
+                            <Button variant="ghost" size="sm" asChild>
+                                <Link href="/notifications">Notifications</Link>
+                            </Button>
+                            <Button variant="outline" size="sm" asChild>
+                                <Link href="/profile">Profile</Link>
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => logout()}
+                            >
+                                Logout
+                            </Button>
+                        </div>
                     </div>
-                </ToastProvider>
-            </NotificationProvider>
-        </AuthProvider>
+                </header>
+                <ProtectedRoute>
+                    <div className="p-4">{children}</div>
+                </ProtectedRoute>
+            </SidebarInset>
+        </SidebarProvider>
     );
 }

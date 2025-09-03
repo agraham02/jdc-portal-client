@@ -1,13 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
-import { useAuth } from "@/lib/contexts/auth-context";
-import { AccountType } from "@/lib/types/auth";
-import { useRouter } from "next/navigation";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { motion } from "motion/react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { ThemeIconButton } from "@/components/navigation/ThemeIconButton";
 import {
     Card,
     CardContent,
@@ -26,48 +22,6 @@ import {
 } from "lucide-react";
 
 export default function Home() {
-    const { isAuthenticated, user, isLoading } = useAuth();
-    const router = useRouter();
-
-    useEffect(() => {
-        if (!isLoading && isAuthenticated && user) {
-            // Redirect authenticated users to their appropriate dashboard
-            switch (user.accountType) {
-                case AccountType.ADMIN:
-                    router.push("/admin/dashboard");
-                    break;
-                case AccountType.EMPLOYEE:
-                    router.push("/employee/dashboard");
-                    break;
-                case AccountType.VENDOR:
-                    router.push("/vendor/dashboard");
-                    break;
-                case AccountType.HOUSING_TENANT:
-                    router.push("/tenant/dashboard");
-                    break;
-                default:
-                    router.push("/dashboard");
-            }
-        }
-    }, [isAuthenticated, user, isLoading, router]);
-
-    if (isLoading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <LoadingSpinner size={32} />
-            </div>
-        );
-    }
-
-    // If authenticated, don't show the landing page (will redirect)
-    if (isAuthenticated) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <LoadingSpinner size={32} />
-            </div>
-        );
-    }
-
     const features = [
         {
             icon: Building2,
@@ -153,13 +107,14 @@ export default function Home() {
                             </p>
                         </div>
                     </div>
-                    <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
                         <Button variant="ghost" asChild>
                             <Link href="/login">Sign In</Link>
                         </Button>
                         <Button asChild>
                             <Link href="/register">Get Started</Link>
                         </Button>
+                        <ThemeIconButton />
                     </div>
                 </div>
             </header>

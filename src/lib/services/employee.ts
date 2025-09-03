@@ -1,77 +1,22 @@
-import { apiClient } from "../api";
-import { Employee, User } from "../types/auth";
+import { apiClient } from "@/lib/api";
+import { Employee, User, UserStatus } from "../types/auth";
 
-export interface CreateEmployeeRequest {
-    email: string;
-    password: string;
-    firstName: string;
-    lastName: string;
-    employeeId?: string;
-    jobTitle?: string;
-    department?: string;
-    hireDate?: string;
-    managerId?: string;
-    contactEmail?: string;
-    contactPhone?: string;
-    physicalAddress?: {
-        line1: string;
-        line2?: string;
-        city: string;
-        state: string;
-        zip: string;
-    };
-    mailingAddress?: {
-        line1: string;
-        line2?: string;
-        city: string;
-        state: string;
-        zip: string;
-    };
-}
+export type EmployeeWithUser = Omit<Employee, "userId"> & {
+    userId: User & { status: UserStatus };
+};
 
-export interface UpdateEmployeeRequest {
-    firstName?: string;
-    lastName?: string;
-    employeeId?: string;
-    jobTitle?: string;
-    department?: string;
-    hireDate?: string;
-    managerId?: string;
-    contactEmail?: string;
-    contactPhone?: string;
-    physicalAddress?: {
-        line1: string;
-        line2?: string;
-        city: string;
-        state: string;
-        zip: string;
-    };
-    mailingAddress?: {
-        line1: string;
-        line2?: string;
-        city: string;
-        state: string;
-        zip: string;
-    };
-}
-
-export interface EmployeeResponse {
-    data: Employee[];
-    total: number;
-    page: number;
-    limit: number;
-}
-
-export interface EmployeeWithUser extends Omit<Employee, "userId"> {
-    userId: User;
-}
-
-export interface EmployeeResponseWithUser {
+export type EmployeeResponseWithUser = {
     data: EmployeeWithUser[];
     total: number;
-    page: number;
-    limit: number;
-}
+    page?: number;
+    limit?: number;
+};
+
+export type CreateEmployeeRequest = Partial<Employee> & {
+    userId: string;
+};
+
+export type UpdateEmployeeRequest = Partial<Employee>;
 
 export class EmployeeService {
     /**

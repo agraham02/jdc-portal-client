@@ -24,8 +24,8 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 
 To learn more about Next.js, take a look at the following resources:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+-   [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+-   [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
@@ -34,3 +34,15 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Design System & Theming
+
+-   Tailwind CSS v4 is configured via `@tailwindcss/postcss` and tokens in `src/app/globals.css`.
+-   shadcn/ui primitives live in `src/components/ui/*`.
+-   Theme toggle uses a minimal localStorage + class strategy:
+    -   `ThemeScript` sets initial theme pre-hydration.
+    -   `ThemeToggle` toggles `document.documentElement.classList` and persists to localStorage.
+-   Dark mode styling is handled with the custom variant `dark:` -> see `@custom-variant dark` in `globals.css` and CSS variables under `:root` and `.dark`.
+-   App shell: `src/app/(app)/layout.tsx` with `AppSidebar` + `SidebarInset` and a sticky header.
+
+To add new UI components, compose from `ui/` primitives and keep styles token-based for consistency.

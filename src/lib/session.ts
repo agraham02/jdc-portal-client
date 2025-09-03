@@ -1,71 +1,28 @@
-// Memory-only session management for maximum security
-// Access tokens are stored in memory only (not in cookies/localStorage)
-// Refresh tokens are handled automatically via httpOnly cookies
+// Simple access token holder with localStorage persistence (not for refresh token)
 
-let accessToken: string | null = null;
+const ACCESS_TOKEN_KEY = "jdc_access_token";
 
-const DEBUG_ENABLED =
-    process.env.NODE_ENV !== "production" ||
-    process.env.NEXT_PUBLIC_DEBUG_AUTH === "true";
+let memoryToken: string | null = null;
 
-function debugLog(message: string, data?: unknown) {
-    if (!DEBUG_ENABLED) return;
-    console.log(`[SESSION DEBUG] ${message}`, data || "");
+function getAccessToken(): string | null {
+    if (typeof window === "undefined") return memoryToken;
+    return memoryToken ?? window.localStorage.getItem(ACCESS_TOKEN_KEY);
+}
+
+function setAccessToken(token: string | null) {
+    memoryToken = token;
+    if (typeof window !== "undefined") {
+        if (token) window.localStorage.setItem(ACCESS_TOKEN_KEY, token);
+        else window.localStorage.removeItem(ACCESS_TOKEN_KEY);
+    }
+}
+
+function clear() {
+    setAccessToken(null);
 }
 
 export const session = {
-    /**
-     * Set access token in memory only (secure against XSS)
-     */
-    setAccessToken: (token: string) => {
-        debugLog(
-            "Setting access token",
-            token ? "Token present" : "Token null"
-        );
-        accessToken = token;
-    },
-
-    /**
-     * Get access token from memory
-     */
-    getAccessToken: (): string | null => {
-        debugLog(
-            "Getting access token",
-            accessToken ? "Token present" : "Token null"
-        );
-        return accessToken;
-    },
-
-    /**
-     * Clear access token from memory
-     */
-    destroy: () => {
-        debugLog("Destroying session");
-        accessToken = null;
-    },
-
-    /**
-     * Check if user has a valid access token
-     */
-    hasValidToken: (): boolean => {
-        const hasToken = !!accessToken;
-        debugLog("Checking if has valid token", hasToken);
-        return hasToken;
-    },
-
-    // Debug function for development only
-    ...(DEBUG_ENABLED
-        ? {
-              debug: () => {
-                  const debugInfo = {
-                      hasToken: !!accessToken,
-                      tokenExists: accessToken ? "Yes" : "No",
-                      tokenLength: accessToken ? accessToken.length : 0,
-                      // Don't log actual token value for security
-                  };
-                  debugLog("Session debug info", debugInfo);
-                  return debugInfo;
-              },
-          }
-        : {}),
+    getAccessToken,
+    setAccessToken,
+    clear,
 };
