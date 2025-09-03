@@ -102,4 +102,23 @@ export const AuthService = {
     refreshToken,
     verifyEmail,
     resendVerification,
+    // Admin user actions
+    deactivateUser(userId: string) {
+        return apiClient.patch<{ message: string }>(
+            `/auth/${encodeURIComponent(userId)}/deactivate`,
+            {}
+        );
+    },
+    reactivateUser(userId: string) {
+        return apiClient.patch<{ message: string }>(
+            `/auth/${encodeURIComponent(userId)}/reactivate`,
+            {}
+        );
+    },
+    unlockUser(userId: string) {
+        return apiClient.patch<{ message: string }>(
+            `/auth/${encodeURIComponent(userId)}/unlock`,
+            {}
+        );
+    },
 };

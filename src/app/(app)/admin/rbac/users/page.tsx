@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ProtectedRoute } from "@/components/routing/ProtectedRoute";
 import { PermissionName as P } from "@/lib/constants/permission-names";
+import { UsersTable } from "@/components/users/UsersTable";
 
 export default function RbacUsersPage() {
     return (
@@ -20,6 +21,8 @@ export default function RbacUsersPage() {
                         Back to RBAC
                     </Link>
                 </div>
+
+                <UsersTable />
             </main>
         </ProtectedRoute>
     );

@@ -153,7 +153,7 @@ This plan organizes frontend delivery into independent, production-ready feature
 
 ---
 
-### [] Feature: Admin User Management
+### [x] Feature: Admin User Management
 
 -   Branch: `feature/admin-user-management`
 -   User Stories: Account management (admin edits, deactivate/reactivate; protect system accounts)
@@ -172,7 +172,7 @@ This plan organizes frontend delivery into independent, production-ready feature
 
 ---
 
-### Feature: Password Reset & Change Password
+### [] Feature: Password Reset & Change Password
 
 -   Branch: `feature/passwords`
 -   User Stories: Passwords and sign‑in (forgot/reset/change); Security (lock sessions after change)
