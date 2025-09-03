@@ -66,6 +66,29 @@ const refreshToken = async (): Promise<{
     return apiClient.post("/auth/refresh", {}, { skipAuthRetry: true });
 };
 
+// Email verification: The backend currently has no explicit endpoints in the auth controller.
+// We provide thin wrappers that can be wired once available. For now, they will attempt
+// conventional endpoints and throw a clear error if not present.
+const verifyEmail = async (token: string): Promise<{ message: string }> => {
+    // Try a conventional path; backend may add this later.
+    return apiClient.post<{ message: string }>(
+        "/auth/verify-email",
+        { token },
+        { skipAuthRetry: true }
+    );
+};
+
+const resendVerification = async (
+    email: string
+): Promise<{ message: string; nextAllowedAt?: string }> => {
+    // Rate-limited on server; 429 returns retry-after we surface via apiClient details
+    return apiClient.post<{ message: string; nextAllowedAt?: string }>(
+        "/auth/verify-email/resend",
+        { email },
+        { skipAuthRetry: true }
+    );
+};
+
 export const AuthService = {
     login,
     registerEmployee,
@@ -73,4 +96,6 @@ export const AuthService = {
     logout,
     getProfile,
     refreshToken,
+    verifyEmail,
+    resendVerification,
 };

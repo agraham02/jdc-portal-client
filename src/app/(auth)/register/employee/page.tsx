@@ -23,7 +23,7 @@ import {
     EmployeeRegistrationFormData,
     employeeRegistrationSchema,
 } from "@/lib/validations/auth";
-import { AuthService } from "@/lib/services";
+import { AuthService } from "@/lib/services/auth";
 
 export default function EmployeeRegisterPage() {
     const [showPassword, setShowPassword] = useState(false);
@@ -31,6 +31,7 @@ export default function EmployeeRegisterPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
+    const [requestId, setRequestId] = useState<string | undefined>();
 
     const methods = useForm<EmployeeRegistrationFormData>({
         resolver: zodResolver(employeeRegistrationSchema),
@@ -63,6 +64,7 @@ export default function EmployeeRegisterPage() {
     const onSubmit = async (data: EmployeeRegistrationFormData) => {
         setIsLoading(true);
         setError(null);
+        setRequestId(undefined);
 
         try {
             // Filter out empty optional fields and addresses
@@ -85,14 +87,15 @@ export default function EmployeeRegisterPage() {
             await AuthService.registerEmployee(cleanData);
             setSuccess(true);
         } catch (err: unknown) {
-            console.error("Registration failed:", err);
-            console.log(err);
-            const error = err as { response?: { data?: { message?: string } } };
-            setError(
-                error.response?.data?.message ||
-                    err + "" ||
-                    "Registration failed. Please try again."
-            );
+            const anyErr = err as any;
+            setRequestId(anyErr?.requestId);
+            if (anyErr?.status === 409) {
+                setError("An account with this email already exists.");
+            } else if (anyErr?.message) {
+                setError(String(anyErr.message));
+            } else {
+                setError("Registration failed. Please try again.");
+            }
         } finally {
             setIsLoading(false);
         }
@@ -177,9 +180,14 @@ export default function EmployeeRegisterPage() {
                                         className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-md"
                                     >
                                         <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
-                                        <p className="text-red-700 text-sm">
+                                        <div className="text-red-700 text-sm flex-1">
                                             {error}
-                                        </p>
+                                        </div>
+                                        {requestId && (
+                                            <span className="text-xs text-muted-foreground">
+                                                Req: {requestId}
+                                            </span>
+                                        )}
                                     </motion.div>
                                 )}
 

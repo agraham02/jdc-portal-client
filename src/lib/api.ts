@@ -88,10 +88,21 @@ class ApiClient {
             `${code} (${status})`;
         const requestId =
             (res.headers.get("x-request-id") || body?.requestId) ?? undefined;
-        const details =
+        // Merge server-provided details with selected response headers for better UX (e.g., 429 retry-after)
+        const serverDetails =
             body && typeof body === "object"
                 ? (body.details as Record<string, unknown> | undefined)
                 : undefined;
+        const retryAfterHeader = res.headers.get("retry-after");
+        const retryAfterSeconds = retryAfterHeader
+            ? Number(retryAfterHeader)
+            : undefined;
+        const details: Record<string, unknown> | undefined = {
+            ...(serverDetails || {}),
+            ...(retryAfterSeconds && !Number.isNaN(retryAfterSeconds)
+                ? { retryAfterSeconds }
+                : {}),
+        };
         const fieldErrors = Array.isArray(body?.fieldErrors)
             ? (body.fieldErrors as {
                   field: string;

@@ -17,10 +17,26 @@ export const addressSchema = z.object({
 });
 
 // Employee registration schema
+const passwordComplexity = z
+    .string()
+    .min(12, "Password must be at least 12 characters")
+    .refine((v) => /[A-Z]/.test(v), {
+        message: "Must include at least one uppercase letter",
+    })
+    .refine((v) => /[a-z]/.test(v), {
+        message: "Must include at least one lowercase letter",
+    })
+    .refine((v) => /\d/.test(v), {
+        message: "Must include at least one number",
+    })
+    .refine((v) => /[^A-Za-z0-9]/.test(v), {
+        message: "Must include at least one special character",
+    });
+
 export const employeeRegistrationSchema = z
     .object({
         email: z.string().email("Invalid email address"),
-        password: z.string().min(8, "Password must be at least 8 characters"),
+        password: passwordComplexity,
         confirmPassword: z.string(),
         firstName: z.string().min(1, "First name is required"),
         lastName: z.string().min(1, "Last name is required"),
@@ -46,7 +62,7 @@ export const employeeRegistrationSchema = z
 export const vendorRegistrationSchema = z
     .object({
         email: z.string().email("Invalid email address"),
-        password: z.string().min(8, "Password must be at least 8 characters"),
+        password: passwordComplexity,
         confirmPassword: z.string(),
         companyName: z.string().min(1, "Company name is required"),
         website: z

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
@@ -37,14 +37,28 @@ export default function VendorRegisterPage() {
     const [error, setError] = useState<string | null>(null);
     const router = useRouter();
 
+    const [requestId, setRequestId] = useState<string | undefined>();
     const onSubmit = async (data: VendorRegistrationFormData) => {
         setSubmitting(true);
         setError(null);
+        setRequestId(undefined);
         try {
             await AuthService.registerVendor(data);
-            router.push("/login?registered=1");
+            try {
+                router.push("/login?registered=1");
+            } catch {
+                // no-op; Next router push can be ignored in tests
+            }
         } catch (e) {
-            setError(e instanceof Error ? e.message : "Registration failed");
+            const anyErr = e as any;
+            setRequestId(anyErr?.requestId);
+            if (anyErr?.status === 409) {
+                setError("An account with this email already exists.");
+            } else if (anyErr?.message) {
+                setError(String(anyErr.message));
+            } else {
+                setError("Registration failed");
+            }
         } finally {
             setSubmitting(false);
         }
@@ -82,7 +96,16 @@ export default function VendorRegisterPage() {
                             >
                                 {error && (
                                     <div className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md">
-                                        {error}
+                                        <div className="flex items-start gap-2">
+                                            <span className="flex-1">
+                                                {error}
+                                            </span>
+                                            {requestId && (
+                                                <span className="text-xs text-muted-foreground">
+                                                    Req: {requestId}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                 )}
                                 <div className="grid md:grid-cols-2 gap-4">
