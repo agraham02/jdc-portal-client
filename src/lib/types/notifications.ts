@@ -1,102 +1,42 @@
-/**
- * Core notification types matching backend enums
- */
-export enum NotificationType {
-    APPLICATION_SUBMITTED = "ApplicationSubmitted",
-    APPLICATION_ACCEPTED = "ApplicationAccepted",
-    APPLICATION_REJECTED = "ApplicationRejected",
-    CONTRACT_AWARDED = "ContractAwarded",
-    CONTRACT_CREATED = "ContractCreated",
-    CONTRACT_DEADLINE_APPROACHING = "ContractDeadlineApproaching",
-    EMPLOYEE_APPROVED = "EmployeeApproved",
-    EMPLOYEE_REJECTED = "EmployeeRejected",
-    VENDOR_APPROVED = "VendorApproved",
-    VENDOR_REJECTED = "VendorRejected",
-    FILE_UPLOADED = "FileUploaded",
-    FILE_APPROVED = "FileApproved",
-    FILE_REJECTED = "FileRejected",
-    SYSTEM_ANNOUNCEMENT = "SystemAnnouncement",
-}
+export type Notification = {
+  _id: string;
+  title: string;
+  body?: string;
+  read?: boolean;
+  createdAt?: string;
+};
 
-/**
- * Priority levels for notifications
- */
-export type NotificationPriority = "low" | "medium" | "high" | "urgent";
+export type NotificationListResponse = {
+  data: Notification[];
+  total?: number;
+};
 
-/**
- * Main notification interface
- */
-export interface Notification {
-    id: string;
-    userId: string;
-    type: NotificationType;
-    title: string;
-    message: string;
-    data: Record<string, unknown>;
-    read: boolean;
-    readAt: string | null;
-    deleted: boolean;
-    deletedAt: string | null;
-    createdAt: string;
-    updatedAt: string;
-}
+export type UnreadCountResponse = {
+  count: number;
+};
 
-/**
- * API response for notification lists
- */
-export interface NotificationListResponse {
-    data: Notification[];
-    total: number;
-    totalPages: number;
-    page: number;
-    limit: number;
-    unreadCount: number;
-}
+export type NotificationQueryParams = {
+  page?: number;
+  limit?: number;
+  read?: boolean;
+  search?: string;
+};
 
-/**
- * API response for unread count
- */
-export interface UnreadCountResponse {
-    count: number;
-}
+export type CreateNotificationDto = {
+  title: string;
+  body?: string;
+  userId?: string;
+};
 
-/**
- * Query parameters for fetching notifications
- */
-export interface NotificationQueryParams {
-    page?: number;
-    limit?: number;
-    type?: NotificationType;
-    read?: boolean;
-    search?: string;
-}
-
-/**
- * DTO for creating notifications (admin only)
- */
-export interface CreateNotificationDto {
-    userId: string;
-    type: NotificationType;
-    title: string;
-    message: string;
-    data?: Record<string, unknown>;
-}
-
-/**
- * API error response
- */
-export interface ApiError {
-    statusCode: number;
-    message: string | string[];
-    error: string;
-}
-
-/**
- * Generic API response wrapper
- */
-export interface ApiResponse<T = unknown> {
-    success: boolean;
-    data?: T;
-    error?: ApiError;
-    message?: string;
-}
+export const API_CONFIG = {
+  ENDPOINTS: {
+    NOTIFICATIONS: "/notifications",
+    UNREAD_COUNT: "/notifications/unread-count",
+    MARK_READ: "/notifications/:id/read",
+    MARK_ALL_READ: "/notifications/read-all",
+    DELETE: "/notifications/:id",
+    ADMIN_CREATE: "/admin/notifications",
+    ADMIN_ALL: "/admin/notifications",
+    ADMIN_CLEANUP: "/admin/notifications/cleanup",
+  },
+};
