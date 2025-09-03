@@ -195,7 +195,7 @@ This plan organizes frontend delivery into independent, production-ready feature
 
 ## RBAC
 
-### Feature: Role & Permission Management
+### [x] Feature: Role & Permission Management
 
 -   Branch: `feature/rbac-management`
 -   User Stories: RBAC (create/rename/delete roles; assign permissions; user role assignment; prevent zero-role)
