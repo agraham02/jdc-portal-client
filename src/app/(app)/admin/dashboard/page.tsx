@@ -1,6 +1,7 @@
 import { ProtectedRoute } from "@/components/routing/ProtectedRoute";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PermissionName as P } from "@/lib/constants/permission-names";
+import Link from "next/link";
 
 export default function AdminDashboardPage() {
     return (
@@ -17,6 +18,12 @@ export default function AdminDashboardPage() {
                         </CardHeader>
                         <CardContent>
                             <p>Manage all users in the system.</p>
+                            <Link
+                                href="/admin/approvals"
+                                className="text-blue-500 hover:underline"
+                            >
+                                Go to User Management
+                            </Link>
                         </CardContent>
                     </Card>
 

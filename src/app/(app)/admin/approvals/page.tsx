@@ -32,8 +32,8 @@ import {
     DialogTitle,
     DialogDescription,
 } from "@/components/ui/dialog";
-import { useToast } from "@/components/ui/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
 
 type PageState = {
     page: number;
@@ -45,7 +45,6 @@ type PageState = {
 export default function ApprovalsPage() {
     const { loading: authzLoading, hasAny } = useAuthz();
     const canDecide = hasAny("user:activate");
-    const { toast } = useToast();
     const [pageState, setPageState] = useState<PageState>({
         page: 1,
         pageSize: 25,
@@ -83,11 +82,7 @@ export default function ApprovalsPage() {
             setData(users);
             setTotal(resp.total);
         } catch (e: any) {
-            toast({
-                title: "Failed to load pending accounts",
-                description: e?.message || "",
-                variant: "destructive",
-            });
+            toast.warning("Failed to load pending accounts");
         } finally {
             setLoading(false);
         }
@@ -102,16 +97,12 @@ export default function ApprovalsPage() {
             setBusyId(u._id);
             try {
                 await ApprovalsService.approveAccount(u._id);
-                toast({ title: `Approved ${u.email}` });
+                toast.success(`Approved ${u.email}`);
                 // Optimistic update: remove from list
                 setData((prev) => prev.filter((x) => x._id !== u._id));
                 setTotal((t) => Math.max(0, t - 1));
             } catch (e: any) {
-                toast({
-                    title: "Approval failed",
-                    description: e?.message || "",
-                    variant: "destructive",
-                });
+                toast.error(`Approval failed: ${e?.message || ""}`);
             } finally {
                 setBusyId(null);
             }
@@ -127,17 +118,13 @@ export default function ApprovalsPage() {
                 rejecting.id,
                 rejectReason || undefined
             );
-            toast({ title: `Rejected ${rejecting.email}` });
+            toast.success(`Rejected ${rejecting.email}`);
             setData((prev) => prev.filter((x) => x._id !== rejecting.id));
             setTotal((t) => Math.max(0, t - 1));
             setRejecting(null);
             setRejectReason("");
         } catch (e: any) {
-            toast({
-                title: "Rejection failed",
-                description: e?.message || "",
-                variant: "destructive",
-            });
+            toast.error(`Rejection failed: ${e?.message || ""}`);
         } finally {
             setBusyId(null);
         }
