@@ -56,6 +56,7 @@ export const menu = {
             title: "Admin Dashboard",
             url: "/admin/dashboard",
             icon: LayoutDashboard,
+            anyOf: [P.SYSTEM_ADMIN],
         },
         {
             title: "Approvals",
