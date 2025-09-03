@@ -14,8 +14,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import {
     Building2,
-    Users,
-    FileText,
     Shield,
     ArrowRight,
     CheckCircle,
