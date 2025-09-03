@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Can } from "@/components/authz/Can";
+import { PermissionName as P } from "@/lib/constants/permission-names";
 
 export default function DashboardPage() {
     return (
@@ -11,27 +13,33 @@ export default function DashboardPage() {
                         <CardTitle>Procurement</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-1">
-                        <Link
-                            className="text-blue-600 hover:underline"
-                            href="/contracts"
-                        >
-                            Contracts
-                        </Link>
-                        <div>
+                        <Can anyOf={[P.CONTRACT_READ, P.CONTRACT_READ_ALL]}>
                             <Link
                                 className="text-blue-600 hover:underline"
-                                href="/contracts/my-applications"
+                                href="/contracts"
                             >
-                                My Applications
+                                Contracts
                             </Link>
+                        </Can>
+                        <div>
+                            <Can anyOf={[P.CONTRACT_APPLY]}>
+                                <Link
+                                    className="text-blue-600 hover:underline"
+                                    href="/contracts/my-applications"
+                                >
+                                    My Applications
+                                </Link>
+                            </Can>
                         </div>
                         <div>
-                            <Link
-                                className="text-blue-600 hover:underline"
-                                href="/hr-resources"
-                            >
-                                HR Resources
-                            </Link>
+                            <Can anyOf={[P.FILE_READ, P.FILE_READ_ALL]}>
+                                <Link
+                                    className="text-blue-600 hover:underline"
+                                    href="/hr-resources"
+                                >
+                                    HR Resources
+                                </Link>
+                            </Can>
                         </div>
                     </CardContent>
                 </Card>
@@ -41,19 +49,23 @@ export default function DashboardPage() {
                         <CardTitle>People</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-1">
-                        <Link
-                            className="text-blue-600 hover:underline"
-                            href="/employees"
-                        >
-                            Employees
-                        </Link>
-                        <div>
+                        <Can anyOf={[P.EMPLOYEE_READ, P.EMPLOYEE_READ_ALL]}>
                             <Link
                                 className="text-blue-600 hover:underline"
-                                href="/vendors"
+                                href="/employees"
                             >
-                                Vendors
+                                Employees
                             </Link>
+                        </Can>
+                        <div>
+                            <Can anyOf={[P.VENDOR_READ, P.VENDOR_READ_ALL]}>
+                                <Link
+                                    className="text-blue-600 hover:underline"
+                                    href="/vendors"
+                                >
+                                    Vendors
+                                </Link>
+                            </Can>
                         </div>
                     </CardContent>
                 </Card>
@@ -109,27 +121,39 @@ export default function DashboardPage() {
                         <CardTitle>Administration</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-1">
-                        <Link
-                            className="text-blue-600 hover:underline"
-                            href="/admin/dashboard"
+                        <Can
+                            anyOf={[
+                                P.SYSTEM_ADMIN,
+                                P.RBAC_ROLE_READ,
+                                P.RBAC_ROLE_MANAGE,
+                            ]}
                         >
-                            Admin Dashboard
-                        </Link>
-                        <div>
                             <Link
                                 className="text-blue-600 hover:underline"
-                                href="/admin/approvals"
+                                href="/admin/dashboard"
                             >
-                                Account Approvals
+                                Admin Dashboard
                             </Link>
+                        </Can>
+                        <div>
+                            <Can anyOf={[P.USER_ACTIVATE]}>
+                                <Link
+                                    className="text-blue-600 hover:underline"
+                                    href="/admin/approvals"
+                                >
+                                    Account Approvals
+                                </Link>
+                            </Can>
                         </div>
                         <div>
-                            <Link
-                                className="text-blue-600 hover:underline"
-                                href="/admin/rbac"
-                            >
-                                RBAC
-                            </Link>
+                            <Can anyOf={[P.RBAC_ROLE_READ, P.RBAC_ROLE_MANAGE]}>
+                                <Link
+                                    className="text-blue-600 hover:underline"
+                                    href="/admin/rbac"
+                                >
+                                    RBAC
+                                </Link>
+                            </Can>
                         </div>
                     </CardContent>
                 </Card>
