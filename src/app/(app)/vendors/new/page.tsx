@@ -1,13 +1,13 @@
 import { ProtectedRoute } from "@/components/routing/ProtectedRoute";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 
-export default function MyApplicationsPage() {
+export default function VendorCreatePage() {
     return (
-        <ProtectedRoute anyOf={[P.CONTRACT_APPLY]}>
+        <ProtectedRoute anyOf={[P.VENDOR_CREATE]}>
             <main className="space-y-4">
-                <h1 className="text-2xl font-semibold">My Applications</h1>
+                <h1 className="text-2xl font-semibold">Create Vendor</h1>
                 <p className="text-muted-foreground">
-                    Your submitted applications will appear here.
+                    Form will be implemented here.
                 </p>
             </main>
         </ProtectedRoute>

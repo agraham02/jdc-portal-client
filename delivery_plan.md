@@ -6,7 +6,7 @@ This plan organizes frontend delivery into independent, production-ready feature
 
 ## Foundation and Infrastructure
 
-### Feature: Design System & Theming
+### [x] Feature: Design System & Theming
 
 -   Branch: `feature/design-system-setup`
 -   User Stories: Non-functional (Design philosophy, Dark Mode), Compatibility & changes
@@ -22,14 +22,14 @@ This plan organizes frontend delivery into independent, production-ready feature
     - Implement theme provider and toggle; persist preference.
 4. `implement responsive app shell scaffold`
     - Header, sidebar, content area; mobile nav.
-6. `docs: add design system usage guidelines`
+5. `docs: add design system usage guidelines`
     - Document patterns in README.
 
 **Completion Criteria:** The app renders with shadcn/ui and Tailwind v4, supports dark/light themes
 
 ---
 
-### Feature: API Client, Error Envelope, and Observability
+### [x] Feature: API Client, Error Envelope, and Observability
 
 -   Branch: `feature/api-client-and-errors`
 -   User Stories: Standard errors; Observability; Rate limits & fair use; Compatibility & changes
@@ -50,7 +50,7 @@ This plan organizes frontend delivery into independent, production-ready feature
 
 ---
 
-### Feature: Routing, Guards, and Navigation
+### [x] Feature: Routing, Guards, and Navigation
 
 -   Branch: `feature/routing-guards`
 -   User Stories: RBAC (authorization on actions), Non-functional (Compatibility)
@@ -71,7 +71,7 @@ This plan organizes frontend delivery into independent, production-ready feature
 
 ## Accounts & Authentication
 
-### Feature: Authentication (Login/Logout/Session)
+### [x] Feature: Authentication (Login/Logout/Session)
 
 -   Branch: `feature/authentication`
 -   User Stories: Passwords and sign‑in (login); Security and privacy (session handling); Notifications (optional sign-in messages)
@@ -92,7 +92,7 @@ This plan organizes frontend delivery into independent, production-ready feature
 
 ---
 
-### Feature: External Sign‑Up & Email Verification
+### [x] Feature: External Sign‑Up & Email Verification
 
 -   Branch: `feature/external-signup-and-verification`
 -   User Stories: Account creation and approval (external); Account email verification
@@ -113,7 +113,7 @@ This plan organizes frontend delivery into independent, production-ready feature
 
 ---
 
-### Feature: Account Approval Console (Admins)
+### [x] Feature: Account Approval Console (Admins)
 
 -   Branch: `feature/account-approval`
 -   User Stories: Account creation and approval (approvers, approve/reject with reason); Notifications
@@ -132,7 +132,7 @@ This plan organizes frontend delivery into independent, production-ready feature
 
 ---
 
-### Feature: Profile Management
+### [x] Feature: Profile Management
 
 -   Branch: `feature/profile-management`
 -   User Stories: Account management (view/update profile); Files & uploads (avatar constraints)
@@ -153,7 +153,7 @@ This plan organizes frontend delivery into independent, production-ready feature
 
 ---
 
-### Feature: Admin User Management
+### [] Feature: Admin User Management
 
 -   Branch: `feature/admin-user-management`
 -   User Stories: Account management (admin edits, deactivate/reactivate; protect system accounts)

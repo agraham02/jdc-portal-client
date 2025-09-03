@@ -1,91 +1,46 @@
-"use client";
-
-import { useState } from "react";
-import { NotificationList } from "@/components/notifications/NotificationList";
-import { NotificationCreationPanel } from "@/components/notifications/NotificationCreationPanel";
-import { NotificationCreationPanelAdvanced } from "@/components/notifications/NotificationCreationPanelAdvanced";
+import Link from "next/link";
 import { ProtectedRoute } from "@/components/routing/ProtectedRoute";
+import { Can } from "@/components/authz/Can";
 import { PermissionName as P } from "@/lib/constants/permission-names";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Settings, Users } from "lucide-react";
 
 export default function NotificationsPage() {
-    const [useAdvancedPanel, setUseAdvancedPanel] = useState(false);
-
     return (
-        <ProtectedRoute anyOf={[P.NOTIFICATIONS_READ]}>
-            <div className="container mx-auto p-6 space-y-6">
-                {/* Header with toggle */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center justify-between">
-                            <span className="flex items-center gap-2">
-                                <Users className="h-5 w-5" />
-                                Notification Management
-                            </span>
-                            <ProtectedRoute
-                                anyOf={[
-                                    P.NOTIFICATIONS_MANAGE,
-                                    P.NOTIFICATIONS_BROADCAST,
-                                ]}
-                            >
-                                <div className="flex items-center gap-2">
-                                    <span className="text-sm text-muted-foreground">
-                                        {useAdvancedPanel
-                                            ? "Advanced Mode"
-                                            : "Simple Mode"}
-                                    </span>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() =>
-                                            setUseAdvancedPanel(
-                                                !useAdvancedPanel
-                                            )
-                                        }
-                                    >
-                                        <Settings className="h-4 w-4 mr-2" />
-                                        {useAdvancedPanel
-                                            ? "Simple Mode"
-                                            : "Advanced Mode"}
-                                    </Button>
-                                </div>
-                            </ProtectedRoute>
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-muted-foreground">
-                            {useAdvancedPanel
-                                ? "Advanced panel with user search and multiple recipient selection"
-                                : "Simple panel for basic notification creation and testing"}
-                        </p>
-                    </CardContent>
-                </Card>
-
-                <div className="flex flex-col lg:flex-row gap-6">
-                    {/* Creation Panel - Only visible to admins */}
-                    <div className="lg:w-1/2">
-                        <ProtectedRoute
-                            anyOf={[
-                                P.NOTIFICATIONS_MANAGE,
-                                P.NOTIFICATIONS_BROADCAST,
-                            ]}
+        <ProtectedRoute
+            anyOf={[
+                P.NOTIFICATIONS_READ,
+                P.NOTIFICATIONS_MANAGE,
+                P.NOTIFICATIONS_BROADCAST,
+            ]}
+        >
+            <main className="space-y-4">
+                <h1 className="text-2xl font-semibold">Notifications</h1>
+                <div className="flex gap-3">
+                    <Can anyOf={[P.NOTIFICATIONS_READ]}>
+                        <Link
+                            className="text-blue-600 hover:underline"
+                            href="/notifications/inbox"
                         >
-                            {useAdvancedPanel ? (
-                                <NotificationCreationPanelAdvanced />
-                            ) : (
-                                <NotificationCreationPanel />
-                            )}
-                        </ProtectedRoute>
-                    </div>
-
-                    {/* Notification List */}
-                    <div className="lg:w-1/2">
-                        <NotificationList className="bg-card rounded-lg shadow-sm border p-6" />
-                    </div>
+                            Inbox
+                        </Link>
+                    </Can>
+                    <Can
+                        anyOf={[
+                            P.NOTIFICATIONS_BROADCAST,
+                            P.NOTIFICATIONS_MANAGE,
+                        ]}
+                    >
+                        <Link
+                            className="text-blue-600 hover:underline"
+                            href="/notifications/broadcasts"
+                        >
+                            Broadcasts
+                        </Link>
+                    </Can>
                 </div>
-            </div>
+                <p className="text-muted-foreground">
+                    Notifications and preferences will appear here.
+                </p>
+            </main>
         </ProtectedRoute>
     );
 }
