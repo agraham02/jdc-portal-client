@@ -18,6 +18,7 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import { AddressForm } from "@/components/auth/AddressForm";
+import PasswordPolicyHints from "@/components/auth/PasswordPolicyHints";
 
 import {
     EmployeeRegistrationFormData,
@@ -60,6 +61,7 @@ export default function EmployeeRegisterPage() {
         watch,
         setValue,
     } = methods;
+    const password = watch("password") || "";
 
     const onSubmit = async (data: EmployeeRegistrationFormData) => {
         setIsLoading(true);
@@ -186,6 +188,9 @@ export default function EmployeeRegisterPage() {
                                         <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
                                         <div className="text-red-700 text-sm flex-1">
                                             {error}
+                                            <PasswordPolicyHints
+                                                password={password}
+                                            />
                                         </div>
                                         {requestId && (
                                             <span className="text-xs text-muted-foreground">

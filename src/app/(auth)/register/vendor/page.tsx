@@ -11,6 +11,7 @@ import {
     type VendorRegistrationFormData,
 } from "@/lib/validations";
 import { AddressForm } from "@/components/auth/AddressForm";
+import PasswordPolicyHints from "@/components/auth/PasswordPolicyHints";
 import { AuthService } from "@/lib/services/auth";
 
 import { Button } from "@/components/ui/button";
@@ -32,7 +33,9 @@ export default function VendorRegisterPage() {
         register,
         handleSubmit,
         formState: { errors },
+        watch,
     } = methods;
+    const password = watch("password") || "";
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const router = useRouter();
@@ -135,6 +138,9 @@ export default function VendorRegisterPage() {
                                             id="password"
                                             type="password"
                                             {...register("password")}
+                                        />
+                                        <PasswordPolicyHints
+                                            password={password}
                                         />
                                         {errors.password && (
                                             <p className="text-sm text-destructive">

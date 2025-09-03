@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
@@ -23,7 +23,7 @@ import { useAuth } from "@/lib/contexts/auth-context";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { StandardError } from "@/lib/types/errors";
 
-export default function LoginPage() {
+function LoginInner() {
     const { login } = useAuth();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -303,5 +303,19 @@ export default function LoginPage() {
                 )}
             </motion.div>
         </div>
+    );
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense
+            fallback={
+                <div className="min-h-screen flex items-center justify-center p-4">
+                    Loading…
+                </div>
+            }
+        >
+            <LoginInner />
+        </Suspense>
     );
 }
