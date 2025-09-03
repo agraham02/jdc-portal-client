@@ -172,7 +172,7 @@ This plan organizes frontend delivery into independent, production-ready feature
 
 ---
 
-### [] Feature: Password Reset & Change Password
+### [x] Feature: Password Reset & Change Password
 
 -   Branch: `feature/passwords`
 -   User Stories: Passwords and sign‑in (forgot/reset/change); Security (lock sessions after change)
