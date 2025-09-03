@@ -41,7 +41,7 @@ export function PermissionSelector({
 
     const filteredIds = useMemo(() => {
         const q = query.trim().toLowerCase();
-        if (!q) return null as string[] | null;
+        if (!q) return null;
         const all: RBACPermission[] = permissionsData?.permissions ?? [];
         return all
             .filter(

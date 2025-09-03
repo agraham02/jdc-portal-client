@@ -42,7 +42,7 @@ export function RoleList() {
     const [editId, setEditId] = useState<string | null>(null);
     const [editOpen, setEditOpen] = useState(false);
 
-    const load = async () => {
+    const loadRoles = async () => {
         setLoading(true);
         setError(null);
         try {
@@ -59,6 +59,7 @@ export function RoleList() {
         let cancelled = false;
         (async () => {
             setLoading(true);
+            setError(null);
             try {
                 const data = await RBACService.getAllRoles();
                 if (!cancelled) setRoles(data);
@@ -205,13 +206,13 @@ export function RoleList() {
             <CreateRoleDialog
                 open={createOpen}
                 onClose={() => setCreateOpen(false)}
-                onCreated={load}
+                onCreated={loadRoles}
             />
             <EditRoleDialog
                 roleId={editId}
                 open={editOpen}
                 onClose={() => setEditOpen(false)}
-                onUpdated={load}
+                onUpdated={loadRoles}
             />
         </div>
     );

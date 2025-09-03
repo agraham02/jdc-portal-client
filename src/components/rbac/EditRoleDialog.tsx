@@ -56,10 +56,21 @@ export function EditRoleDialog({ roleId, open, onClose, onUpdated }: Props) {
                 setRole(roleResp);
                 setName(roleResp.name);
                 setDescription(roleResp.description ?? "");
-                type Perm = string | { _id: string };
-                const ids = (roleResp.permissions as unknown as Perm[]).map(
-                    (p) => (typeof p === "string" ? p : p._id)
-                );
+                function getPermissionId(p: unknown): string {
+                    if (typeof p === "string") return p;
+                    if (
+                        typeof p === "object" &&
+                        p !== null &&
+                        "_id" in p &&
+                        typeof (p as any)._id === "string"
+                    ) {
+                        return (p as { _id: string })._id;
+                    }
+                    return "";
+                }
+                const ids = Array.isArray(roleResp.permissions)
+                    ? roleResp.permissions.map(getPermissionId).filter(Boolean)
+                    : [];
                 setPermissionIds(ids);
                 // fetch users with this role to guard deletion
                 try {
@@ -83,6 +94,7 @@ export function EditRoleDialog({ roleId, open, onClose, onUpdated }: Props) {
         };
     }, [open, roleId]);
 
+    // TODO add role.isSystem field in backend
     const isSystemRole = useMemo(() => {
         const n = role?.name;
         return (
