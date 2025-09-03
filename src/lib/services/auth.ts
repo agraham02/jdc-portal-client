@@ -7,6 +7,11 @@ import {
     VendorRegistrationFormData,
 } from "../validations/auth";
 import type { ProfileUpdateFormData } from "../validations/profile";
+import type {
+    ForgotPasswordFormData,
+    ResetPasswordFormData,
+    ChangePasswordFormData,
+} from "../validations/auth";
 
 const login = async (credentials: LoginFormData): Promise<{ user: User }> => {
     // The refreshToken is handled by the backend via httpOnly cookies
@@ -102,6 +107,29 @@ export const AuthService = {
     refreshToken,
     verifyEmail,
     resendVerification,
+    requestPasswordReset(data: ForgotPasswordFormData) {
+        return apiClient.post<{ message: string; token?: string }>(
+            "/auth/password-reset/request",
+            data,
+            { skipAuthRetry: true }
+        );
+    },
+    confirmPasswordReset(token: string, data: ResetPasswordFormData) {
+        return apiClient.post<{ message: string }>(
+            "/auth/password-reset/confirm",
+            { token, newPassword: data.newPassword },
+            { skipAuthRetry: true }
+        );
+    },
+    changePassword(data: ChangePasswordFormData) {
+        // remove confirmPassword before sending
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { confirmPassword, ...payload } = data;
+        return apiClient.patch<{ message: string }>(
+            "/auth/update-password",
+            payload
+        );
+    },
     // Admin user actions
     deactivateUser(userId: string) {
         return apiClient.patch<{ message: string }>(

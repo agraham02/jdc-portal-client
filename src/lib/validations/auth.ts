@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PASSWORD_MIN_LENGTH } from "@/lib/constants/auth";
 
 export const loginSchema = z.object({
     email: z.string().email("Invalid email address"),
@@ -16,10 +17,13 @@ export const addressSchema = z.object({
     zip: z.string().min(5, "ZIP code must be at least 5 characters"),
 });
 
-// Employee registration schema
-const passwordComplexity = z
+// Password policy used across registration, reset, and change flows
+export const passwordComplexity = z
     .string()
-    .min(12, "Password must be at least 12 characters")
+    .min(
+        PASSWORD_MIN_LENGTH,
+        `Password must be at least ${PASSWORD_MIN_LENGTH} characters`
+    )
     .refine((v) => /[A-Z]/.test(v), {
         message: "Must include at least one uppercase letter",
     })
@@ -93,3 +97,38 @@ export type VendorRegistrationFormData = z.infer<
     typeof vendorRegistrationSchema
 >;
 export type AddressFormData = z.infer<typeof addressSchema>;
+
+// Forgot password schema
+export const forgotPasswordSchema = z.object({
+    email: z.string().email("Invalid email address"),
+});
+export type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
+
+// Reset password schema
+export const resetPasswordSchema = z
+    .object({
+        newPassword: passwordComplexity,
+        confirmPassword: z.string(),
+    })
+    .refine((data) => data.newPassword === data.confirmPassword, {
+        message: "Passwords don't match",
+        path: ["confirmPassword"],
+    });
+export type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
+
+// Change password schema (when signed in)
+export const changePasswordSchema = z
+    .object({
+        oldPassword: z.string().min(1, "Current password is required"),
+        newPassword: passwordComplexity,
+        confirmPassword: z.string(),
+    })
+    .refine((data) => data.newPassword === data.confirmPassword, {
+        message: "Passwords don't match",
+        path: ["confirmPassword"],
+    })
+    .refine((data) => data.newPassword !== data.oldPassword, {
+        message: "New password must be different from current password",
+        path: ["newPassword"],
+    });
+export type ChangePasswordFormData = z.infer<typeof changePasswordSchema>;
