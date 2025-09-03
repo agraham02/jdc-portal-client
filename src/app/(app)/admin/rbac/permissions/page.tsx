@@ -1,10 +1,17 @@
 import Link from "next/link";
 import { ProtectedRoute } from "@/components/routing/ProtectedRoute";
 import { PermissionName as P } from "@/lib/constants/permission-names";
+import { PermissionsBrowser } from "@/components/rbac/PermissionsBrowser";
 
 export default function PermissionsPage() {
     return (
-        <ProtectedRoute anyOf={[P.RBAC_ROLE_READ, P.RBAC_ROLE_MANAGE]}>
+        <ProtectedRoute
+            anyOf={[
+                P.RBAC_PERMISSION_READ,
+                P.RBAC_ROLE_MANAGE,
+                P.RBAC_ROLE_READ,
+            ]}
+        >
             <main className="space-y-4">
                 <h1 className="text-2xl font-semibold">Permissions</h1>
                 <p className="text-muted-foreground">
@@ -18,6 +25,7 @@ export default function PermissionsPage() {
                         Back to RBAC
                     </Link>
                 </div>
+                <PermissionsBrowser />
             </main>
         </ProtectedRoute>
     );
