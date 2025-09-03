@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/card";
 import { AuthService } from "@/lib/services/auth";
 
-export default function VerifyEmailPage() {
+function VerifyEmailInner() {
     const sp = useSearchParams();
     const token = sp?.get("token") || "";
     const hasToken = useMemo(() => !!token, [token]);
@@ -200,5 +200,19 @@ export default function VerifyEmailPage() {
                 </Card>
             </motion.div>
         </div>
+    );
+}
+
+export default function VerifyEmailPage() {
+    return (
+        <Suspense
+            fallback={
+                <div className="min-h-screen flex items-center justify-center p-4">
+                    Loading…
+                </div>
+            }
+        >
+            <VerifyEmailInner />
+        </Suspense>
     );
 }
