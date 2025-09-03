@@ -5,5 +5,5 @@ export default function RbacLayout({
 }: {
     children: React.ReactNode;
 }) {
-    return { children };
+    return <>{children}</>;
 }

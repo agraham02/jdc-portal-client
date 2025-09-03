@@ -58,6 +58,12 @@ export const menu = {
             icon: LayoutDashboard,
         },
         {
+            title: "Approvals",
+            url: "/admin/approvals",
+            icon: ShieldCheck,
+            anyOf: [P.USER_ACTIVATE],
+        },
+        {
             title: "RBAC",
             url: "/admin/rbac",
             icon: Shield,

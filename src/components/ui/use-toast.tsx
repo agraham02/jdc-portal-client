@@ -1,49 +1,18 @@
 "use client";
 
-// TODO: delete file
-import * as React from "react";
+// Deprecated: we now use `toast` from 'sonner' directly. This shim avoids breaking legacy imports.
+// Prefer: import { toast } from "sonner";
+// This file may be removed once all references are migrated.
 
-interface ToastProps {
-    title: string;
-    description?: string;
-    variant?: "default" | "destructive";
-}
-
-interface ToastContextValue {
-    toast: (props: ToastProps) => void;
-}
-
-const ToastContext = React.createContext<ToastContextValue | undefined>(
-    undefined
-);
+import React from "react";
+export { toast } from "sonner";
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
-    const toast = React.useCallback(
-        ({ title, description, variant = "default" }: ToastProps) => {
-            // For now, we'll use a simple alert. In a real app, you'd implement a proper toast system
-            const message = description ? `${title}: ${description}` : title;
-            if (variant === "destructive") {
-                console.error(message);
-                alert(`Error: ${message}`);
-            } else {
-                console.log(message);
-                alert(message);
-            }
-        },
-        []
-    );
-
-    return (
-        <ToastContext.Provider value={{ toast }}>
-            {children}
-        </ToastContext.Provider>
-    );
+    return <>{children}</>;
 }
 
 export function useToast() {
-    const context = React.useContext(ToastContext);
-    if (context === undefined) {
-        throw new Error("useToast must be used within a ToastProvider");
-    }
-    return context;
+    // Simple shim to match old API shape
+    const { toast } = require("sonner");
+    return { toast } as { toast: (opts: any) => void };
 }
