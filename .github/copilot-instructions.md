@@ -48,6 +48,7 @@ These instructions are meant to guide GitHub Copilot (and other AI pair programm
 -   Don’t define components as arrow functions if they can be standard functions.
 -   Don’t write large, unfocused files — **split logic and responsibilities** appropriately.
 -   Don't just be a yes man. Critique any flaws in my ideas and give me alternative solutions if necessary
+- Do not worry about frontend testing at all for now
 
 ---
 
