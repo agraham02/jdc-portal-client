@@ -6,6 +6,7 @@ import {
     EmployeeRegistrationFormData,
     VendorRegistrationFormData,
 } from "../validations/auth";
+import type { ProfileUpdateFormData } from "../validations/profile";
 
 const login = async (credentials: LoginFormData): Promise<{ user: User }> => {
     // The refreshToken is handled by the backend via httpOnly cookies
@@ -95,6 +96,9 @@ export const AuthService = {
     registerVendor,
     logout,
     getProfile,
+    updateProfile(data: Partial<ProfileUpdateFormData>) {
+        return apiClient.patch<{ message: string }>("/auth/me/profile", data);
+    },
     refreshToken,
     verifyEmail,
     resendVerification,

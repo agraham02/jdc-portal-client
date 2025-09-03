@@ -1,5 +1,25 @@
 import { apiClient } from "@/lib/api";
-import { User } from "@/lib/types/auth";
+import type { Vendor as VendorType } from "@/lib/types/auth";
+
+export type Vendor = VendorType;
+
+export interface VendorResponse {
+    data: Vendor;
+}
+
+export interface VendorListResponse {
+    data: Vendor[];
+    total?: number;
+}
+
+export interface CreateVendorRequest {
+    companyName: string;
+    website?: string;
+    contactName?: string;
+    servicesOffered?: string[];
+}
+
+export interface UpdateVendorRequest extends Partial<CreateVendorRequest> {}
 
 export class VendorService {
     /**
