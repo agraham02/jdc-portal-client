@@ -72,7 +72,7 @@ export interface User {
 
 export interface Vendor {
     _id: string;
-    userId: string; // Link to the User document for the vendor contact
+    userId: string | User; // Can be ObjectId or populated User
     website?: string;
     companyName: string;
     contactName?: string; // Primary contact person for the vendor company

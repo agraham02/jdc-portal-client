@@ -1,290 +1,123 @@
 "use client";
 
-import { useState } from "react";
-import { RBACPermission, PermissionFilters } from "@/lib/types/rbac";
-import {
-    getPermissionCategory,
-    PERMISSION_CATEGORY_LABELS,
-    formatPermissionName,
-} from "@/lib/constants/permissions";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useMemo, useState } from "react";
+import type { RBACPermission, PermissionsResponse } from "@/lib/types/rbac";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 
-interface PermissionSelectorProps {
-    permissions: RBACPermission[];
-    selectedPermissionIds: string[];
+type Props = {
+    permissionsData: PermissionsResponse | null;
+    value: string[];
     onChange: (permissionIds: string[]) => void;
     disabled?: boolean;
-}
+};
 
 export function PermissionSelector({
-    permissions,
-    selectedPermissionIds,
+    permissionsData,
+    value,
     onChange,
-    disabled = false,
-}: PermissionSelectorProps) {
-    const [filters, setFilters] = useState<PermissionFilters>({
-        search: "",
-        category: undefined,
-    });
+    disabled,
+}: Props) {
+    const [query, setQuery] = useState("");
 
-    // Group permissions by category
-    const categorizedPermissions = permissions.reduce((acc, permission) => {
-        const category = getPermissionCategory(permission.name);
-        if (!acc[category]) {
-            acc[category] = [];
-        }
-        acc[category].push(permission);
-        return acc;
-    }, {} as Record<string, RBACPermission[]>);
+    const categorized = useMemo(
+        () => permissionsData?.categorized ?? {},
+        [permissionsData]
+    );
+    const categories = useMemo(
+        () => Object.keys(categorized).sort(),
+        [categorized]
+    );
 
-    // Filter permissions based on search and category
-    const filteredCategorizedPermissions = Object.keys(
-        categorizedPermissions
-    ).reduce((acc, category) => {
-        if (filters.category && category !== filters.category) {
-            return acc;
-        }
-
-        const categoryPermissions = categorizedPermissions[category].filter(
-            (permission) => {
-                if (!filters.search) return true;
-
-                const searchLower = filters.search.toLowerCase();
-                return (
-                    permission.name.toLowerCase().includes(searchLower) ||
-                    permission.description
-                        ?.toLowerCase()
-                        .includes(searchLower) ||
-                    formatPermissionName(permission.name)
-                        .toLowerCase()
-                        .includes(searchLower)
-                );
-            }
-        );
-
-        if (categoryPermissions.length > 0) {
-            acc[category] = categoryPermissions;
-        }
-
-        return acc;
-    }, {} as Record<string, RBACPermission[]>);
-
-    const handlePermissionToggle = (permissionId: string, checked: boolean) => {
+    const toggle = (id: string) => {
         if (disabled) return;
-
-        if (checked) {
-            onChange([...selectedPermissionIds, permissionId]);
+        if (value.includes(id)) {
+            onChange(value.filter((v) => v !== id));
         } else {
-            onChange(selectedPermissionIds.filter((id) => id !== permissionId));
+            onChange([...value, id]);
         }
     };
 
-    const handleCategoryToggle = (category: string, checked: boolean) => {
-        if (disabled) return;
+    const filteredIds = useMemo(() => {
+        const q = query.trim().toLowerCase();
+        if (!q) return null;
+        const all: RBACPermission[] = permissionsData?.permissions ?? [];
+        return all
+            .filter(
+                (p) =>
+                    p.name.toLowerCase().includes(q) ||
+                    (p.description ?? "").toLowerCase().includes(q)
+            )
+            .map((p) => p._id);
+    }, [permissionsData, query]);
 
-        const categoryPermissionIds = categorizedPermissions[category].map(
-            (p) => p._id
-        );
-
-        if (checked) {
-            // Add all category permissions that aren't already selected
-            const newSelections = categoryPermissionIds.filter(
-                (id) => !selectedPermissionIds.includes(id)
-            );
-            onChange([...selectedPermissionIds, ...newSelections]);
-        } else {
-            // Remove all category permissions
-            onChange(
-                selectedPermissionIds.filter(
-                    (id) => !categoryPermissionIds.includes(id)
-                )
-            );
-        }
+    const isVisible = (permId: string) => {
+        return filteredIds == null || filteredIds.includes(permId);
     };
-
-    const getCategorySelectionState = (category: string) => {
-        const categoryPermissionIds = categorizedPermissions[category].map(
-            (p) => p._id
-        );
-        const selectedInCategory = categoryPermissionIds.filter((id) =>
-            selectedPermissionIds.includes(id)
-        );
-
-        if (selectedInCategory.length === 0) return false;
-        if (selectedInCategory.length === categoryPermissionIds.length)
-            return true;
-        return "indeterminate";
-    };
-
-    const selectedCount = selectedPermissionIds.length;
-    const totalCount = permissions.length;
 
     return (
-        <div className="space-y-4">
-            <div className="flex items-center justify-between">
-                <div>
-                    <Label className="text-base font-medium">Permissions</Label>
-                    <p className="text-sm text-muted-foreground">
-                        Select permissions for this role ({selectedCount} of{" "}
-                        {totalCount} selected)
-                    </p>
-                </div>
-                <Badge variant="secondary">{selectedCount} selected</Badge>
-            </div>
+        <div className="space-y-3">
+            <Input
+                placeholder="Search permissions…"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                aria-label="Search permissions"
+            />
 
-            {/* Search Filter */}
-            <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                    placeholder="Search permissions..."
-                    value={filters.search}
-                    onChange={(e) =>
-                        setFilters((prev) => ({
-                            ...prev,
-                            search: e.target.value,
-                        }))
-                    }
-                    className="pl-10"
-                />
-            </div>
-
-            {/* Category Filter */}
-            <div className="flex flex-wrap gap-2">
-                <Badge
-                    variant={!filters.category ? "default" : "outline"}
-                    className="cursor-pointer"
-                    onClick={() =>
-                        setFilters((prev) => ({ ...prev, category: undefined }))
-                    }
-                >
-                    All Categories
-                </Badge>
-                {Object.keys(categorizedPermissions).map((category) => (
-                    <Badge
-                        key={category}
-                        variant={
-                            filters.category === category
-                                ? "default"
-                                : "outline"
-                        }
-                        className="cursor-pointer"
-                        onClick={() =>
-                            setFilters((prev) => ({
-                                ...prev,
-                                category:
-                                    filters.category === category
-                                        ? undefined
-                                        : category,
-                            }))
-                        }
-                    >
-                        {PERMISSION_CATEGORY_LABELS[category] || category}
-                    </Badge>
-                ))}
-            </div>
-
-            {/* Permission Categories */}
-            <div className="space-y-4 max-h-96 overflow-y-auto">
-                {Object.entries(filteredCategorizedPermissions).map(
-                    ([category, categoryPermissions]) => {
-                        const selectionState =
-                            getCategorySelectionState(category);
-
-                        return (
-                            <Card key={category}>
-                                <CardHeader className="pb-3">
-                                    <div className="flex items-center space-x-2">
-                                        <Checkbox
-                                            checked={selectionState === true}
-                                            onCheckedChange={(
-                                                checked: boolean
-                                            ) =>
-                                                handleCategoryToggle(
-                                                    category,
-                                                    checked
-                                                )
-                                            }
-                                            disabled={disabled}
-                                            ref={(ref) => {
-                                                if (
-                                                    ref &&
-                                                    selectionState ===
-                                                        "indeterminate"
-                                                ) {
-                                                    ref.indeterminate = true;
-                                                }
-                                            }}
-                                        />
-                                        <CardTitle className="text-lg">
-                                            {PERMISSION_CATEGORY_LABELS[
-                                                category
-                                            ] || category}
-                                        </CardTitle>
-                                        <Badge variant="outline">
-                                            {categoryPermissions.length}{" "}
-                                            permissions
-                                        </Badge>
-                                    </div>
-                                </CardHeader>
-                                <CardContent className="pt-0">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                        {categoryPermissions.map(
-                                            (permission) => (
-                                                <div
-                                                    key={permission._id}
-                                                    className="flex items-start space-x-2 p-2 rounded border hover:bg-muted/50"
-                                                >
-                                                    <Checkbox
-                                                        checked={selectedPermissionIds.includes(
-                                                            permission._id
-                                                        )}
-                                                        onCheckedChange={(
-                                                            checked: boolean
-                                                        ) =>
-                                                            handlePermissionToggle(
-                                                                permission._id,
-                                                                checked
-                                                            )
-                                                        }
-                                                        disabled={disabled}
-                                                        className="mt-0.5"
-                                                    />
-                                                    <div className="min-w-0 flex-1">
-                                                        <Label className="text-sm font-medium cursor-pointer">
-                                                            {formatPermissionName(
-                                                                permission.name
-                                                            )}
-                                                        </Label>
-                                                        <p className="text-xs text-muted-foreground mt-1">
-                                                            {permission.description ||
-                                                                permission.name}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            )
-                                        )}
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        );
-                    }
+            <div className="max-h-80 overflow-auto rounded-md border p-3">
+                {categories.length === 0 && (
+                    <div className="text-sm text-muted-foreground">
+                        No permissions available
+                    </div>
                 )}
+                {categories.map((cat, idx) => {
+                    const items = categorized[cat] as RBACPermission[];
+                    const anyVisible = items.some((p) => isVisible(p._id));
+                    if (!anyVisible) return null;
+                    return (
+                        <div key={cat} className="py-2">
+                            <div className="text-xs font-medium uppercase text-muted-foreground tracking-wide">
+                                {cat}
+                            </div>
+                            <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {items.map((p) => {
+                                    if (!isVisible(p._id)) return null;
+                                    const checked = value.includes(p._id);
+                                    return (
+                                        <label
+                                            key={p._id}
+                                            className="flex items-start gap-2 cursor-pointer"
+                                        >
+                                            <Checkbox
+                                                checked={checked}
+                                                onCheckedChange={() =>
+                                                    toggle(p._id)
+                                                }
+                                                disabled={disabled}
+                                                aria-label={`Toggle permission ${p.name}`}
+                                            />
+                                            <div className="space-y-0.5">
+                                                <div className="text-sm font-medium">
+                                                    {p.name}
+                                                </div>
+                                                {p.description && (
+                                                    <div className="text-xs text-muted-foreground">
+                                                        {p.description}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </label>
+                                    );
+                                })}
+                            </div>
+                            {idx < categories.length - 1 && (
+                                <Separator className="my-3" />
+                            )}
+                        </div>
+                    );
+                })}
             </div>
-
-            {Object.keys(filteredCategorizedPermissions).length === 0 && (
-                <Card>
-                    <CardContent className="py-8 text-center">
-                        <p className="text-muted-foreground">
-                            No permissions found matching your filters.
-                        </p>
-                    </CardContent>
-                </Card>
-            )}
         </div>
     );
 }

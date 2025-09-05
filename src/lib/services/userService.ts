@@ -1,19 +1,17 @@
 import { apiClient } from "@/lib/api";
-import { User } from "@/lib/types/auth";
+import type { User } from "@/lib/types/auth";
 
 export interface UserListResponse {
     data: User[];
-    total: number;
-    totalPages: number;
-    currentPage: number;
+    total?: number;
 }
 
 export interface UserQueryParams {
     page?: number;
     limit?: number;
-    search?: string;
-    role?: string;
     status?: string;
+    accountType?: string;
+    search?: string;
 }
 
 class UserService {

@@ -1,5 +1,5 @@
-export { PermissionSelector } from "./PermissionSelector";
-export { RoleCard } from "./RoleCard";
-export { RoleForm } from "./RoleForm";
-export { UserRoleAssignmentDialog } from "./UserRoleAssignmentDialog";
-export { ConfirmationDialog } from "./ConfirmationDialog";
+export * from "./RoleList";
+export * from "./CreateRoleDialog";
+export * from "./EditRoleDialog";
+export * from "./PermissionSelector";
+export * from "./PermissionsBrowser";

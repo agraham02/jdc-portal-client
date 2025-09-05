@@ -1,129 +1,163 @@
-"use client";
-
-import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
-import { RoleGuard } from "@/components/auth/RoleGuard";
-import { AccountTypeGuard } from "@/components/auth/AccountTypeGuard";
-import { RoleName, AccountType } from "@/lib/types/auth";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { useAuth } from "@/lib/contexts/auth-context";
-import { useUserProfile } from "@/lib/hooks/useUserProfile";
+import { Can } from "@/components/authz/Can";
+import { PermissionName as P } from "@/lib/constants/permission-names";
 
 export default function DashboardPage() {
-    const { user, isAuthenticated } = useAuth();
-    const { displayName, getRoleDisplay, needsOnboarding, hasAccountIssues } =
-        useUserProfile();
-
-    if (!isAuthenticated) {
-        return null; // This shouldn't happen due to ProtectedRoute, but good to be safe
-    }
-
     return (
-        <ProtectedRoute>
-            <div className="container mx-auto p-6 space-y-6">
-                <div className="flex items-center justify-between">
-                    <h1 className="text-3xl font-bold">Dashboard</h1>
-                    <div className="flex items-center gap-2">
-                        <Badge variant="outline">{user?.accountType}</Badge>
-                        <Badge variant="secondary">{getRoleDisplay()}</Badge>
-                        {needsOnboarding() && (
-                            <Badge variant="destructive">
-                                Onboarding Required
-                            </Badge>
-                        )}
-                        {hasAccountIssues() && (
-                            <Badge variant="destructive">Account Issues</Badge>
-                        )}
-                    </div>
-                </div>
-
-                {/* Welcome Section */}
+        <main className="container mx-auto p-6 space-y-6">
+            <h1 className="text-3xl font-bold">Dashboard</h1>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <Card>
                     <CardHeader>
-                        <CardTitle>Welcome, {displayName}!</CardTitle>
+                        <CardTitle>Procurement</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                        <p>Welcome to your JDC Portal dashboard.</p>
-                        {user && (
-                            <div className="mt-4 text-sm text-muted-foreground">
-                                <p>Account Type: {user.accountType}</p>
-                                <p>Status: {user.status}</p>
-                                <p>
-                                    Last Login:{" "}
-                                    {user.lastLogin
-                                        ? new Date(
-                                              user.lastLogin
-                                          ).toLocaleDateString()
-                                        : "Never"}
-                                </p>
-                            </div>
-                        )}
+                    <CardContent className="space-y-1">
+                        <Can anyOf={[P.CONTRACT_READ, P.CONTRACT_READ_ALL]}>
+                            <Link
+                                className="text-blue-600 hover:underline"
+                                href="/contracts"
+                            >
+                                Contracts
+                            </Link>
+                        </Can>
+                        <div>
+                            <Can anyOf={[P.CONTRACT_APPLY]}>
+                                <Link
+                                    className="text-blue-600 hover:underline"
+                                    href="/contracts/my-applications"
+                                >
+                                    My Applications
+                                </Link>
+                            </Can>
+                        </div>
+                        <div>
+                            <Can anyOf={[P.FILE_READ, P.FILE_READ_ALL]}>
+                                <Link
+                                    className="text-blue-600 hover:underline"
+                                    href="/hr-resources"
+                                >
+                                    HR Resources
+                                </Link>
+                            </Can>
+                        </div>
                     </CardContent>
                 </Card>
 
-                {/* Admin Only Section - Using RoleGuard */}
-                <RoleGuard requiredRoles={RoleName.ADMIN}>
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Admin Controls</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p>
-                                This section is only visible to administrators.
-                            </p>
-                        </CardContent>
-                    </Card>
-                </RoleGuard>
-
-                {/* Employee and Admin Section - Using multiple roles */}
-                <RoleGuard requiredRoles={[RoleName.ADMIN, RoleName.EMPLOYEE]}>
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Employee Portal</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p>
-                                This section is visible to employees and
-                                administrators.
-                            </p>
-                        </CardContent>
-                    </Card>
-                </RoleGuard>
-
-                {/* Vendor Only Section - Using AccountTypeGuard */}
-                <AccountTypeGuard requiredAccountTypes={AccountType.VENDOR}>
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Vendor Portal</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p>
-                                This section is only visible to vendor accounts.
-                            </p>
-                            {user?.vendor && (
-                                <div className="mt-4 text-sm text-muted-foreground">
-                                    <p>Company: {user.vendor.companyName}</p>
-                                    {user.vendor.website && (
-                                        <p>Website: {user.vendor.website}</p>
-                                    )}
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-                </AccountTypeGuard>
-
-                {/* Everyone Section */}
                 <Card>
                     <CardHeader>
-                        <CardTitle>General Information</CardTitle>
+                        <CardTitle>People</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                        <p>
-                            This section is visible to all authenticated users.
-                        </p>
+                    <CardContent className="space-y-1">
+                        <Can anyOf={[P.EMPLOYEE_READ, P.EMPLOYEE_READ_ALL]}>
+                            <Link
+                                className="text-blue-600 hover:underline"
+                                href="/employees"
+                            >
+                                Employees
+                            </Link>
+                        </Can>
+                        <div>
+                            <Can anyOf={[P.VENDOR_READ, P.VENDOR_READ_ALL]}>
+                                <Link
+                                    className="text-blue-600 hover:underline"
+                                    href="/vendors"
+                                >
+                                    Vendors
+                                </Link>
+                            </Can>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Account</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-1">
+                        <Link
+                            className="text-blue-600 hover:underline"
+                            href="/profile"
+                        >
+                            Profile
+                        </Link>
+                        <div>
+                            <Link
+                                className="text-blue-600 hover:underline"
+                                href="/profile/security"
+                            >
+                                Security
+                            </Link>
+                        </div>
+                        <div>
+                            <Link
+                                className="text-blue-600 hover:underline"
+                                href="/profile/notifications"
+                            >
+                                Notification Preferences
+                            </Link>
+                        </div>
+                        <div>
+                            <Link
+                                className="text-blue-600 hover:underline"
+                                href="/profile/sessions"
+                            >
+                                Sessions
+                            </Link>
+                        </div>
+                        <div>
+                            <Link
+                                className="text-blue-600 hover:underline"
+                                href="/settings"
+                            >
+                                Settings
+                            </Link>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Administration</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-1">
+                        <Can
+                            anyOf={[
+                                P.SYSTEM_ADMIN,
+                                P.RBAC_ROLE_READ,
+                                P.RBAC_ROLE_MANAGE,
+                            ]}
+                        >
+                            <Link
+                                className="text-blue-600 hover:underline"
+                                href="/admin/dashboard"
+                            >
+                                Admin Dashboard
+                            </Link>
+                        </Can>
+                        <div>
+                            <Can anyOf={[P.USER_ACTIVATE]}>
+                                <Link
+                                    className="text-blue-600 hover:underline"
+                                    href="/admin/approvals"
+                                >
+                                    Account Approvals
+                                </Link>
+                            </Can>
+                        </div>
+                        <div>
+                            <Can anyOf={[P.RBAC_ROLE_READ, P.RBAC_ROLE_MANAGE]}>
+                                <Link
+                                    className="text-blue-600 hover:underline"
+                                    href="/admin/rbac"
+                                >
+                                    RBAC
+                                </Link>
+                            </Can>
+                        </div>
                     </CardContent>
                 </Card>
             </div>
-        </ProtectedRoute>
+        </main>
     );
 }

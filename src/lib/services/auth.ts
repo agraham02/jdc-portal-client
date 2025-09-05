@@ -6,6 +6,12 @@ import {
     EmployeeRegistrationFormData,
     VendorRegistrationFormData,
 } from "../validations/auth";
+import type { ProfileUpdateFormData } from "../validations/profile";
+import type {
+    ForgotPasswordFormData,
+    ResetPasswordFormData,
+    ChangePasswordFormData,
+} from "../validations/auth";
 
 const login = async (credentials: LoginFormData): Promise<{ user: User }> => {
     // The refreshToken is handled by the backend via httpOnly cookies
@@ -58,8 +64,35 @@ const getProfile = (): Promise<User> => {
     return apiClient.get("/auth/me");
 };
 
-const refreshToken = async (): Promise<{ accessToken: string }> => {
-    return apiClient.post("/auth/refresh", {});
+const refreshToken = async (): Promise<{
+    accessToken: string;
+    expiresIn?: string;
+}> => {
+    // Avoid nested 401 refresh loops when calling /auth/refresh
+    return apiClient.post("/auth/refresh", {}, { skipAuthRetry: true });
+};
+
+// Email verification: The backend currently has no explicit endpoints in the auth controller.
+// We provide thin wrappers that can be wired once available. For now, they will attempt
+// conventional endpoints and throw a clear error if not present.
+const verifyEmail = async (token: string): Promise<{ message: string }> => {
+    // Try a conventional path; backend may add this later.
+    return apiClient.post<{ message: string }>(
+        "/auth/verify-email",
+        { token },
+        { skipAuthRetry: true }
+    );
+};
+
+const resendVerification = async (
+    email: string
+): Promise<{ message: string; nextAllowedAt?: string }> => {
+    // Rate-limited on server; 429 returns retry-after we surface via apiClient details
+    return apiClient.post<{ message: string; nextAllowedAt?: string }>(
+        "/auth/verify-email/resend",
+        { email },
+        { skipAuthRetry: true }
+    );
 };
 
 export const AuthService = {
@@ -68,5 +101,52 @@ export const AuthService = {
     registerVendor,
     logout,
     getProfile,
+    updateProfile(data: Partial<ProfileUpdateFormData>) {
+        return apiClient.patch<{ message: string }>("/auth/me/profile", data);
+    },
     refreshToken,
+    verifyEmail,
+    resendVerification,
+    requestPasswordReset(data: ForgotPasswordFormData) {
+        return apiClient.post<{ message: string; token?: string }>(
+            "/auth/password-reset/request",
+            data,
+            { skipAuthRetry: true }
+        );
+    },
+    confirmPasswordReset(token: string, data: ResetPasswordFormData) {
+        return apiClient.post<{ message: string }>(
+            "/auth/password-reset/confirm",
+            { token, newPassword: data.newPassword },
+            { skipAuthRetry: true }
+        );
+    },
+    changePassword(data: ChangePasswordFormData) {
+        // remove confirmPassword before sending
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { confirmPassword, ...payload } = data;
+        return apiClient.patch<{ message: string }>(
+            "/auth/update-password",
+            payload
+        );
+    },
+    // Admin user actions
+    deactivateUser(userId: string) {
+        return apiClient.patch<{ message: string }>(
+            `/auth/${encodeURIComponent(userId)}/deactivate`,
+            {}
+        );
+    },
+    reactivateUser(userId: string) {
+        return apiClient.patch<{ message: string }>(
+            `/auth/${encodeURIComponent(userId)}/reactivate`,
+            {}
+        );
+    },
+    unlockUser(userId: string) {
+        return apiClient.patch<{ message: string }>(
+            `/auth/${encodeURIComponent(userId)}/unlock`,
+            {}
+        );
+    },
 };

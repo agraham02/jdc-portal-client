@@ -1,13 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
-import { useAuth } from "@/lib/contexts/auth-context";
-import { AccountType } from "@/lib/types/auth";
-import { useRouter } from "next/navigation";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { motion } from "motion/react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { ThemeIconButton } from "@/components/navigation/ThemeIconButton";
 import {
     Card,
     CardContent,
@@ -18,80 +14,53 @@ import {
 import { Badge } from "@/components/ui/badge";
 import {
     Building2,
-    Users,
-    FileText,
     Shield,
     ArrowRight,
     CheckCircle,
+    UserCheck,
+    Bell,
+    Lock,
+    Upload,
+    ClipboardList,
 } from "lucide-react";
 
 export default function Home() {
-    const { isAuthenticated, user, isLoading } = useAuth();
-    const router = useRouter();
-
-    useEffect(() => {
-        if (!isLoading && isAuthenticated && user) {
-            // Redirect authenticated users to their appropriate dashboard
-            switch (user.accountType) {
-                case AccountType.ADMIN:
-                    router.push("/admin/dashboard");
-                    break;
-                case AccountType.EMPLOYEE:
-                    router.push("/employee/dashboard");
-                    break;
-                case AccountType.VENDOR:
-                    router.push("/vendor/dashboard");
-                    break;
-                case AccountType.HOUSING_TENANT:
-                    router.push("/tenant/dashboard");
-                    break;
-                default:
-                    router.push("/dashboard");
-            }
-        }
-    }, [isAuthenticated, user, isLoading, router]);
-
-    if (isLoading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <LoadingSpinner size={32} />
-            </div>
-        );
-    }
-
-    // If authenticated, don't show the landing page (will redirect)
-    if (isAuthenticated) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <LoadingSpinner size={32} />
-            </div>
-        );
-    }
-
     const features = [
         {
-            icon: Building2,
-            title: "Vendor Management",
+            icon: UserCheck,
+            title: "Account Management",
             description:
-                "Streamlined vendor registration, profile management, and capability tracking",
+                "Secure account creation, approval workflows, and comprehensive profile management with role-based access controls",
         },
         {
-            icon: Users,
-            title: "Employee Portal",
+            icon: Lock,
+            title: "Role-Based Access Control",
             description:
-                "Centralized employee management with role-based access controls",
+                "Advanced RBAC system with customizable roles, permissions, and secure authorization for all system features",
         },
         {
-            icon: FileText,
-            title: "Contract Management",
+            icon: ClipboardList,
+            title: "Procurement & Contracts",
             description:
-                "Complete procurement lifecycle from posting to award and tracking",
+                "Complete contract lifecycle management from creation to vendor applications, reviews, and awards",
+        },
+        {
+            icon: Upload,
+            title: "Document Management",
+            description:
+                "Secure HR document storage, sharing, and management with version control and access permissions",
+        },
+        {
+            icon: Bell,
+            title: "Real-time Notifications",
+            description:
+                "Instant notifications for account approvals, contract updates, document changes, and system events",
         },
         {
             icon: Shield,
-            title: "Secure Access",
+            title: "Enterprise Security",
             description:
-                "Enterprise-grade security with role-based permissions and audit trails",
+                "Multi-layered security with audit trails, session management, and comprehensive data protection",
         },
     ];
 
@@ -99,12 +68,14 @@ export default function Home() {
         {
             title: "Administrators",
             description:
-                "Manage users, oversee contracts, and generate comprehensive reports",
+                "Manage user accounts, oversee procurement workflows, configure roles and permissions, and access comprehensive system controls",
             features: [
-                "User Management",
-                "Contract Oversight",
-                "System Administration",
-                "Reporting",
+                "User Account Approval & Management",
+                "Role & Permission Configuration",
+                "Contract & Procurement Oversight",
+                "System Administration & Audit Logs",
+                "HR Document Management",
+                "Notification & System Broadcasts",
             ],
             href: "/login",
             badge: "Admin Access",
@@ -112,12 +83,14 @@ export default function Home() {
         {
             title: "Employees",
             description:
-                "Access HR resources, view contracts, and manage your profile",
+                "Access your profile, view contracts, manage HR documents, and participate in internal procurement processes",
             features: [
-                "Profile Management",
-                "Contract Viewing",
-                "HR Resources",
-                "Document Access",
+                "Personal Profile Management",
+                "Contract Creation & Management",
+                "HR Document Access & Download",
+                "Internal Notes & Collaboration",
+                "Real-time Notifications",
+                "Secure Document Upload",
             ],
             href: "/login",
             badge: "Employee Portal",
@@ -125,15 +98,17 @@ export default function Home() {
         {
             title: "Vendors",
             description:
-                "Apply for contracts, manage bids, and track application status",
+                "Submit account requests, apply for contracts, track application status, and manage your vendor profile",
             features: [
-                "Contract Bidding",
-                "Bid Management",
-                "Status Tracking",
-                "Profile Setup",
+                "Account Registration & Approval",
+                "Contract Application Submission",
+                "Bid Status Tracking & Updates",
+                "Vendor Profile Management",
+                "Document Upload & Management",
+                "Application Deadline Monitoring",
             ],
             href: "/register",
-            badge: "Get Started",
+            badge: "Apply Now",
         },
     ];
 
@@ -153,13 +128,14 @@ export default function Home() {
                             </p>
                         </div>
                     </div>
-                    <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
                         <Button variant="ghost" asChild>
                             <Link href="/login">Sign In</Link>
                         </Button>
                         <Button asChild>
                             <Link href="/register">Get Started</Link>
                         </Button>
+                        <ThemeIconButton />
                     </div>
                 </div>
             </header>
@@ -173,17 +149,17 @@ export default function Home() {
                         transition={{ duration: 0.6 }}
                     >
                         <Badge variant="secondary" className="mb-4">
-                            Enterprise Management Portal
+                            Comprehensive Business Management Platform
                         </Badge>
                         <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                            Streamline Your
-                            <br />
-                            Business Operations
+                            Complete Procurement
+                            <br />& Business Portal
                         </h1>
                         <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-                            Comprehensive portal for managing employees,
-                            vendors, and procurement contracts. Built for
-                            efficiency, security, and scalability.
+                            Unified platform for account management, procurement
+                            workflows, HR document sharing, and role-based
+                            collaboration. Designed for security, efficiency,
+                            and compliance.
                         </p>
                         <div className="flex flex-col sm:flex-row gap-4 justify-center">
                             <Button size="lg" asChild>
@@ -191,12 +167,12 @@ export default function Home() {
                                     href="/register"
                                     className="flex items-center"
                                 >
-                                    Start Your Journey{" "}
+                                    Apply as Vendor{" "}
                                     <ArrowRight className="ml-2 w-4 h-4" />
                                 </Link>
                             </Button>
                             <Button size="lg" variant="outline" asChild>
-                                <Link href="/login">Access Portal</Link>
+                                <Link href="/login">Employee Access</Link>
                             </Button>
                         </div>
                     </motion.div>
@@ -214,15 +190,16 @@ export default function Home() {
                         className="text-center mb-16"
                     >
                         <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                            Everything You Need in One Platform
+                            Comprehensive Platform Features
                         </h2>
                         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                            Our comprehensive portal provides all the tools
-                            necessary for efficient business management
+                            From secure account management to complex
+                            procurement workflows, our platform provides
+                            enterprise-grade capabilities
                         </p>
                     </motion.div>
 
-                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                         {features.map((feature, index) => (
                             <motion.div
                                 key={feature.title}
@@ -253,6 +230,131 @@ export default function Home() {
                 </div>
             </section>
 
+            {/* Key Capabilities Section */}
+            <section className="py-20 px-4">
+                <div className="container mx-auto">
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6 }}
+                        viewport={{ once: true }}
+                        className="text-center mb-16"
+                    >
+                        <h2 className="text-3xl md:text-4xl font-bold mb-4">
+                            Built for Enterprise Requirements
+                        </h2>
+                        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                            Advanced workflows and security features that meet
+                            the needs of modern business operations
+                        </p>
+                    </motion.div>
+
+                    <div className="grid lg:grid-cols-2 gap-12 items-center">
+                        <motion.div
+                            initial={{ opacity: 0, x: -20 }}
+                            whileInView={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.6 }}
+                            viewport={{ once: true }}
+                        >
+                            <h3 className="text-2xl font-bold mb-6">
+                                Security & Compliance
+                            </h3>
+                            <div className="space-y-4">
+                                <div className="flex items-start space-x-3">
+                                    <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                                    <div>
+                                        <p className="font-semibold">
+                                            Account Approval Workflows
+                                        </p>
+                                        <p className="text-sm text-muted-foreground">
+                                            External vendor accounts require
+                                            administrative approval before
+                                            access is granted
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-start space-x-3">
+                                    <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                                    <div>
+                                        <p className="font-semibold">
+                                            Role-Based Security
+                                        </p>
+                                        <p className="text-sm text-muted-foreground">
+                                            Granular permissions system with
+                                            customizable roles and access
+                                            controls
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-start space-x-3">
+                                    <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                                    <div>
+                                        <p className="font-semibold">
+                                            Audit & Compliance
+                                        </p>
+                                        <p className="text-sm text-muted-foreground">
+                                            Complete audit trails for all
+                                            actions, with compliance-ready
+                                            logging
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+
+                        <motion.div
+                            initial={{ opacity: 0, x: 20 }}
+                            whileInView={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.6 }}
+                            viewport={{ once: true }}
+                        >
+                            <h3 className="text-2xl font-bold mb-6">
+                                Workflow Excellence
+                            </h3>
+                            <div className="space-y-4">
+                                <div className="flex items-start space-x-3">
+                                    <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                                    <div>
+                                        <p className="font-semibold">
+                                            Contract Lifecycle Management
+                                        </p>
+                                        <p className="text-sm text-muted-foreground">
+                                            Complete procurement process from
+                                            contract creation to vendor awards
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-start space-x-3">
+                                    <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                                    <div>
+                                        <p className="font-semibold">
+                                            Real-time Notifications
+                                        </p>
+                                        <p className="text-sm text-muted-foreground">
+                                            Instant alerts for account
+                                            approvals, contract updates, and
+                                            system events
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-start space-x-3">
+                                    <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                                    <div>
+                                        <p className="font-semibold">
+                                            Document Management
+                                        </p>
+                                        <p className="text-sm text-muted-foreground">
+                                            Secure file sharing with version
+                                            control and permission-based access
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                </div>
+            </section>
+
             {/* User Types Section */}
             <section className="py-20 px-4">
                 <div className="container mx-auto">
@@ -264,11 +366,12 @@ export default function Home() {
                         className="text-center mb-16"
                     >
                         <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                            Choose Your Access Level
+                            Tailored Access for Every Role
                         </h2>
                         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                            Different portal experiences tailored to your role
-                            and responsibilities
+                            Secure, role-based access with features designed
+                            specifically for administrators, employees, and
+                            external vendors
                         </p>
                     </motion.div>
 
@@ -317,8 +420,11 @@ export default function Home() {
                                         <Button className="w-full" asChild>
                                             <Link href={userType.href}>
                                                 {userType.title === "Vendors"
-                                                    ? "Register Now"
-                                                    : "Access Portal"}
+                                                    ? "Apply as Vendor"
+                                                    : userType.title ===
+                                                      "Administrators"
+                                                    ? "Admin Login"
+                                                    : "Employee Login"}
                                             </Link>
                                         </Button>
                                     </div>
@@ -339,15 +445,18 @@ export default function Home() {
                         viewport={{ once: true }}
                     >
                         <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                            Ready to Get Started?
+                            Ready to Join Our Platform?
                         </h2>
                         <p className="text-lg mb-8 max-w-2xl mx-auto opacity-90">
-                            Join thousands of users who trust JDC Portal for
-                            their business management needs.
+                            Experience secure, efficient business management
+                            with comprehensive workflows designed for modern
+                            organizations.
                         </p>
                         <div className="flex flex-col sm:flex-row gap-4 justify-center">
                             <Button size="lg" variant="secondary" asChild>
-                                <Link href="/register">Create Account</Link>
+                                <Link href="/register">
+                                    Vendor Registration
+                                </Link>
                             </Button>
                             <Button
                                 size="lg"
@@ -355,7 +464,7 @@ export default function Home() {
                                 className="bg-transparent border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary"
                                 asChild
                             >
-                                <Link href="/login">Sign In</Link>
+                                <Link href="/login">Employee Login</Link>
                             </Button>
                         </div>
                     </motion.div>

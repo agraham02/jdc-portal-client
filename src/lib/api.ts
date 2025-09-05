@@ -1,359 +1,230 @@
+// Lightweight fetch-based API client with JWT attach and auto-refresh
 import { session } from "./session";
+import { AuthService } from "./services/auth";
+import { emitApiError } from "./api-events";
+import type { StandardError } from "./types/errors";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+type HttpMethod = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
 
-// Token refresh state management
-let isRefreshing = false;
-let refreshPromise: Promise<string> | null = null;
-
-type QueuedRequest<T = unknown> = {
-    resolve: (value: T) => void;
-    reject: (reason?: unknown) => void;
-    request: () => Promise<T>;
+type RequestOptions = {
+    headers?: Record<string, string>;
+    // When true, skips the global 401 refresh+retry flow (used by refresh itself)
+    skipAuthRetry?: boolean;
+    // Optional controller to cancel requests
+    signal?: AbortSignal;
 };
 
-let requestQueue: QueuedRequest[] = [];
+class ApiClient {
+    private baseUrl: string;
+    private deviceFingerprint: string;
 
-/**
- * Process queued requests after token refresh
- */
-const processQueue = (error: unknown = null) => {
-    requestQueue.forEach((queued) => {
-        if (error) {
-            queued.reject(error);
-        } else {
-            // Retry the original request
-            queued.request().then(queued.resolve).catch(queued.reject);
-        }
-    });
-    requestQueue = [];
-};
-
-/**
- * Refresh access token using httpOnly cookie
- */
-const refreshAccessToken = async (): Promise<string> => {
-    if (isRefreshing && refreshPromise) {
-        return refreshPromise;
+    constructor() {
+        this.baseUrl =
+            process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+        this.deviceFingerprint = this.ensureFingerprint();
     }
 
-    isRefreshing = true;
+    private ensureFingerprint(): string {
+        const key = "jdc_device_fingerprint";
+        if (typeof window === "undefined") return "server";
 
-    refreshPromise = fetch(`${BASE_URL}/auth/refresh`, {
-        method: "POST",
-        credentials: "include", // Essential for httpOnly cookies
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({}),
-    })
-        .then(async (response) => {
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error("Token refresh failed: " + errorText);
-            }
+        const existing = window.localStorage.getItem(key);
+        if (existing) return existing;
 
-            const data = await response.json();
-            const newToken = data.accessToken;
-
-            if (!newToken) {
-                throw new Error("No access token received");
-            }
-
-            session.setAccessToken(newToken);
-            return newToken;
-        })
-        .catch((error) => {
-            // Clear session on refresh failure
-            session.destroy();
-
-            // Redirect to login page
-            if (typeof window !== "undefined") {
-                window.location.href = "/login";
-            }
-
-            throw error;
-        })
-        .finally(() => {
-            isRefreshing = false;
-            refreshPromise = null;
-        });
-
-    return refreshPromise;
-};
-
-/**
- * Cached device fingerprint for enhanced security
- */
-let cachedDeviceFingerprint: string | null = null;
-
-const createDeviceFingerprint = (): string => {
-    // Return cached fingerprint if already computed
-    if (cachedDeviceFingerprint !== null) {
-        return cachedDeviceFingerprint;
+        const fp = Array.from(crypto.getRandomValues(new Uint8Array(16)))
+            .map((b) => b.toString(16).padStart(2, "0"))
+            .join("");
+        window.localStorage.setItem(key, fp);
+        return fp;
     }
 
-    if (typeof window === "undefined") {
-        cachedDeviceFingerprint = "";
-        return cachedDeviceFingerprint;
-    }
-
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-    if (ctx) {
-        ctx.textBaseline = "top";
-        ctx.font = "14px Arial";
-        ctx.fillText("Device fingerprint", 2, 2);
-    }
-
-    cachedDeviceFingerprint = btoa(
-        [
-            navigator.userAgent,
-            navigator.language,
-            screen.width + "x" + screen.height,
-            new Date().getTimezoneOffset(),
-            canvas.toDataURL(),
-        ].join("|")
-    ).slice(0, 32);
-
-    return cachedDeviceFingerprint;
-};
-
-/**
- * Enhanced request function with automatic token refresh
- */
-async function request<T>(
-    endpoint: string,
-    options: RequestInit = {}
-): Promise<T> {
-    const url = `${BASE_URL}${endpoint}`;
-    const token = session.getAccessToken();
-
-    const defaultHeaders: HeadersInit = {
-        "X-Device-Fingerprint": createDeviceFingerprint(),
-    };
-
-    // Only set Content-Type to application/json if body is not FormData
-    if (!(options.body instanceof FormData)) {
-        defaultHeaders["Content-Type"] = "application/json";
-    }
-
-    if (token) {
-        defaultHeaders["Authorization"] = `Bearer ${token}`;
-    }
-
-    const config: RequestInit = {
-        ...options,
-        credentials: "include", // Essential for httpOnly cookies
-        headers: {
-            ...defaultHeaders,
-            ...options.headers,
-        },
-    };
-
-    try {
-        const response = await fetch(url, config);
-
-        // Debug logging in development
-        if (
-            process.env.NODE_ENV !== "production" &&
-            process.env.NEXT_PUBLIC_DEBUG_API === "true"
-        ) {
-            console.log(
-                `API Request: ${endpoint} - Status: ${response.status}`
-            );
-        }
-
-        if (!response.ok) {
-            const errorData = await response
-                .json()
-                .catch(() => ({ message: response.statusText }));
-
-            // Handle 401 Unauthorized - Token expired
-            if (response.status === 401 && endpoint !== "/auth/refresh") {
-                // If already refreshing, queue this request
-                if (isRefreshing) {
-                    return new Promise<T>((resolve, reject) => {
-                        requestQueue.push({
-                            resolve: resolve as (value: unknown) => void,
-                            reject,
-                            request: () => request<T>(endpoint, options),
-                        });
-                    });
-                }
-
-                // Attempt token refresh
-                try {
-                    await refreshAccessToken();
-
-                    // Process queued requests
-                    processQueue();
-
-                    // Retry original request with new token
-                    return request<T>(endpoint, options);
-                } catch (refreshError) {
-                    // Process queue with error
-                    processQueue(refreshError);
-                    throw new Error(
-                        "Authentication failed - please log in again"
-                    );
-                }
-            }
-
-            throw new Error(errorData.message || "An unknown error occurred");
-        }
-
-        // Handle cases with no content
-        if (response.status === 204) {
-            return null as T;
-        }
-
-        const responseData = await response.json();
-        return responseData;
-    } catch (error) {
-        return Promise.reject(error);
-    }
-}
-
-/**
- * Enhanced API client with proper error handling and token management
- */
-export const apiClient = {
-    /**
-     * GET request
-     */
-    get: <T>(endpoint: string, options?: RequestInit): Promise<T> =>
-        request<T>(endpoint, { ...options, method: "GET" }),
-
-    /**
-     * POST request
-     */
-    post: <T>(
-        endpoint: string,
-        data?: unknown,
-        options?: RequestInit
-    ): Promise<T> => {
-        const body = data instanceof FormData ? data : JSON.stringify(data);
-        return request<T>(endpoint, { ...options, method: "POST", body });
-    },
-
-    /**
-     * PUT request
-     */
-    put: <T>(
-        endpoint: string,
-        data?: unknown,
-        options?: RequestInit
-    ): Promise<T> => {
-        const body = data instanceof FormData ? data : JSON.stringify(data);
-        return request<T>(endpoint, { ...options, method: "PUT", body });
-    },
-
-    /**
-     * PATCH request
-     */
-    patch: <T>(
-        endpoint: string,
-        data?: unknown,
-        options?: RequestInit
-    ): Promise<T> => {
-        const body = data instanceof FormData ? data : JSON.stringify(data);
-        return request<T>(endpoint, { ...options, method: "PATCH", body });
-    },
-
-    /**
-     * DELETE request
-     */
-    delete: <T>(endpoint: string, options?: RequestInit): Promise<T> =>
-        request<T>(endpoint, { ...options, method: "DELETE" }),
-
-    /**
-     * File upload with proper FormData handling
-     */
-    upload: <T>(
-        endpoint: string,
-        formData: FormData,
-        options?: RequestInit
-    ): Promise<T> =>
-        request<T>(endpoint, {
-            ...options,
-            method: "POST",
-            body: formData,
-        }),
-
-    /**
-     * FormData POST method for backward compatibility
-     */
-    postFormData: <T>(
-        endpoint: string,
-        formData: FormData,
-        options?: RequestInit
-    ): Promise<T> =>
-        request<T>(endpoint, {
-            ...options,
-            method: "POST",
-            body: formData,
-        }),
-
-    /**
-     * FormData PATCH method for backward compatibility
-     */
-    patchFormData: <T>(
-        endpoint: string,
-        formData: FormData,
-        options?: RequestInit
-    ): Promise<T> =>
-        request<T>(endpoint, {
-            ...options,
-            method: "PATCH",
-            body: formData,
-        }),
-
-    /**
-     * Download file with proper response handling
-     */
-    download: async (
-        endpoint: string,
-        filename?: string,
-        options?: RequestInit
-    ): Promise<void> => {
-        const token = session.getAccessToken();
-        const headers: HeadersInit = {
-            "X-Device-Fingerprint": createDeviceFingerprint(),
+    private buildHeaders(extra?: Record<string, string>) {
+        const headers: Record<string, string> = {
+            "x-device-fingerprint": this.deviceFingerprint,
+            ...extra,
         };
 
+        const token = session.getAccessToken();
         if (token) {
             headers["Authorization"] = `Bearer ${token}`;
         }
+        if (extra?.["Content-Type"] == null) {
+            // Allow callers to override; default to JSON
+            headers["Content-Type"] = "application/json";
+        }
+        return headers;
+    }
 
-        const response = await fetch(`${BASE_URL}${endpoint}`, {
-            ...options,
-            credentials: "include",
-            headers: {
-                ...headers,
-                ...options?.headers,
-            },
+    private parseStandardError = async (
+        res: Response,
+        fallbackPath: string,
+        method: string
+    ): Promise<StandardError> => {
+        let body: unknown = null;
+        try {
+            body = await res.clone().json();
+        } catch {}
+        const status = res.status;
+        const b =
+            body && typeof body === "object"
+                ? (body as Record<string, unknown>)
+                : undefined;
+        const code =
+            (b && typeof b["error"] === "string" && (b["error"] as string)) ||
+            (status === 401
+                ? "Unauthorized"
+                : status === 403
+                ? "Forbidden"
+                : status === 404
+                ? "NotFound"
+                : status === 409
+                ? "Conflict"
+                : status === 429
+                ? "TooManyRequests"
+                : status >= 500
+                ? "ServerError"
+                : "HttpError");
+        const message =
+            (b &&
+                typeof b["message"] === "string" &&
+                (b["message"] as string)) ||
+            (b && Array.isArray(b["message"])
+                ? (b["message"] as unknown[]).join(", ")
+                : undefined) ||
+            `${code} (${status})`;
+        const requestId =
+            (res.headers.get("x-request-id") ||
+                (b && (b["requestId"] as string))) ??
+            undefined;
+        // Merge server-provided details with selected response headers for better UX (e.g., 429 retry-after)
+        const serverDetails =
+            b && (b["details"] as Record<string, unknown> | undefined);
+        const retryAfterHeader = res.headers.get("retry-after");
+        const retryAfterSeconds = retryAfterHeader
+            ? Number(retryAfterHeader)
+            : undefined;
+        const details: Record<string, unknown> | undefined = {
+            ...(serverDetails || {}),
+            ...(retryAfterSeconds && !Number.isNaN(retryAfterSeconds)
+                ? { retryAfterSeconds }
+                : {}),
+        };
+        const fieldErrorsRaw = b?.["fieldErrors"] as unknown;
+        const fieldErrors = Array.isArray(fieldErrorsRaw)
+            ? (fieldErrorsRaw as {
+                  field: string;
+                  message: string;
+                  code?: string;
+              }[])
+            : undefined;
+        const path = (b?.["path"] as string) || fallbackPath;
+        const methodFromBody = (b?.["method"] as string) || method;
+        return {
+            code,
+            message,
+            requestId,
+            details,
+            fieldErrors,
+            status,
+            path,
+            method: methodFromBody,
+        };
+    };
+
+    private async request<T>(
+        method: HttpMethod,
+        path: string,
+        body?: unknown,
+        options?: RequestOptions
+    ): Promise<T> {
+        const url = `${this.baseUrl}${path}`;
+        const headers = this.buildHeaders({
+            ...(options?.headers || {}),
         });
 
-        if (!response.ok) {
-            throw new Error(`Download failed: ${response.statusText}`);
+        // If sending FormData, let the browser set the multipart boundary
+        if (body instanceof FormData && headers["Content-Type"]) {
+            delete headers["Content-Type"];
         }
 
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = filename || "download";
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-    },
-};
+        const res = await fetch(url, {
+            method,
+            headers,
+            credentials: "include",
+            body:
+                body instanceof FormData
+                    ? body
+                    : body != null
+                    ? JSON.stringify(body)
+                    : undefined,
+            signal: options?.signal,
+        });
 
-// Export default for convenience
-export default apiClient;
+        if (res.status === 401 && !options?.skipAuthRetry) {
+            // Try one refresh then retry the original request
+            try {
+                const { accessToken } = await AuthService.refreshToken();
+                session.setAccessToken(accessToken);
+            } catch {
+                // Ensure we clear session on hard 401
+                session.clear();
+                const stdErr: StandardError = {
+                    code: "Unauthorized",
+                    message: "Unauthorized",
+                    status: 401,
+                    path,
+                };
+                emitApiError({ ...stdErr, status: stdErr.status ?? 401 });
+                const error = new Error(stdErr.message);
+                throw Object.assign(error, stdErr);
+            }
+            return this.request<T>(method, path, body, {
+                ...options,
+                skipAuthRetry: true,
+            });
+        }
 
-// Legacy exports for backward compatibility
-export { request };
-export const api = apiClient;
+        if (!res.ok) {
+            const std = await this.parseStandardError(res, path, method);
+            const err = new Error(std.message);
+            Object.assign(err as unknown as object, std);
+            emitApiError({ ...std, status: std.status ?? res.status });
+            throw err;
+        }
+
+        // No content
+        if (res.status === 204) {
+            return undefined as unknown as T;
+        }
+        const data = (await res.json()) as T;
+        return data;
+    }
+
+    get<T>(path: string, options?: RequestOptions) {
+        return this.request<T>("GET", path, undefined, options);
+    }
+    post<T>(path: string, body?: unknown, options?: RequestOptions) {
+        return this.request<T>("POST", path, body, options);
+    }
+    postFormData<T>(
+        path: string,
+        formData: FormData,
+        options?: RequestOptions
+    ) {
+        const headers = { ...(options?.headers || {}) };
+        // Let browser set multipart boundary
+        delete headers["Content-Type"];
+        return this.request<T>("POST", path, formData, { ...options, headers });
+    }
+    patch<T>(path: string, body?: unknown, options?: RequestOptions) {
+        return this.request<T>("PATCH", path, body, options);
+    }
+    put<T>(path: string, body?: unknown, options?: RequestOptions) {
+        return this.request<T>("PUT", path, body, options);
+    }
+    delete<T>(path: string, options?: RequestOptions) {
+        return this.request<T>("DELETE", path, undefined, options);
+    }
+}
+
+export const apiClient = new ApiClient();

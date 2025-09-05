@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { AuthDebugger } from "@/lib/auth-debug";
 import { apiClient } from "@/lib/api";
 import { session } from "@/lib/session";
 import { useAuth } from "@/lib/contexts/auth-context";
+import { AuthService } from "@/lib/services/auth";
+import Link from "next/link";
 
 export default function AuthDebugPage() {
     const { user, isLoading } = useAuth();
@@ -48,36 +49,30 @@ export default function AuthDebugPage() {
 
     const tests = [
         {
-            name: "Backend Health Check",
-            fn: () => AuthDebugger.testConnection(),
-        },
-        {
-            name: "CloudFront Configuration",
-            fn: () => AuthDebugger.testCloudFrontConfig(),
-        },
-        {
-            name: "Debug Headers",
-            fn: () => AuthDebugger.debugHeaders({ testSource: "debug-page" }),
+            name: "Backend Connectivity (/auth/refresh)",
+            fn: () => AuthService.refreshToken(),
         },
         {
             name: "Session State",
             fn: async () => {
-                try {
-                    AuthDebugger.logSessionState();
-                    return session.debug?.() || "Debug function not available";
-                } catch (error) {
-                    console.error("Session state test error:", error);
-                    throw error;
-                }
+                const token = session.getAccessToken();
+                return {
+                    hasToken: !!token,
+                    tokenLength: token?.length || 0,
+                };
             },
         },
         {
-            name: "Token Info",
-            fn: () => AuthDebugger.testTokenInfo(),
-        },
-        {
-            name: "Test Login Flow",
-            fn: () => AuthDebugger.testLogin(),
+            name: "Token Info (decode payload)",
+            fn: async () => {
+                const token = session.getAccessToken();
+                if (!token) throw new Error("No access token in session");
+                const [, payload] = token.split(".");
+                const json = JSON.parse(
+                    atob(payload.replace(/-/g, "+").replace(/_/g, "/"))
+                );
+                return json;
+            },
         },
         {
             name: "Auth Me Endpoint",
@@ -85,13 +80,24 @@ export default function AuthDebugPage() {
         },
         {
             name: "Token Refresh",
-            fn: () => apiClient.post("/auth/refresh", {}),
+            fn: () => AuthService.refreshToken(),
         },
         {
             name: "Full Diagnostic",
             fn: async () => {
-                await AuthDebugger.runFullDiagnostic();
-                return "Check browser console for detailed logs";
+                const out: Record<string, unknown> = {};
+                try {
+                    out.refresh = await AuthService.refreshToken();
+                } catch (e) {
+                    out.refreshError =
+                        e instanceof Error ? e.message : String(e);
+                }
+                try {
+                    out.me = await AuthService.getProfile();
+                } catch (e) {
+                    out.meError = e instanceof Error ? e.message : String(e);
+                }
+                return out;
             },
         },
     ];
@@ -101,8 +107,8 @@ export default function AuthDebugPage() {
             addLog("Auth Debug Page loaded");
             addLog(`Environment: ${process.env.NODE_ENV}`);
 
-            // Only log API and auth info if user is already logged in
-            const hasToken = session.hasValidToken();
+            // Only log API and auth info if an access token exists
+            const hasToken = !!session.getAccessToken();
             if (hasToken) {
                 addLog(
                     `API URL: ${process.env.NEXT_PUBLIC_API_URL || "Not set"}`
@@ -162,9 +168,12 @@ export default function AuthDebugPage() {
                     <p className="text-gray-600 mb-4">
                         Please log in to access the debug console.
                     </p>
-                    <a href="/login" className="text-blue-600 hover:underline">
+                    <Link
+                        href="/login"
+                        className="text-blue-600 hover:underline"
+                    >
                         Go to Login →
-                    </a>
+                    </Link>
                 </div>
             </div>
         );
@@ -394,9 +403,19 @@ function LoginTest({ onLog }: { onLog: (message: string) => void }) {
         onLog(`Testing login with email: ${email}`);
 
         try {
-            const result = await AuthDebugger.testLogin(email, password);
+            const result = await AuthService.login({ email, password });
             onLog(`✅ Login test completed`);
-            onLog(`Result: ${JSON.stringify(result, null, 2)}`);
+            onLog(`User: ${JSON.stringify(result.user, null, 2)}`);
+            try {
+                const me = await AuthService.getProfile();
+                onLog(`/auth/me: ${JSON.stringify(me, null, 2)}`);
+            } catch (e) {
+                onLog(
+                    `⚠️ /auth/me failed after login: ${
+                        e instanceof Error ? e.message : String(e)
+                    }`
+                );
+            }
         } catch (error) {
             onLog(
                 `❌ Login test failed: ${

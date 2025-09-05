@@ -1,65 +1,25 @@
 import { apiClient } from "@/lib/api";
-import { User } from "@/lib/types/auth";
+import type { Vendor as VendorType } from "@/lib/types/auth";
 
-export interface VendorData {
-    // userId: string;
-    companyName: string;
-    contactName?: string;
-    website?: string;
-    servicesOffered?: string[];
-    notes?: string;
-}
+export type Vendor = VendorType;
 
-export interface Vendor extends VendorData {
-    _id: string;
-    userId: User;
-    createdAt: string;
-    updatedAt: string;
-}
-
-export interface CreateVendorRequest {
-    // User fields
-    email: string;
-    firstName: string;
-    lastName: string;
-    password: string;
-    contactEmail?: string;
-    contactPhone?: string;
-
-    // Vendor-specific fields
-    companyName: string;
-    contactName?: string;
-    website?: string;
-    servicesOffered?: string[];
-    notes?: string;
-}
-
-export interface UpdateVendorRequest {
-    // User fields
-    firstName?: string;
-    lastName?: string;
-    contactEmail?: string;
-    contactPhone?: string;
-
-    // Vendor-specific fields
-    companyName?: string;
-    contactName?: string;
-    website?: string;
-    servicesOffered?: string[];
-    notes?: string;
+export interface VendorResponse {
+    data: Vendor;
 }
 
 export interface VendorListResponse {
     data: Vendor[];
-    total: number;
-    page: number;
-    limit: number;
+    total?: number;
 }
 
-export interface VendorResponse {
-    data: Vendor;
-    message?: string;
+export interface CreateVendorRequest {
+    companyName: string;
+    website?: string;
+    contactName?: string;
+    servicesOffered?: string[];
 }
+
+export type UpdateVendorRequest = Partial<CreateVendorRequest>;
 
 export class VendorService {
     /**

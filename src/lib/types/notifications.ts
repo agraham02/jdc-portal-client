@@ -1,6 +1,3 @@
-/**
- * Core notification types matching backend enums
- */
 export enum NotificationType {
     APPLICATION_SUBMITTED = "ApplicationSubmitted",
     APPLICATION_ACCEPTED = "ApplicationAccepted",
@@ -18,15 +15,7 @@ export enum NotificationType {
     SYSTEM_ANNOUNCEMENT = "SystemAnnouncement",
 }
 
-/**
- * Priority levels for notifications
- */
-export type NotificationPriority = "low" | "medium" | "high" | "urgent";
-
-/**
- * Main notification interface
- */
-export interface Notification {
+export type Notification = {
     id: string;
     userId: string;
     type: NotificationType;
@@ -34,69 +23,28 @@ export interface Notification {
     message: string;
     data: Record<string, unknown>;
     read: boolean;
-    readAt: string | null;
-    deleted: boolean;
-    deletedAt: string | null;
+    readAt?: string | null;
+    deleted?: boolean;
+    deletedAt?: string | null;
     createdAt: string;
     updatedAt: string;
-}
+};
 
-/**
- * API response for notification lists
- */
-export interface NotificationListResponse {
+export type NotificationListResponse = {
     data: Notification[];
     total: number;
     totalPages: number;
     page: number;
     limit: number;
-    unreadCount: number;
-}
+    unreadCount?: number;
+};
 
-/**
- * API response for unread count
- */
-export interface UnreadCountResponse {
-    count: number;
-}
+export type UnreadCountResponse = { count: number };
 
-/**
- * Query parameters for fetching notifications
- */
-export interface NotificationQueryParams {
+export type NotificationQuery = {
     page?: number;
     limit?: number;
     type?: NotificationType;
     read?: boolean;
     search?: string;
-}
-
-/**
- * DTO for creating notifications (admin only)
- */
-export interface CreateNotificationDto {
-    userId: string;
-    type: NotificationType;
-    title: string;
-    message: string;
-    data?: Record<string, unknown>;
-}
-
-/**
- * API error response
- */
-export interface ApiError {
-    statusCode: number;
-    message: string | string[];
-    error: string;
-}
-
-/**
- * Generic API response wrapper
- */
-export interface ApiResponse<T = unknown> {
-    success: boolean;
-    data?: T;
-    error?: ApiError;
-    message?: string;
-}
+};
