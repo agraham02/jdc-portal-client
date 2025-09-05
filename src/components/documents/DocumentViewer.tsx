@@ -35,7 +35,7 @@ interface DocumentViewerProps {
     /** Loading placeholder */
     loadingPlaceholder?: React.ReactNode;
     /** Error placeholder */
-    errorPlaceholder?: React.ReactNode;
+    // errorPlaceholder is reserved for future use to render custom error UI
 }
 
 interface DocumentWithStatus extends UploadedFile {
@@ -52,7 +52,6 @@ export function DocumentViewer({
     maxVisible,
     className = "",
     loadingPlaceholder,
-    errorPlaceholder,
 }: DocumentViewerProps) {
     const [documents, setDocuments] = useState<DocumentWithStatus[]>([]);
     const [loading, setLoading] = useState(true);
@@ -69,7 +68,7 @@ export function DocumentViewer({
             }
 
             setLoading(true);
-            const loadedDocs: DocumentWithStatus[] = [];
+            // load documents
 
             // Load documents in parallel
             const loadPromises = filteredIds.map(async (id) => {
@@ -95,11 +94,14 @@ export function DocumentViewer({
         };
 
         loadDocuments();
-    }, [filteredIds.join(",")]);
+    }, [filteredIds]);
 
     const handleDownload = async (doc: DocumentWithStatus) => {
         try {
-            await FileService.triggerDownload(doc._id, doc.originalName || "document");
+            await FileService.triggerDownload(
+                doc._id,
+                doc.originalName || "document"
+            );
             toast.success(`Downloaded ${doc.originalName}`);
         } catch (error) {
             toast.error("Failed to download file");
@@ -139,9 +141,8 @@ export function DocumentViewer({
         return "bg-gray-100 text-gray-800";
     };
 
-    const displayedDocs = maxVisible && !showAll 
-        ? documents.slice(0, maxVisible) 
-        : documents;
+    const displayedDocs =
+        maxVisible && !showAll ? documents.slice(0, maxVisible) : documents;
 
     const hasMore = maxVisible && documents.length > maxVisible && !showAll;
 
@@ -223,7 +224,9 @@ export function DocumentViewer({
 
     if (displayMode === "grid") {
         return (
-            <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 ${className}`}>
+            <div
+                className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 ${className}`}
+            >
                 {displayedDocs.map((doc, index) => (
                     <Card key={doc._id} className="p-3">
                         <CardContent className="p-0">
@@ -232,7 +235,8 @@ export function DocumentViewer({
                                     {getFileIcon(doc.mimetype)}
                                     <div className="min-w-0 flex-1">
                                         <div className="text-sm font-medium truncate">
-                                            {doc.originalName || `Document ${index + 1}`}
+                                            {doc.originalName ||
+                                                `Document ${index + 1}`}
                                         </div>
                                         {showMetadata && !doc.error && (
                                             <div className="flex gap-2 mt-1">
@@ -247,7 +251,9 @@ export function DocumentViewer({
                                                     ).toUpperCase() || "FILE"}
                                                 </Badge>
                                                 <span className="text-xs text-muted-foreground">
-                                                    {FileService.formatFileSize(doc.size)}
+                                                    {FileService.formatFileSize(
+                                                        doc.size
+                                                    )}
                                                 </span>
                                             </div>
                                         )}
@@ -275,7 +281,9 @@ export function DocumentViewer({
                                             <Button
                                                 size="sm"
                                                 variant="outline"
-                                                onClick={() => handleDownload(doc)}
+                                                onClick={() =>
+                                                    handleDownload(doc)
+                                                }
                                                 className="flex-1"
                                             >
                                                 <DownloadIcon className="h-4 w-4 mr-1" />
@@ -370,10 +378,7 @@ export function DocumentViewer({
             ))}
             {hasMore && (
                 <div className="text-center pt-2">
-                    <Button
-                        variant="ghost"
-                        onClick={() => setShowAll(true)}
-                    >
+                    <Button variant="ghost" onClick={() => setShowAll(true)}>
                         Show {documents.length - maxVisible!} more documents...
                     </Button>
                 </div>
