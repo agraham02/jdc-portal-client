@@ -289,7 +289,7 @@ This plan organizes frontend delivery into independent, production-ready feature
 
 ## HR Documents
 
-### Feature: HR/Company Documents Library
+### [x] Feature: HR/Company Documents Library
 
 -   Branch: `feature/hr-documents`
 -   User Stories: HR Documents (upload/view/download/replace/delete); Files & uploads
