@@ -157,18 +157,8 @@ export class FileService {
         file: File,
         updates: Partial<FileUploadDto> = {}
     ): Promise<UploadedFile> {
-        const formData = new FormData();
-        formData.append("file", file);
-        Object.entries(updates).forEach(([key, value]) => {
-            if (value !== undefined && value !== null) {
-                if (Array.isArray(value)) {
-                    formData.append(key, value.join(","));
-                } else {
-                    formData.append(key, value.toString());
-                }
-            }
-        });
-        return apiClient.patch<UploadedFile>(`/files/${id}/replace`, formData);
+        const formData = this.buildFormData(file, updates);
+        return apiClient.put<UploadedFile>(`/files/${id}/replace`, formData);
     }
 
     /**

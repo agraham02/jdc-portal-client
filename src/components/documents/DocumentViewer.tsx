@@ -35,7 +35,6 @@ interface DocumentViewerProps {
     /** Loading placeholder */
     loadingPlaceholder?: React.ReactNode;
     /** Error placeholder */
-    // errorPlaceholder is reserved for future use to render custom error UI
 }
 
 interface DocumentWithStatus extends UploadedFile {
