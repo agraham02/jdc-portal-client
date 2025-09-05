@@ -20,7 +20,6 @@ import { FileService } from "@/lib/services/file";
 import { toast } from "sonner";
 import {
     Upload,
-    FileText,
     AlertCircle,
     CheckCircle,
     X,

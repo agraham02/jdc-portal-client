@@ -167,7 +167,7 @@ export default function HRResourcesPage() {
                         transition={{ delay: 0.2 }}
                         className="flex gap-3"
                     >
-                        {quickActions.map((action, index) => (
+                        {quickActions.map((action) => (
                             <Can
                                 key={action.title}
                                 anyOf={
