@@ -61,10 +61,10 @@ export function EditRoleDialog({ roleId, open, onClose, onUpdated }: Props) {
                     if (
                         typeof p === "object" &&
                         p !== null &&
-                        "_id" in p &&
-                        typeof (p as any)._id === "string"
+                        "_id" in (p as Record<string, unknown>)
                     ) {
-                        return (p as { _id: string })._id;
+                        const id = (p as { _id?: unknown })._id;
+                        return typeof id === "string" ? id : "";
                     }
                     return "";
                 }
