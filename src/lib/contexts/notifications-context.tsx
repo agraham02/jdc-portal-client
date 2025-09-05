@@ -210,13 +210,13 @@ function normalize(payload: unknown): Notification {
     const toIso = (d: unknown) =>
         typeof d === "string" ? d : new Date().toISOString();
     return {
-        id: String((obj["id"] ?? obj["_id"] ?? "") as string),
-        userId: String((obj["userId"] ?? "") as string),
+        id: String(obj["id"] ?? obj["_id"] ?? ""),
+        userId: String(obj["userId"] ?? ""),
         type:
             (obj["type"] as NotificationType) ??
             NotificationType.SYSTEM_ANNOUNCEMENT,
-        title: String((obj["title"] ?? "") as string),
-        message: String((obj["message"] ?? "") as string),
+        title: String(obj["title"] ?? ""),
+        message: String(obj["message"] ?? ""),
         data:
             obj["data"] && typeof obj["data"] === "object"
                 ? (obj["data"] as Record<string, unknown>)
