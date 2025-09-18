@@ -12,17 +12,30 @@ import type {
     ResetPasswordFormData,
     ChangePasswordFormData,
 } from "../validations/auth";
+import type {
+    LoginDto,
+    RegisterEmployeeDto,
+    RegisterVendorDto,
+    UpdatePasswordDto,
+    RequestPasswordResetDto,
+    ConfirmPasswordResetDto,
+    UpdateProfileDto,
+} from "../types/auth";
 
 const login = async (credentials: LoginFormData): Promise<{ user: User }> => {
+    const loginDto: LoginDto = {
+        email: credentials.email,
+        password: credentials.password,
+    };
+
     // The refreshToken is handled by the backend via httpOnly cookies
     const { accessToken } = await apiClient.post<{
         accessToken: string;
         expiresIn: string;
-    }>("/auth/login", credentials);
+    }>("/auth/login", loginDto);
     session.setAccessToken(accessToken);
 
     const user = await getProfile();
-
     return { user };
 };
 
@@ -31,10 +44,26 @@ const registerEmployee = async (
 ): Promise<{ message: string }> => {
     // Remove confirmPassword before sending to backend
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { confirmPassword, ...registrationData } = data;
+    const { confirmPassword, ...formData } = data;
+
+    // Map to API DTO format
+    const registerDto: RegisterEmployeeDto = {
+        email: formData.email,
+        password: formData.password,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        physicalAddress: formData.physicalAddress!,
+        mailingAddress: formData.mailingAddress,
+        contactPhone: formData.contactPhone,
+        employeeId: formData.employeeId,
+        jobTitle: formData.jobTitle,
+        department: formData.department,
+        hireDate: formData.hireDate,
+    };
+
     return apiClient.post<{ message: string }>(
         "/auth/register/employee",
-        registrationData
+        registerDto
     );
 };
 
@@ -43,10 +72,25 @@ const registerVendor = async (
 ): Promise<{ message: string }> => {
     // Remove confirmPassword before sending to backend
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { confirmPassword, ...registrationData } = data;
+    const { confirmPassword, ...formData } = data;
+
+    const registerDto: RegisterVendorDto = {
+        email: formData.email,
+        password: formData.password,
+        firstName: formData.firstName || formData.contactName,
+        lastName: formData.lastName || "",
+        physicalAddress: formData.physicalAddress,
+        mailingAddress: formData.mailingAddress,
+        contactPhone: formData.contactPhone,
+        companyName: formData.companyName,
+        website: formData.website,
+        contactName: formData.contactName,
+        servicesOffered: formData.servicesOffered,
+    };
+
     return apiClient.post<{ message: string }>(
         "/auth/register/vendor",
-        registrationData
+        registerDto
     );
 };
 
@@ -64,6 +108,10 @@ const getProfile = (): Promise<User> => {
     return apiClient.get("/auth/me");
 };
 
+const getUserPermissions = (): Promise<{ permissions: string[] }> => {
+    return apiClient.get("/auth/me/permissions");
+};
+
 const refreshToken = async (): Promise<{
     accessToken: string;
     expiresIn?: string;
@@ -72,27 +120,33 @@ const refreshToken = async (): Promise<{
     return apiClient.post("/auth/refresh", {}, { skipAuthRetry: true });
 };
 
-// Email verification: The backend currently has no explicit endpoints in the auth controller.
-// We provide thin wrappers that can be wired once available. For now, they will attempt
-// conventional endpoints and throw a clear error if not present.
-const verifyEmail = async (token: string): Promise<{ message: string }> => {
-    // Try a conventional path; backend may add this later.
-    return apiClient.post<{ message: string }>(
-        "/auth/verify-email",
-        { token },
-        { skipAuthRetry: true }
+// Get pending accounts (Admin only)
+const getPendingAccounts = async (): Promise<{ users: User[] }> => {
+    return apiClient.get("/auth/pending");
+};
+
+// Approve user account (Admin only)
+const approveUser = async (userId: string): Promise<{ message: string }> => {
+    return apiClient.patch<{ message: string }>(
+        `/auth/${encodeURIComponent(userId)}/approve`,
+        {}
     );
 };
 
-const resendVerification = async (
-    email: string
-): Promise<{ message: string; nextAllowedAt?: string }> => {
-    // Rate-limited on server; 429 returns retry-after we surface via apiClient details
-    return apiClient.post<{ message: string; nextAllowedAt?: string }>(
-        "/auth/verify-email/resend",
-        { email },
-        { skipAuthRetry: true }
+// Reject user account (Admin only)
+const rejectUser = async (
+    userId: string,
+    reason?: string
+): Promise<{ message: string }> => {
+    return apiClient.patch<{ message: string }>(
+        `/auth/${encodeURIComponent(userId)}/reject`,
+        { reason }
     );
+};
+
+// Request account deletion
+const requestAccountDeletion = async (): Promise<{ message: string }> => {
+    return apiClient.post<{ message: string }>("/auth/me/request-delete", {});
 };
 
 export const AuthService = {
@@ -101,23 +155,41 @@ export const AuthService = {
     registerVendor,
     logout,
     getProfile,
+    getUserPermissions,
+    getPendingAccounts,
+    approveUser,
+    rejectUser,
+    requestAccountDeletion,
     updateProfile(data: Partial<ProfileUpdateFormData>) {
-        return apiClient.patch<{ message: string }>("/auth/me/profile", data);
+        const updateDto: UpdateProfileDto = {
+            firstName: data.firstName,
+            lastName: data.lastName,
+            contactPhone: data.contactPhone,
+        };
+        return apiClient.patch<{ message: string }>(
+            "/auth/me/profile",
+            updateDto
+        );
     },
     refreshToken,
-    verifyEmail,
-    resendVerification,
     requestPasswordReset(data: ForgotPasswordFormData) {
+        const requestDto: RequestPasswordResetDto = {
+            email: data.email,
+        };
         return apiClient.post<{ message: string; token?: string }>(
             "/auth/password-reset/request",
-            data,
+            requestDto,
             { skipAuthRetry: true }
         );
     },
     confirmPasswordReset(token: string, data: ResetPasswordFormData) {
+        const confirmDto: ConfirmPasswordResetDto = {
+            token,
+            newPassword: data.newPassword,
+        };
         return apiClient.post<{ message: string }>(
             "/auth/password-reset/confirm",
-            { token, newPassword: data.newPassword },
+            confirmDto,
             { skipAuthRetry: true }
         );
     },
@@ -125,9 +197,13 @@ export const AuthService = {
         // remove confirmPassword before sending
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { confirmPassword, ...payload } = data;
+        const updateDto: UpdatePasswordDto = {
+            currentPassword: payload.oldPassword,
+            newPassword: payload.newPassword,
+        };
         return apiClient.patch<{ message: string }>(
             "/auth/update-password",
-            payload
+            updateDto
         );
     },
     // Admin user actions

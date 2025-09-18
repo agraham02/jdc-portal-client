@@ -1,6 +1,7 @@
 // RBAC-specific types for role and permission management
 
 import { User, Permission, Role } from "./auth";
+import { PaginatedResponse } from "./api";
 
 // Extended permission interface for RBAC management
 export interface RBACPermission extends Permission {
@@ -10,66 +11,58 @@ export interface RBACPermission extends Permission {
 
 // Extended role interface for RBAC management
 export interface RBACRole extends Role {
-    isCustom: boolean;
-    isActive: boolean;
+    isCustom?: boolean;
+    isActive?: boolean;
     userCount?: number; // Number of users with this role
     createdAt?: string;
     updatedAt?: string;
 }
 
-// User with role assignment information
+// User with role assignment information - extends User but includes populated roles
 export interface RBACUser extends User {
     totalRoles?: number;
+    roles: RBACRole[]; // Always populated in RBAC context
 }
 
-// API Response types
+// API Response types matching new API structure
 export interface PermissionsResponse {
     permissions: RBACPermission[];
-    categorized: Record<string, RBACPermission[]>;
-    totalPermissions: number;
 }
 
-export interface RolesResponse {
-    roles: RBACRole[];
-    totalRoles: number;
-}
+export type RoleListResponse = PaginatedResponse<RBACRole>;
 
 export interface UserRolesResponse {
     user: RBACUser;
     roles: RBACRole[];
-    totalRoles: number;
 }
 
 export interface UserPermissionsResponse {
     user: RBACUser;
     permissions: RBACPermission[];
-    totalPermissions: number;
 }
 
-export interface RoleUsersResponse {
+export interface RoleUsersResponse extends PaginatedResponse<RBACUser> {
     role: RBACRole;
-    users: RBACUser[];
-    totalUsers: number;
 }
 
-// Form data types
-export interface CreateRoleRequest {
+// DTO types matching the new API
+export interface CreateRoleDto {
     name: string;
     description?: string;
-    permissionIds: string[];
+    permissions: string[]; // Array of permission IDs
 }
 
-export interface UpdateRoleRequest {
+export interface UpdateRoleDto {
     name?: string;
     description?: string;
-    permissionIds?: string[];
+    permissions?: string[]; // Array of permission IDs
 }
 
-export interface AssignRoleRequest {
+export interface AssignRoleDto {
     roleId: string;
 }
 
-export interface BulkUpdateUserRolesRequest {
+export interface BulkAssignRolesDto {
     roleIds: string[];
 }
 

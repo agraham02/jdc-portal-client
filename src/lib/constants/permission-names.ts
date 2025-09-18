@@ -50,6 +50,9 @@ export const PermissionName = {
 
     // HR Documents
     HR_DOCUMENT_CREATE: "hr_document:create",
+    HR_DOCUMENT_READ: "hr_document:read",
+    HR_DOCUMENT_UPDATE: "hr_document:update",
+    HR_DOCUMENT_DELETE: "hr_document:delete",
 
     // Internal Notes (procurement)
     INTERNAL_NOTE_CREATE: "internal_note:create",

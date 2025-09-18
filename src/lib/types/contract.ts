@@ -1,29 +1,34 @@
+import { PaginatedResponse } from "./api";
+
 export enum ContractStatus {
-    OPEN = "Open",
-    IN_PROGRESS = "InProgress",
-    CLOSED = "Closed",
-    AWARDED = "Awarded",
+    DRAFT = "draft",
+    OPEN = "open",
+    CLOSED = "closed",
+    AWARDED = "awarded",
+    IN_PROGRESS = "in_progress",
+    COMPLETED = "completed",
+    CANCELLED = "cancelled",
 }
 
-export enum ContractApplicationStatus {
-    SUBMITTED = "Submitted",
-    REVIEWED = "Reviewed",
-    ACCEPTED = "Accepted",
-    REJECTED = "Rejected",
+export enum ApplicationStatus {
+    SUBMITTED = "submitted",
+    IN_REVIEW = "in_review",
+    AWARDED = "awarded",
+    REJECTED = "rejected",
 }
 
 export interface ContractApplication {
-    _id?: string;
+    _id: string;
+    contractId: string;
     vendorId: string;
-    userId: string;
-    applicationDate: Date;
+    vendorName?: string;
+    applicationDate: string; // ISO date string
     proposalDetails: string;
-    status: ContractApplicationStatus;
+    status: ApplicationStatus;
     documents?: string[];
-    createdBy?: string;
-    updatedBy?: string;
-    createdAt?: Date;
-    updatedAt?: Date;
+    notes?: string;
+    createdAt: string;
+    updatedAt: string;
 }
 
 export interface Contract {
@@ -32,64 +37,59 @@ export interface Contract {
     description: string;
     status: ContractStatus;
     budget?: number;
-    deadline?: Date;
+    deadline?: string; // ISO date string
+    requiredDocuments?: string[];
     createdBy: {
         _id: string;
-        firstName: string;
-        lastName: string;
+        firstName?: string;
+        lastName?: string;
+        fullName: string;
         email: string;
     };
     awardedToVendorId?: string;
-    applications: ContractApplication[];
+    awardedToVendorName?: string;
+    applications?: ContractApplication[];
+    applicationCount?: number;
     documents?: string[];
-    statusLog?: Array<{
-        status: ContractStatus;
-        changedAt: Date;
-        changedBy: string;
-    }>;
-    createdAt: Date;
-    updatedAt: Date;
+    createdAt: string;
+    updatedAt: string;
 }
 
-export interface CreateContractRequest {
+// DTOs matching the new API
+export interface CreateContractDto {
     title: string;
     description: string;
     budget?: number;
-    deadline?: string;
-    documents?: string[];
+    deadline?: string; // ISO date string
+    requiredDocuments?: string[];
 }
 
-export interface UpdateContractRequest {
+export interface UpdateContractDto {
     title?: string;
     description?: string;
     budget?: number;
-    deadline?: string;
-    documents?: string[];
+    deadline?: string; // ISO date string
+    requiredDocuments?: string[];
 }
 
-export interface ApplyToContractRequest {
+export interface ApplyToContractDto {
     proposalDetails: string;
-    documents?: string[];
 }
 
-export interface UpdateApplicationStatusRequest {
-    status: ContractApplicationStatus;
+export interface UpdateApplicationStatusDto {
+    status: ApplicationStatus;
     notes?: string;
 }
 
-export interface AwardContractRequest {
+export interface AwardContractDto {
     applicationId: string;
     notes?: string;
 }
 
-export interface ContractListResponse {
-    data: Contract[];
-    total: number;
-    page: number;
-    limit: number;
-}
+// Response types
+export type ContractListResponse = PaginatedResponse<Contract>;
 
-export interface ContractResponse {
-    message: string;
+export interface ContractApplicationsResponse
+    extends PaginatedResponse<ContractApplication> {
     contract: Contract;
 }

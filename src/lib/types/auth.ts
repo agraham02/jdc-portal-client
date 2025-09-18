@@ -1,24 +1,24 @@
 export enum UserStatus {
-    PENDING = "Pending", // Awaiting approval or onboarding
-    ACTIVE = "Active", // Fully approved and active
-    INACTIVE = "Inactive", // Temporarily disabled (leave, suspended, etc.)
-    ONBOARDING = "Onboarding", // In the process of being set up
-    REJECTED = "Rejected", // Registration/application denied
-    TERMINATED = "Terminated", // Explicitly ended (employment/lease ended)
-    ARCHIVED = "Archived", // Soft-deleted or historical
+    PENDING = "pending",
+    ACTIVE = "active",
+    INACTIVE = "inactive",
+    ONBOARDING = "onboarding",
+    REJECTED = "rejected",
+    TERMINATED = "terminated",
+    ARCHIVED = "archived",
 }
 
 export enum AccountType {
-    ADMIN = "Admin",
-    EMPLOYEE = "Employee",
-    VENDOR = "Vendor",
-    HOUSING_TENANT = "Housing Tenant",
+    ADMIN = "admin",
+    EMPLOYEE = "employee",
+    VENDOR = "vendor",
+    HOUSING_TENANT = "housing_tenant",
 }
 
 export enum RoleName {
-    ADMIN = "Admin",
-    EMPLOYEE = "Employee",
-    VENDOR = "Vendor",
+    ADMIN = "admin",
+    EMPLOYEE = "employee",
+    VENDOR = "vendor",
 }
 
 // Map each accountType to its default RoleName
@@ -97,4 +97,61 @@ export interface Employee {
 export interface LoginCredentials {
     email: string;
     password: string;
+}
+
+// Registration DTOs matching the new API
+export interface RegisterDto {
+    email: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+    physicalAddress: Address;
+    mailingAddress?: Address;
+    contactPhone?: string;
+}
+
+export interface RegisterEmployeeDto extends RegisterDto {
+    employeeId?: string;
+    jobTitle?: string;
+    department?: string;
+    hireDate?: string; // ISO date string
+    managerId?: string;
+}
+
+export interface RegisterVendorDto extends RegisterDto {
+    companyName: string;
+    website?: string;
+    contactName?: string;
+    servicesOffered?: string[];
+}
+
+export interface LoginDto {
+    email: string;
+    password: string;
+}
+
+export interface RefreshTokenDto {
+    refreshToken?: string; // May be in httpOnly cookie
+}
+
+export interface UpdatePasswordDto {
+    currentPassword: string;
+    newPassword: string;
+}
+
+export interface RequestPasswordResetDto {
+    email: string;
+}
+
+export interface ConfirmPasswordResetDto {
+    token: string;
+    newPassword: string;
+}
+
+export interface UpdateProfileDto {
+    firstName?: string;
+    lastName?: string;
+    contactPhone?: string;
+    physicalAddress?: Address;
+    mailingAddress?: Address;
 }

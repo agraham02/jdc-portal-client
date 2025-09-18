@@ -1,33 +1,51 @@
 import { apiClient } from "@/lib/api";
-import type { Vendor as VendorType } from "@/lib/types/auth";
+import type { Vendor as VendorType, User, UserStatus } from "@/lib/types/auth";
+import { PaginatedResponse } from "@/lib/types/api";
 
 export type Vendor = VendorType;
 
-export interface VendorResponse {
-    data: Vendor;
-}
+export type VendorWithUser = Omit<Vendor, "userId"> & {
+    userId: User & { status: UserStatus };
+};
 
-export interface VendorListResponse {
-    data: Vendor[];
-    total?: number;
-}
+export type VendorListResponse = PaginatedResponse<VendorWithUser>;
 
-export interface CreateVendorRequest {
+export interface CreateVendorDto {
     companyName: string;
     website?: string;
     contactName?: string;
     servicesOffered?: string[];
+    notes?: string;
 }
 
-export type UpdateVendorRequest = Partial<CreateVendorRequest>;
+export interface UpdateVendorDto {
+    companyName?: string;
+    website?: string;
+    contactName?: string;
+    servicesOffered?: string[];
+    notes?: string;
+}
 
 export class VendorService {
     /**
-     * Get all vendors with pagination
+     * Get all vendors with pagination and filtering
      */
-    static async getVendors(page = 1, limit = 10): Promise<VendorListResponse> {
+    static async getVendors(params?: {
+        page?: number;
+        pageSize?: number;
+        search?: string;
+        status?: UserStatus;
+    }): Promise<VendorListResponse> {
+        const queryParams = new URLSearchParams();
+        if (params?.page) queryParams.append("page", params.page.toString());
+        if (params?.pageSize)
+            queryParams.append("pageSize", params.pageSize.toString());
+        if (params?.search) queryParams.append("search", params.search);
+        if (params?.status) queryParams.append("status", params.status);
+
+        const query = queryParams.toString();
         return apiClient.get<VendorListResponse>(
-            `/vendors?page=${page}&limit=${limit}`
+            `/vendors${query ? `?${query}` : ""}`
         );
     }
 
@@ -39,31 +57,29 @@ export class VendorService {
     }
 
     /**
-     * Get active vendors only
+     * Get current vendor profile (for vendors to view their own profile)
      */
-    static async getActiveVendors(
-        page = 1,
-        limit = 10
-    ): Promise<VendorListResponse> {
-        return apiClient.get<VendorListResponse>(
-            `/vendors/active?page=${page}&limit=${limit}`
-        );
+    static async getMyProfile(): Promise<VendorWithUser> {
+        return apiClient.get<VendorWithUser>(`/vendors/me`);
     }
 
     /**
      * Get a single vendor by ID
      */
-    static async getVendor(vendorId: string): Promise<VendorResponse> {
-        return apiClient.get<VendorResponse>(`/vendors/${vendorId}`);
+    static async getVendor(vendorId: string): Promise<VendorWithUser> {
+        return apiClient.get<VendorWithUser>(`/vendors/${vendorId}`);
     }
 
     /**
-     * Create a new vendor account
+     * Create a new vendor profile
      */
     static async createVendor(
-        vendorData: CreateVendorRequest
-    ): Promise<VendorResponse> {
-        return apiClient.post<VendorResponse>(`/vendors`, vendorData);
+        vendorData: CreateVendorDto
+    ): Promise<{ message: string; vendor: VendorWithUser }> {
+        return apiClient.post<{ message: string; vendor: VendorWithUser }>(
+            `/vendors`,
+            vendorData
+        );
     }
 
     /**
@@ -71,55 +87,18 @@ export class VendorService {
      */
     static async updateVendor(
         vendorId: string,
-        vendorData: UpdateVendorRequest
-    ): Promise<VendorResponse> {
-        return apiClient.patch<VendorResponse>(
+        vendorData: UpdateVendorDto
+    ): Promise<{ message: string; vendor: VendorWithUser }> {
+        return apiClient.patch<{ message: string; vendor: VendorWithUser }>(
             `/vendors/${vendorId}`,
             vendorData
         );
     }
 
     /**
-     * Approve a pending vendor
+     * Delete vendor profile (Admin only)
      */
-    static async approveVendor(vendorId: string): Promise<VendorResponse> {
-        return apiClient.patch<VendorResponse>(
-            `/vendors/${vendorId}/approve`,
-            {}
-        );
-    }
-
-    /**
-     * Reject a pending vendor
-     */
-    static async rejectVendor(
-        vendorId: string,
-        reason?: string
-    ): Promise<VendorResponse> {
-        return apiClient.patch<VendorResponse>(`/vendors/${vendorId}/reject`, {
-            reason,
-        });
-    }
-
-    /**
-     * Deactivate a vendor (soft delete)
-     */
-    static async deactivateVendor(vendorId: string): Promise<VendorResponse> {
-        return apiClient.delete<VendorResponse>(`/vendors/${vendorId}`);
-    }
-
-    /**
-     * Search vendors by query
-     */
-    static async searchVendors(
-        query: string,
-        page = 1,
-        limit = 10
-    ): Promise<VendorListResponse> {
-        return apiClient.get<VendorListResponse>(
-            `/vendors/search?q=${encodeURIComponent(
-                query
-            )}&page=${page}&limit=${limit}`
-        );
+    static async deleteVendor(vendorId: string): Promise<{ message: string }> {
+        return apiClient.delete<{ message: string }>(`/vendors/${vendorId}`);
     }
 }

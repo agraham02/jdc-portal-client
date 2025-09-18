@@ -25,6 +25,8 @@ type AuthContextValue = {
     hasRole: (roles: string | string[]) => boolean;
     hasPermission: (perm: string) => boolean;
     isAccountActive: () => boolean;
+    isAccountPending: () => boolean;
+    isAccountRejected: () => boolean;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -132,7 +134,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
 
     const isAccountActive = useCallback(() => {
-        return user?.status === UserStatus.ACTIVE;
+        if (!user) return false;
+        return user.status === UserStatus.ACTIVE;
+    }, [user]);
+
+    const isAccountPending = useCallback(() => {
+        if (!user) return false;
+        return user.status === UserStatus.PENDING;
+    }, [user]);
+
+    const isAccountRejected = useCallback(() => {
+        if (!user) return false;
+        return user.status === UserStatus.REJECTED;
     }, [user]);
 
     const value = useMemo<AuthContextValue>(
@@ -146,6 +159,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             hasRole,
             hasPermission,
             isAccountActive,
+            isAccountPending,
+            isAccountRejected,
         }),
         [
             user,
@@ -156,6 +171,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             hasRole,
             hasPermission,
             isAccountActive,
+            isAccountPending,
+            isAccountRejected,
         ]
     );
 

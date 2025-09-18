@@ -12,16 +12,29 @@ type RequestOptions = {
     skipAuthRetry?: boolean;
     // Optional controller to cancel requests
     signal?: AbortSignal;
+    // Optional timeout override (ms) for this request
+    timeoutMs?: number;
 };
 
 class ApiClient {
     private baseUrl: string;
     private deviceFingerprint: string;
+    private readonly defaultTimeoutMs: number;
 
     constructor() {
-        this.baseUrl =
+        // Ensure default base URL includes "/api" to match server routes
+        const rawBase =
             process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+        // Always append /api to the base URL if not already present
+        const baseWithoutSlash = rawBase.replace(/\/$/, "");
+        this.baseUrl = baseWithoutSlash.endsWith("/api")
+            ? baseWithoutSlash
+            : `${baseWithoutSlash}/api`;
+        
         this.deviceFingerprint = this.ensureFingerprint();
+        this.defaultTimeoutMs = Number(
+            process.env.NEXT_PUBLIC_API_TIMEOUT_MS || 20000
+        );
     }
 
     private ensureFingerprint(): string {
@@ -147,18 +160,69 @@ class ApiClient {
             delete headers["Content-Type"];
         }
 
-        const res = await fetch(url, {
-            method,
-            headers,
-            credentials: "include",
-            body:
-                body instanceof FormData
-                    ? body
-                    : body != null
-                    ? JSON.stringify(body)
-                    : undefined,
-            signal: options?.signal,
-        });
+        // Provide a timeout via AbortController
+        const ac = new AbortController();
+        const timeoutMs = options?.timeoutMs ?? this.defaultTimeoutMs;
+        const timer = setTimeout(() => ac.abort(), timeoutMs);
+
+        let res: Response;
+        try {
+            res = await fetch(url, {
+                method,
+                headers,
+                credentials: "include",
+                body:
+                    body instanceof FormData
+                        ? body
+                        : body != null
+                        ? JSON.stringify(body)
+                        : undefined,
+                signal: options?.signal ?? ac.signal,
+            });
+        } catch (e) {
+            // On network error or abort, attempt a single retry for idempotent methods
+            if (method === "GET") {
+                try {
+                    res = await fetch(url, {
+                        method,
+                        headers,
+                        credentials: "include",
+                        signal: options?.signal ?? ac.signal,
+                    });
+                } catch (e2) {
+                    clearTimeout(timer);
+                    const stdErr: StandardError = {
+                        code: "NetworkError",
+                        message: (e2 as Error)?.message || "Network error",
+                        path,
+                        method,
+                    };
+                    emitApiError({ ...stdErr, status: 0 });
+                    const err = new Error(stdErr.message);
+                    throw Object.assign(err, stdErr);
+                }
+            } else {
+                clearTimeout(timer);
+                const stdErr: StandardError = {
+                    code:
+                        (e as Error)?.name === "AbortError"
+                            ? "Timeout"
+                            : "NetworkError",
+                    message:
+                        (e as Error)?.message ||
+                        ((e as Error)?.name === "AbortError"
+                            ? "Request timed out"
+                            : "Network error"),
+                    path,
+                    method,
+                };
+                emitApiError({ ...stdErr, status: 0 });
+                const err = new Error(stdErr.message);
+                throw Object.assign(err, stdErr);
+            }
+        } finally {
+            clearTimeout(timer);
+        }
 
         if (res.status === 401 && !options?.skipAuthRetry) {
             // Try one refresh then retry the original request
@@ -182,6 +246,21 @@ class ApiClient {
                 ...options,
                 skipAuthRetry: true,
             });
+        }
+
+        // Respect server rate-limit backoff once if provided
+        if (res.status === 429 && !options?.skipAuthRetry) {
+            const retryAfterHeader = res.headers.get("retry-after");
+            const waitMs = retryAfterHeader
+                ? Number(retryAfterHeader) * 1000
+                : 0;
+            if (waitMs > 0 && waitMs <= 10000) {
+                await new Promise((r) => setTimeout(r, waitMs));
+                return this.request<T>(method, path, body, {
+                    ...options,
+                    skipAuthRetry: true,
+                });
+            }
         }
 
         if (!res.ok) {
@@ -224,6 +303,85 @@ class ApiClient {
     }
     delete<T>(path: string, options?: RequestOptions) {
         return this.request<T>("DELETE", path, undefined, options);
+    }
+
+    // Binary download helper (Blob)
+    async getBlob(path: string, options?: RequestOptions): Promise<Blob> {
+        const url = `${this.baseUrl}${path}`;
+        const headers = this.buildHeaders({ ...(options?.headers || {}) });
+
+        const ac = new AbortController();
+        const timeoutMs = options?.timeoutMs ?? this.defaultTimeoutMs;
+        const timer = setTimeout(() => ac.abort(), timeoutMs);
+        let res: Response;
+        try {
+            res = await fetch(url, {
+                method: "GET",
+                headers,
+                credentials: "include",
+                signal: options?.signal ?? ac.signal,
+            });
+        } catch (e) {
+            clearTimeout(timer);
+            const stdErr: StandardError = {
+                code:
+                    (e as Error)?.name === "AbortError"
+                        ? "Timeout"
+                        : "NetworkError",
+                message:
+                    (e as Error)?.message ||
+                    ((e as Error)?.name === "AbortError"
+                        ? "Request timed out"
+                        : "Network error"),
+                path,
+                method: "GET",
+            };
+            emitApiError({ ...stdErr, status: 0 });
+            const err = new Error(stdErr.message);
+            throw Object.assign(err, stdErr);
+        } finally {
+            clearTimeout(timer);
+        }
+
+        if (res.status === 401 && !options?.skipAuthRetry) {
+            try {
+                const { accessToken } = await AuthService.refreshToken();
+                session.setAccessToken(accessToken);
+            } catch {
+                session.clear();
+                const stdErr: StandardError = {
+                    code: "Unauthorized",
+                    message: "Unauthorized",
+                    status: 401,
+                    path,
+                    method: "GET",
+                };
+                emitApiError({ ...stdErr, status: 401 });
+                const error = new Error(stdErr.message);
+                throw Object.assign(error, stdErr);
+            }
+            return this.getBlob(path, { ...options, skipAuthRetry: true });
+        }
+
+        if (res.status === 429 && !options?.skipAuthRetry) {
+            const retryAfterHeader = res.headers.get("retry-after");
+            const waitMs = retryAfterHeader
+                ? Number(retryAfterHeader) * 1000
+                : 0;
+            if (waitMs > 0 && waitMs <= 10000) {
+                await new Promise((r) => setTimeout(r, waitMs));
+                return this.getBlob(path, { ...options, skipAuthRetry: true });
+            }
+        }
+
+        if (!res.ok) {
+            const std = await this.parseStandardError(res, path, "GET");
+            const err = new Error(std.message);
+            Object.assign(err as unknown as object, std);
+            emitApiError({ ...std, status: std.status ?? res.status });
+            throw err;
+        }
+        return res.blob();
     }
 }
 

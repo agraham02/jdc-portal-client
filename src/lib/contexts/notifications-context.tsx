@@ -12,10 +12,13 @@ import React, {
 import { NotificationsApi } from "@/lib/services/notifications";
 import type {
     Notification,
-    NotificationListResponse,
+    NotificationListResponseDto,
     NotificationQuery,
 } from "@/lib/types/notifications";
-import { NotificationType } from "@/lib/types/notifications";
+import {
+    NotificationType,
+    NotificationPriority,
+} from "@/lib/types/notifications";
 import { notificationsSocket } from "@/lib/services/realtime";
 import { toast } from "sonner";
 
@@ -24,7 +27,7 @@ type NotificationsContextValue = {
     unreadCount: number;
     loading: boolean;
     error: string | null;
-    list: (params?: NotificationQuery) => Promise<NotificationListResponse>;
+    list: (params?: NotificationQuery) => Promise<NotificationListResponseDto>;
     markRead: (id: string) => Promise<void>;
     markAllRead: () => Promise<void>;
     remove: (id: string) => Promise<void>;
@@ -44,7 +47,7 @@ export function NotificationsProvider({
     const [unreadCount, setUnreadCount] = useState(0);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const paramsRef = useRef<NotificationQuery>({ page: 1, limit: 25 });
+    const paramsRef = useRef<NotificationQuery>({ page: 1, pageSize: 25 });
     const shownToastIdsRef = useRef<Set<string>>(new Set());
 
     const list = useCallback(async (params?: NotificationQuery) => {
@@ -53,7 +56,9 @@ export function NotificationsProvider({
         setLoading(true);
         setError(null);
         const res = await NotificationsApi.list(merged);
-        setNotifications(res.data);
+        // Normalize the response data
+        const normalizedData = res.data.map((item) => normalize(item));
+        setNotifications(normalizedData);
         if (typeof res.unreadCount === "number")
             setUnreadCount(res.unreadCount);
         setLoading(false);
@@ -122,7 +127,7 @@ export function NotificationsProvider({
 
     // Initial load and socket wiring
     useEffect(() => {
-        list({ page: 1, limit: 25 }).catch(() => {});
+        list({ page: 1, pageSize: 25 }).catch(() => {});
         refreshUnread().catch(() => {});
 
         notificationsSocket.connect();
@@ -211,10 +216,14 @@ function normalize(payload: unknown): Notification {
         typeof d === "string" ? d : new Date().toISOString();
     return {
         id: String(obj["id"] ?? obj["_id"] ?? ""),
+        _id: obj["_id"] ? String(obj["_id"]) : undefined,
         userId: String(obj["userId"] ?? ""),
         type:
             (obj["type"] as NotificationType) ??
             NotificationType.SYSTEM_ANNOUNCEMENT,
+        priority:
+            (obj["priority"] as NotificationPriority) ??
+            NotificationPriority.NORMAL,
         title: String(obj["title"] ?? ""),
         message: String(obj["message"] ?? ""),
         data:
@@ -223,6 +232,11 @@ function normalize(payload: unknown): Notification {
                 : {},
         read: Boolean(obj["read"]),
         readAt: obj["readAt"] ? toIso(obj["readAt"]) : null,
+        deleted: Boolean(obj["deleted"]),
+        deletedAt: obj["deletedAt"] ? toIso(obj["deletedAt"]) : undefined,
+        expiresAt: obj["expiresAt"] ? toIso(obj["expiresAt"]) : undefined,
+        emailSent: Boolean(obj["emailSent"]),
+        emailSentAt: obj["emailSentAt"] ? toIso(obj["emailSentAt"]) : undefined,
         createdAt: toIso(obj["createdAt"]),
         updatedAt: toIso((obj["updatedAt"] ?? obj["createdAt"]) as unknown),
     } as Notification;

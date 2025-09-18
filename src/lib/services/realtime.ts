@@ -22,12 +22,18 @@ export class NotificationsSocketClient {
 
     connect() {
         if (this.socket && this.socket.connected) return;
-        const url =
+        // Prefer explicit WS URL; else derive from API URL (strip trailing /api)
+        const apiBase =
+            process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+        // Remove /api suffix if present to get the base server URL
+        const derived = apiBase.replace(/\/?api\/?$/, "");
+        const baseUrl =
             process.env.NEXT_PUBLIC_WS_URL ||
-            process.env.NEXT_PUBLIC_API_URL ||
+            derived ||
             "http://localhost:4000";
+
         const token = session.getAccessToken();
-        this.socket = io(url + "/notifications", {
+        this.socket = io(baseUrl + "/notifications", {
             transports: ["websocket"],
             autoConnect: true,
             reconnection: false, // we'll implement our own with jitter
