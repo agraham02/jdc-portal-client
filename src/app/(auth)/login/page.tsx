@@ -249,7 +249,9 @@ function LoginInner() {
                                     onClick={() =>
                                         autofill(
                                             "admin.test@jdc.com",
-                                            "Password123!"
+                                            process.env
+                                                .NEXT_PUBLIC_ADMIN_PASSWORD ||
+                                                ""
                                         )
                                     }
                                 >
@@ -258,7 +260,7 @@ function LoginInner() {
                                         admin.test@jdc.com
                                     </p>
                                     <p className="text-muted-foreground">
-                                        Password123!
+                                        {process.env.NEXT_PUBLIC_ADMIN_PASSWORD}
                                     </p>
                                 </button>
                                 <button
