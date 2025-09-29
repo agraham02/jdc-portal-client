@@ -11,6 +11,9 @@ import {
     DialogHeader,
     DialogTitle,
     DialogDescription,
+    DialogTrigger,
+    DialogFooter,
+    DialogClose,
 } from "@/components/ui/dialog";
 import {
     Select,
@@ -19,14 +22,15 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { toast } from "sonner";
 
 type Props = {
     userId: string | null;
-    open: boolean;
-    onClose: () => void;
+    onClose?: () => void;
+    trigger: React.ReactNode;
 };
 
-export function UserDetailDrawer({ userId, open, onClose }: Props) {
+export function UserDetailDrawer({ userId, onClose, trigger }: Props) {
     const [loading, setLoading] = useState(false);
     const [roles, setRoles] = useState<RBACRole[]>([]);
     const [userRoles, setUserRoles] = useState<UserRolesResponse | null>(null);
@@ -47,7 +51,7 @@ export function UserDetailDrawer({ userId, open, onClose }: Props) {
                         : Promise.resolve(null),
                 ]);
                 if (cancelled) return;
-                setRoles(allRoles);
+                setRoles(allRoles.data);
                 setUserRoles(userRolesResp);
             } finally {
                 if (!cancelled) setLoading(false);
@@ -89,6 +93,10 @@ export function UserDetailDrawer({ userId, open, onClose }: Props) {
                 roleId
             );
             setUserRoles(updated);
+        } catch (e) {
+            toast.error(
+                e instanceof Error ? e.message : "Failed to remove role"
+            );
         } finally {
             setSaving(false);
         }
@@ -97,7 +105,8 @@ export function UserDetailDrawer({ userId, open, onClose }: Props) {
     const user = userRoles?.user;
 
     return (
-        <Dialog open={open} onOpenChange={(o) => (o ? void 0 : onClose())}>
+        <Dialog>
+            <DialogTrigger asChild>{trigger}</DialogTrigger>
             <DialogContent className="sm:max-w-xl">
                 <DialogHeader>
                     <DialogTitle>User details</DialogTitle>
@@ -187,6 +196,13 @@ export function UserDetailDrawer({ userId, open, onClose }: Props) {
                         No user selected
                     </div>
                 )}
+                <DialogFooter>
+                    <DialogClose asChild>
+                        <Button variant="outline" onClick={onClose}>
+                            Close
+                        </Button>
+                    </DialogClose>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     );

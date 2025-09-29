@@ -64,10 +64,12 @@ export interface TableAction<T extends BaseEntity> {
         | "ghost"
         | "link";
     size?: "default" | "sm" | "lg" | "icon";
-    onClick: (item: T) => void | Promise<void>;
+    onClick?: (item: T) => void | Promise<void>;
     disabled?: (item: T) => boolean;
     hidden?: (item: T) => boolean;
     permission?: string[];
+    // Optional render function to render custom content for the action (e.g., a dialog trigger)
+    render?: (item: T) => ReactNode;
 }
 
 // Status badge configuration
@@ -216,6 +218,7 @@ export function GenericTable<T extends BaseEntity>({
 
     // Handle action clicks with loading state
     const handleAction = async (action: TableAction<T>, item: T) => {
+        if (!action.onClick) return;
         setBusyIds((prev) => new Set(prev).add(item._id));
         try {
             await action.onClick(item);
@@ -445,6 +448,29 @@ export function GenericTable<T extends BaseEntity>({
                                                                                 item
                                                                             )
                                                                         );
+
+                                                                    // If action provides a custom render, render it and don't wire onSelect
+                                                                    if (
+                                                                        action.render
+                                                                    ) {
+                                                                        return (
+                                                                            <div
+                                                                                key={
+                                                                                    action.key
+                                                                                }
+                                                                                onClick={(
+                                                                                    e
+                                                                                ) =>
+                                                                                    e.stopPropagation()
+                                                                                }
+                                                                            >
+                                                                                {action.render(
+                                                                                    item
+                                                                                )}
+                                                                            </div>
+                                                                        );
+                                                                    }
+
                                                                     return (
                                                                         <DropdownMenuItem
                                                                             key={
@@ -453,7 +479,6 @@ export function GenericTable<T extends BaseEntity>({
                                                                             onSelect={(
                                                                                 e
                                                                             ) => {
-                                                                                // onSelect receives keyboard/selection event; prevent default and run
                                                                                 e.preventDefault();
                                                                                 if (
                                                                                     disabled
