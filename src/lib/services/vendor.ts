@@ -1,6 +1,12 @@
 import { apiClient } from "@/lib/api";
-import type { Vendor as VendorType, User, UserStatus } from "@/lib/types/auth";
+import type {
+    Vendor as VendorType,
+    User,
+    UserStatus,
+    RegisterVendorDto,
+} from "@/lib/types/auth";
 import { PaginatedResponse } from "@/lib/types/api";
+import { VendorRegistrationFormData } from "../validations";
 
 export type Vendor = VendorType;
 
@@ -52,8 +58,29 @@ export class VendorService {
     /**
      * Get pending vendors (awaiting approval)
      */
-    static async getPendingVendors(): Promise<VendorListResponse> {
-        return apiClient.get<VendorListResponse>(`/vendors/pending`);
+        static async getPendingVendors(): Promise<VendorListResponse> {
+            return apiClient.get<VendorListResponse>(`/vendors/pending`);
+        }
+
+    /** 
+     * Approve vendor account
+     */
+    static async approveUser(vendorId: string): Promise<void> {
+        return apiClient.patch(`/vendors/approve/${vendorId}`);
+    }
+
+    /**
+     * Reject vendor account
+     */
+    static async rejectUser(vendorId: string, reason: string): Promise<void> {
+        return apiClient.patch(`/vendors/reject/${vendorId}`, { reason });
+    }
+
+    /**
+     * Deactivate vendor account
+     */
+    static async deactivateUser(vendorId: string): Promise<void> {
+        return apiClient.patch(`/vendors/deactivate/${vendorId}`);
     }
 
     /**
@@ -74,11 +101,13 @@ export class VendorService {
      * Create a new vendor profile
      */
     static async createVendor(
-        vendorData: CreateVendorDto
+        vendorData: VendorRegistrationFormData
     ): Promise<{ message: string; vendor: VendorWithUser }> {
+        const { confirmPassword, ...formData } = vendorData;
+
         return apiClient.post<{ message: string; vendor: VendorWithUser }>(
             `/vendors`,
-            vendorData
+            formData
         );
     }
 

@@ -1,24 +1,24 @@
 export enum UserStatus {
-    PENDING = "pending",
-    ACTIVE = "active",
-    INACTIVE = "inactive",
-    ONBOARDING = "onboarding",
-    REJECTED = "rejected",
-    TERMINATED = "terminated",
-    ARCHIVED = "archived",
+    PENDING = "Pending",
+    ACTIVE = "Active",
+    INACTIVE = "Inactive",
+    ONBOARDING = "Onboarding",
+    REJECTED = "Rejected",
+    TERMINATED = "Terminated",
+    ARCHIVED = "Archived",
 }
 
 export enum AccountType {
-    ADMIN = "admin",
-    EMPLOYEE = "employee",
-    VENDOR = "vendor",
-    HOUSING_TENANT = "housing_tenant",
+    ADMIN = "Admin",
+    EMPLOYEE = "Employee",
+    VENDOR = "Vendor",
+    HOUSING_TENANT = "Housing_Tenant",
 }
 
 export enum RoleName {
-    ADMIN = "admin",
-    EMPLOYEE = "employee",
-    VENDOR = "vendor",
+    ADMIN = "Admin",
+    EMPLOYEE = "Employee",
+    VENDOR = "Vendor",
 }
 
 // Map each accountType to its default RoleName
@@ -75,7 +75,11 @@ export interface Vendor {
     userId: string | User; // Can be ObjectId or populated User
     website?: string;
     companyName: string;
-    contactName?: string; // Primary contact person for the vendor company
+    contactName: string; // Primary contact person for the vendor company
+    contactEmail: string; // Contact email for the vendor company
+    contactPhone?: string;
+    physicalAddress?: Address;
+    mailingAddress?: Address;
     servicesOffered?: string[];
     notes?: string; // Internal admin comments
     createdAt?: Date;
@@ -123,6 +127,7 @@ export interface RegisterVendorDto extends RegisterDto {
     website?: string;
     contactName?: string;
     servicesOffered?: string[];
+    contactEmail: string;
 }
 
 export interface LoginDto {

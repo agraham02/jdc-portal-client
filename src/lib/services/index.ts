@@ -6,4 +6,4 @@ export * from "./rbac";
 export * from "./contract";
 export * from "./notifications";
 export * from "./internal-notes";
-export * from "./userService";
+export * from "./user";

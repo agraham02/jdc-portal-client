@@ -67,33 +67,6 @@ const registerEmployee = async (
     );
 };
 
-const registerVendor = async (
-    data: VendorRegistrationFormData
-): Promise<{ message: string }> => {
-    // Remove confirmPassword before sending to backend
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { confirmPassword, ...formData } = data;
-
-    const registerDto: RegisterVendorDto = {
-        email: formData.email,
-        password: formData.password,
-        firstName: formData.firstName || formData.contactName,
-        lastName: formData.lastName || "",
-        physicalAddress: formData.physicalAddress,
-        mailingAddress: formData.mailingAddress,
-        contactPhone: formData.contactPhone,
-        companyName: formData.companyName,
-        website: formData.website,
-        contactName: formData.contactName,
-        servicesOffered: formData.servicesOffered,
-    };
-
-    return apiClient.post<{ message: string }>(
-        "/auth/register/vendor",
-        registerDto
-    );
-};
-
 const logout = async (): Promise<{ message: string }> => {
     // Tell the backend to invalidate the refresh token
     // Don't clear session here - let AuthContext handle it
@@ -152,7 +125,6 @@ const requestAccountDeletion = async (): Promise<{ message: string }> => {
 export const AuthService = {
     login,
     registerEmployee,
-    registerVendor,
     logout,
     getProfile,
     getUserPermissions,

@@ -79,7 +79,7 @@ export const vendorRegistrationSchema = z
             .array(z.string())
             .min(1, "At least one service must be specified"),
         contactEmail: z.string().email("Invalid contact email"),
-        contactPhone: z.string().min(1, "Contact phone is required"),
+        contactPhone: z.string().min(1, "Contact phone is required").optional(),
         physicalAddress: addressSchema,
         mailingAddress: addressSchema,
         firstName: z.string().optional(),
