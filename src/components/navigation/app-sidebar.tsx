@@ -11,6 +11,7 @@ import { NavSection } from "@/components/navigation/NavSection";
 import { menu } from "@/components/navigation/menu-config";
 import { ThemeToggle } from "@/components/navigation/ThemeToggle";
 import Link from "next/link";
+import { Button } from "../ui/button";
 
 export function AppSidebar() {
     const DEBUG_ENABLED =
@@ -24,24 +25,30 @@ export function AppSidebar() {
 
                 <SidebarSeparator />
 
-                <NavSection label="Procurement" items={menu.procurement} />
                 <NavSection label="People" items={menu.people} />
-                <NavSection label="Admin" items={menu.admin} />
+                <NavSection label="Procurement" items={menu.procurement} />
+                <NavSection label="HR" items={menu.resources} />
+                <NavSection
+                    label="User Management"
+                    items={menu.userManagement}
+                />
 
                 <SidebarSeparator />
 
-                <NavSection label="Account" items={menu.account} />
             </SidebarContent>
             <SidebarFooter>
+                <NavSection label="Account" items={menu.account} />
                 <ThemeToggle />
                 {DEBUG_ENABLED && (
-                    <div className="mt-2 text-xs">
-                        <Link
-                            href="/debug"
-                            className="text-blue-600 hover:underline"
-                        >
-                            Debug
-                        </Link>
+                    <div className="mt-2 mx-auto text-xs">
+                        <Button asChild>
+                            <Link
+                                href="/debug"
+                                className="text-blue-600 hover:underline"
+                            >
+                                Debug
+                            </Link>
+                        </Button>
                     </div>
                 )}
             </SidebarFooter>

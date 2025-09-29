@@ -28,11 +28,14 @@ export const menu = {
             icon: FileText,
             anyOf: [P.CONTRACT_APPLY],
         },
+    ] satisfies MenuItem[],
+
+    resources: [
         {
             title: "HR Resources",
             url: "/hr-resources",
             icon: FileText,
-            anyOf: [P.FILE_READ, P.FILE_READ_ALL],
+            anyOf: [P.HR_DOCUMENT_READ],
         },
     ] satisfies MenuItem[],
 
@@ -51,54 +54,27 @@ export const menu = {
         },
     ] satisfies MenuItem[],
 
-    admin: [
-        {
-            title: "Admin Dashboard",
-            url: "/admin/dashboard",
-            icon: LayoutDashboard,
-            anyOf: [P.SYSTEM_ADMIN],
-        },
-        {
-            title: "Approvals",
-            url: "/admin/approvals",
-            icon: ShieldCheck,
-            anyOf: [P.USER_ACTIVATE],
-        },
-        {
-            title: "RBAC",
-            url: "/admin/rbac",
-            icon: Shield,
-            anyOf: [P.RBAC_ROLE_READ, P.RBAC_ROLE_MANAGE],
-        },
-        {
-            title: "Roles",
-            url: "/admin/rbac/roles",
-            icon: ShieldCheck,
-            anyOf: [P.RBAC_ROLE_READ],
-        },
-        {
-            title: "Permissions",
-            url: "/admin/rbac/permissions",
-            icon: ShieldCheck,
-            anyOf: [P.RBAC_PERMISSION_READ],
-        },
+    userManagement: [
         {
             title: "Users",
-            url: "/admin/rbac/users",
+            url: "/users",
             icon: Users,
-            anyOf: [P.RBAC_USER_ASSIGN_ROLES],
+            anyOf: [P.USER_READ, P.USER_READ_ALL, P.RBAC_USER_ASSIGN_ROLES],
+        },
+        {
+            title: "Roles & Permissions",
+            url: "/users/rbac",
+            icon: Shield,
+            anyOf: [
+                P.RBAC_ROLE_READ,
+                P.RBAC_ROLE_MANAGE,
+                P.RBAC_PERMISSION_READ,
+            ],
         },
     ] satisfies MenuItem[],
 
     account: [
         { title: "Profile", url: "/profile", icon: User },
-        { title: "Security", url: "/profile/security", icon: Shield },
-        {
-            title: "Notification Prefs",
-            url: "/profile/notifications",
-            icon: Bell,
-        },
-        { title: "Sessions", url: "/profile/sessions", icon: User },
         { title: "Settings", url: "/settings", icon: Settings },
     ] satisfies MenuItem[],
 } as const;
