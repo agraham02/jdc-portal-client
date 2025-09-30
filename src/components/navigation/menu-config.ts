@@ -62,8 +62,8 @@ export const menu = {
             anyOf: [P.USER_READ, P.USER_READ_ALL, P.RBAC_USER_ASSIGN_ROLES],
         },
         {
-            title: "Roles & Permissions",
-            url: "/users/rbac",
+            title: "Roles",
+            url: "/users/roles",
             icon: Shield,
             anyOf: [
                 P.RBAC_ROLE_READ,

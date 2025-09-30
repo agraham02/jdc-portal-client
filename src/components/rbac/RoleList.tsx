@@ -46,8 +46,8 @@ export function RoleList() {
         setLoading(true);
         setError(null);
         try {
-            const data = await RBACService.getAllRoles();
-            setRoles(data);
+            const results = await RBACService.getAllRoles();
+            setRoles(results.data);
         } catch (e) {
             setError(e instanceof Error ? e.message : "Failed to load roles");
         } finally {
@@ -61,8 +61,8 @@ export function RoleList() {
             setLoading(true);
             setError(null);
             try {
-                const data = await RBACService.getAllRoles();
-                if (!cancelled) setRoles(data);
+                const results = await RBACService.getAllRoles();
+                if (!cancelled) setRoles(results.data);
             } catch (e) {
                 if (!cancelled)
                     setError(

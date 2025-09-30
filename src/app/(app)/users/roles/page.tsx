@@ -11,14 +11,6 @@ export default function RolesPage() {
                 <p className="text-muted-foreground">
                     Manage role definitions and their permissions.
                 </p>
-                <div className="flex gap-4">
-                    <Link
-                        className="text-blue-600 hover:underline"
-                        href="/admin/rbac"
-                    >
-                        Back to RBAC
-                    </Link>
-                </div>
                 <RoleList />
             </main>
         </ProtectedRoute>
