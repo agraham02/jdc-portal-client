@@ -66,7 +66,7 @@ export function PasswordPolicyHints({ password, className, minLength }: Props) {
     return (
         <div className={cn("mt-2", className)} aria-live="polite">
             {/* Subtle strength meter */}
-            <div className="mb-1" aria-hidden="true">
+            <div className="mb-1">
                 <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
                     <div
                         className={cn(
@@ -86,15 +86,9 @@ export function PasswordPolicyHints({ password, className, minLength }: Props) {
                 {checks.map((c) => (
                     <li key={c.key} className="flex items-center gap-2 text-xs">
                         {c.met ? (
-                            <Check
-                                className="h-3.5 w-3.5 text-emerald-600"
-                                aria-hidden="true"
-                            />
+                            <Check className="h-3.5 w-3.5 text-emerald-600" />
                         ) : (
-                            <X
-                                className="h-3.5 w-3.5 text-muted-foreground"
-                                aria-hidden="true"
-                            />
+                            <X className="h-3.5 w-3.5 text-muted-foreground" />
                         )}
                         <span
                             className={cn(
