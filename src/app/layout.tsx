@@ -45,7 +45,7 @@ export default function RootLayout({
                         </NotificationsProvider>
                     </AuthProvider>
                 </AuthorizationProvider>
-                <Toaster />
+                <Toaster richColors />
             </body>
         </html>
     );

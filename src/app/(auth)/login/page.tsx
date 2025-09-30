@@ -10,6 +10,7 @@ import { Eye, EyeOff, Building2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
     Card,
     CardContent,
@@ -22,6 +23,7 @@ import { LoginFormData, loginSchema } from "@/lib/validations";
 import { useAuth } from "@/lib/contexts/auth-context";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { StandardError } from "@/lib/types/errors";
+import { PasswordInput } from "@/components/ui/password-input";
 
 function LoginInner() {
     const { login } = useAuth();
@@ -31,6 +33,7 @@ function LoginInner() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [requestId, setRequestId] = useState<string | undefined>();
+    const [rememberMe, setRememberMe] = useState(false);
 
     const {
         register,
@@ -146,18 +149,34 @@ function LoginInner() {
                                     className="flex items-center gap-2 p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md"
                                 >
                                     <AlertCircle className="w-4 h-4" />
-                                    <span className="flex-1">{error}</span>
-                                    {requestId && (
-                                        <span className="ml-2 text-xs text-muted-foreground">
-                                            Request ID: {requestId}
-                                        </span>
-                                    )}
+                                    <div className="flex-1">
+                                        <div>{error}</div>
+                                        {requestId && (
+                                            <div className="mt-1 text-xs text-muted-foreground flex items-center gap-2">
+                                                <span>Request ID:</span>
+                                                <code className="select-all bg-muted/30 px-2 py-1 rounded">
+                                                    {requestId}
+                                                </code>
+                                                <Button
+                                                    className="text-primary text-xs underline ml-2"
+                                                    onClick={() =>
+                                                        navigator.clipboard?.writeText(
+                                                            String(requestId)
+                                                        )
+                                                    }
+                                                >
+                                                    Copy
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </div>
                                 </motion.div>
                             )}{" "}
                             <div className="space-y-2">
                                 <Label htmlFor="email">Email Address</Label>
                                 <Input
                                     id="email"
+                                    autoComplete="email"
                                     type="email"
                                     placeholder="Enter your email"
                                     {...register("email")}
@@ -168,41 +187,22 @@ function LoginInner() {
                                     </p>
                                 )}
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="password">Password</Label>
-                                <div className="relative">
-                                    {" "}
-                                    <Input
-                                        id="password"
-                                        type={
-                                            showPassword ? "text" : "password"
-                                        }
-                                        placeholder="Enter your password"
-                                        {...register("password")}
-                                    />
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="sm"
-                                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                                        onClick={() =>
-                                            setShowPassword(!showPassword)
-                                        }
-                                    >
-                                        {showPassword ? (
-                                            <EyeOff className="h-4 w-4" />
-                                        ) : (
-                                            <Eye className="h-4 w-4" />
-                                        )}
-                                    </Button>
-                                </div>
-                                {errors.password && (
-                                    <p className="text-sm text-destructive">
-                                        {errors.password.message}
-                                    </p>
-                                )}
-                            </div>
+                            <PasswordInput register={register} />
                             <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <Checkbox
+                                        id="remember"
+                                        checked={rememberMe}
+                                        onCheckedChange={(v) =>
+                                            setRememberMe(Boolean(v))
+                                        }
+                                        aria-label="Remember me"
+                                    />
+                                    <Label htmlFor="remember" className="m-0">
+                                        Remember me
+                                    </Label>
+                                </div>
+
                                 <Link
                                     href="/forgot-password"
                                     className="text-sm text-primary hover:underline"
@@ -214,8 +214,35 @@ function LoginInner() {
                                 type="submit"
                                 className="w-full"
                                 disabled={isLoading}
+                                aria-live="polite"
                             >
-                                {isLoading ? "Signing in..." : "Sign In"}
+                                {isLoading ? (
+                                    <>
+                                        <svg
+                                            className="animate-spin -ml-1 mr-3 h-5 w-5 text-current"
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <circle
+                                                className="opacity-25"
+                                                cx="12"
+                                                cy="12"
+                                                r="10"
+                                                stroke="currentColor"
+                                                strokeWidth="4"
+                                            />
+                                            <path
+                                                className="opacity-75"
+                                                fill="currentColor"
+                                                d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                                            />
+                                        </svg>
+                                        Signing in...
+                                    </>
+                                ) : (
+                                    "Sign In"
+                                )}
                             </Button>
                         </form>
 
@@ -243,29 +270,26 @@ function LoginInner() {
                         </CardHeader>
                         <CardContent className="space-y-2 text-xs">
                             <div className="grid grid-cols-3 gap-2">
-                                <button
-                                    type="button"
-                                    className="p-2 bg-muted/50 rounded w-full text-left hover:bg-muted transition"
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="flex flex-col items-start p-3"
                                     onClick={() =>
                                         autofill(
-                                            "admin.test@jdc.com",
+                                            process.env
+                                                .NEXT_PUBLIC_ADMIN_EMAIL || "",
                                             process.env
                                                 .NEXT_PUBLIC_ADMIN_PASSWORD ||
                                                 ""
                                         )
                                     }
                                 >
-                                    <p className="font-medium">Admin</p>
-                                    <p className="text-muted-foreground">
-                                        admin.test@jdc.com
-                                    </p>
-                                    <p className="text-muted-foreground">
-                                        {process.env.NEXT_PUBLIC_ADMIN_PASSWORD}
-                                    </p>
-                                </button>
-                                <button
-                                    type="button"
-                                    className="p-2 bg-muted/50 rounded w-full text-left hover:bg-muted transition"
+                                    <span className="font-medium">Admin</span>
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="flex flex-col items-start p-3"
                                     onClick={() =>
                                         autofill(
                                             "employee@jdc.com",
@@ -273,17 +297,17 @@ function LoginInner() {
                                         )
                                     }
                                 >
-                                    <p className="font-medium">Employee</p>
-                                    <p className="text-muted-foreground">
+                                    <span className="font-medium">
+                                        Employee
+                                    </span>
+                                    <small className="text-muted-foreground">
                                         employee@jdc.com
-                                    </p>
-                                    <p className="text-muted-foreground">
-                                        Password123!
-                                    </p>
-                                </button>
-                                <button
-                                    type="button"
-                                    className="p-2 bg-muted/50 rounded w-full text-left hover:bg-muted transition"
+                                    </small>
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="flex flex-col items-start p-3"
                                     onClick={() =>
                                         autofill(
                                             "vendor@example.com",
@@ -291,14 +315,11 @@ function LoginInner() {
                                         )
                                     }
                                 >
-                                    <p className="font-medium">Vendor</p>
-                                    <p className="text-muted-foreground">
+                                    <span className="font-medium">Vendor</span>
+                                    <small className="text-muted-foreground">
                                         vendor@example.com
-                                    </p>
-                                    <p className="text-muted-foreground">
-                                        Password123!
-                                    </p>
-                                </button>
+                                    </small>
+                                </Button>
                             </div>
                         </CardContent>
                     </Card>

@@ -5,12 +5,12 @@ import EntityDetail from "@/components/details/EntityDetail";
 interface Params {
     id: string;
 }
-export default function EmployeeDetailsPage({ params }: { params: Params }) {
+export default function Page({ params }: { params: Params }) {
     return (
-        <ProtectedRoute anyOf={[P.EMPLOYEE_READ, P.EMPLOYEE_READ_ALL]}>
+        <ProtectedRoute anyOf={[P.USER_READ, P.USER_READ_ALL]}>
             <main>
                 <EntityDetail
-                    entityType="employee"
+                    entityType="user"
                     id={params.id}
                     canUpdate={true}
                 />

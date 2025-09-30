@@ -260,7 +260,6 @@ export default function HRUploadPage() {
                                                         </Badge>
                                                     </div>
                                                     <Button
-                                                        type="button"
                                                         variant="outline"
                                                         size="sm"
                                                         onClick={removeFile}
@@ -360,7 +359,6 @@ export default function HRUploadPage() {
                                             )}
                                         </Button>
                                         <Button
-                                            type="button"
                                             variant="outline"
                                             disabled={submitting}
                                             onClick={() => {

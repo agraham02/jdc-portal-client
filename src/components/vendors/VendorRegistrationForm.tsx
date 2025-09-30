@@ -161,6 +161,7 @@ export default function VendorRegistrationForm() {
                         </div>
                         <div className="flex gap-2">
                             <Button
+                                type="button"
                                 size="sm"
                                 variant="outline"
                                 onClick={() => {
@@ -216,6 +217,7 @@ export default function VendorRegistrationForm() {
                                 Autofill
                             </Button>
                             <Button
+                                type="button"
                                 size="sm"
                                 variant="ghost"
                                 onClick={() => {
@@ -298,6 +300,7 @@ export default function VendorRegistrationForm() {
 
                                 <div className="flex justify-between">
                                     <Button
+                                        type="button"
                                         className="font-medium"
                                         size="sm"
                                         onClick={handleBack}
@@ -410,13 +413,18 @@ export default function VendorRegistrationForm() {
 
                                 <div className="flex justify-between">
                                     <Button
+                                        type="button"
                                         className="font-medium"
                                         size="sm"
                                         onClick={handleBack}
                                     >
                                         Back
                                     </Button>
-                                    <Button size="sm" className="font-medium">
+                                    <Button
+                                        type="submit"
+                                        size="sm"
+                                        className="font-medium"
+                                    >
                                         Next
                                     </Button>
                                 </div>
@@ -499,6 +507,7 @@ export default function VendorRegistrationForm() {
 
                                 <div className="flex justify-between">
                                     <Button
+                                        type="button"
                                         className="font-medium"
                                         size="sm"
                                         onClick={handleBack}
@@ -506,6 +515,7 @@ export default function VendorRegistrationForm() {
                                         Back
                                     </Button>
                                     <Button
+                                        type="submit"
                                         size="sm"
                                         className="font-medium"
                                         disabled={isSubmitting}
@@ -563,7 +573,7 @@ function ServicesInput({ field }: { field: any }) {
                     }}
                     placeholder="Add a service and press Enter"
                 />
-                <Button onClick={addTag} size="sm">
+                <Button type="button" onClick={addTag} size="sm">
                     Add
                 </Button>
             </div>
@@ -575,6 +585,7 @@ function ServicesInput({ field }: { field: any }) {
                     >
                         {t}
                         <Button
+                            type="button"
                             onClick={() => removeTag(idx)}
                             className="ml-1 text-destructive"
                             aria-label={`Remove ${t}`}

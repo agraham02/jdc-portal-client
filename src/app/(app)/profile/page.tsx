@@ -9,7 +9,7 @@ import {
 } from "@/lib/validations/profile";
 import { useAuth } from "@/lib/contexts/auth-context";
 import { AuthService } from "@/lib/services/auth";
-import { FileService } from "@/lib/services/files";
+// import { FileService } from "@/lib/services/files";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -90,12 +90,12 @@ export default function Page() {
 
             // 2) If avatar selected, upload it to Files service as profile_image
             if (avatarFile && user?._id) {
-                await FileService.uploadProfileImage(avatarFile, {
-                    description: "Profile image",
-                    isPublic: false,
-                    relatedEntityId: user._id,
-                    relatedEntityType: "User",
-                });
+                // await FileService.uploadProfileImage(avatarFile, {
+                //     description: "Profile image",
+                //     isPublic: false,
+                //     relatedEntityId: user._id,
+                //     relatedEntityType: "User",
+                // });
                 // Note: backend does not yet tie file to user profile; this prepares the file and enforces policy.
             }
 
@@ -149,7 +149,6 @@ export default function Page() {
                             />
                             {avatarPreview && (
                                 <Button
-                                    type="button"
                                     variant="secondary"
                                     onClick={() => onSelectAvatar(null)}
                                 >
@@ -216,7 +215,6 @@ export default function Page() {
                             {submitting ? "Saving..." : "Save changes"}
                         </Button>
                         <Button
-                            type="button"
                             variant="secondary"
                             disabled={submitting}
                             onClick={() => {

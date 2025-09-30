@@ -6,6 +6,7 @@ import { session } from "@/lib/session";
 import { useAuth } from "@/lib/contexts/auth-context";
 import { AuthService } from "@/lib/services/auth";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export default function AuthDebugPage() {
     const { user, isLoading } = useAuth();
@@ -191,25 +192,25 @@ export default function AuthDebugPage() {
                     <h2 className="text-xl font-semibold mb-4">Quick Tests</h2>
                     <div className="grid grid-cols-1 gap-2">
                         {tests.map((test, index) => (
-                            <button
+                            <Button
                                 key={index}
                                 onClick={() => runTest(test.name, test.fn)}
                                 disabled={isTestLoading}
                                 className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 text-left"
                             >
                                 {test.name}
-                            </button>
+                            </Button>
                         ))}
                     </div>
 
                     <div className="flex gap-2 mt-4">
-                        <button
+                        <Button
                             onClick={clearLogs}
                             className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
                         >
                             Clear Logs
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                             onClick={() => {
                                 const logText = logs.join("\\n");
                                 navigator.clipboard.writeText(logText);
@@ -218,7 +219,7 @@ export default function AuthDebugPage() {
                             className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
                         >
                             Copy Logs
-                        </button>
+                        </Button>
                     </div>
 
                     {/* Environment Info */}
@@ -367,13 +368,13 @@ function ManualApiTest({ onLog }: { onLog: (message: string) => void }) {
                     className="px-3 py-2 border rounded md:col-span-2"
                 />
 
-                <button
+                <Button
                     onClick={runManualTest}
                     disabled={loading}
                     className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50"
                 >
                     {loading ? "Testing..." : "Test"}
-                </button>
+                </Button>
             </div>
 
             {method !== "GET" && (
@@ -446,13 +447,13 @@ function LoginTest({ onLog }: { onLog: (message: string) => void }) {
                     className="px-3 py-2 border rounded"
                 />
 
-                <button
+                <Button
                     onClick={testLogin}
                     disabled={loading}
                     className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
                 >
                     {loading ? "Testing..." : "Test Login"}
-                </button>
+                </Button>
             </div>
 
             <div className="text-sm text-gray-600">

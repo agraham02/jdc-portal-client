@@ -16,7 +16,6 @@ export function PasswordInput({
     return (
         <div className="relative">
             <Input
-                id="password"
                 autoComplete="current-password"
                 type={showPassword ? "text" : "password"}
                 placeholder={placeholder || "Enter your password"}
