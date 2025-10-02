@@ -14,23 +14,42 @@ import type {
     Notification,
     NotificationListResponseDto,
     NotificationQuery,
+    NotificationResponseDto,
 } from "@/lib/types/notifications";
 import {
     NotificationType,
-    NotificationPriority,
+    NotificationSeverity,
+    NotificationEmailStatus,
 } from "@/lib/types/notifications";
-import { notificationsSocket } from "@/lib/services/realtime";
+import {
+    notificationsSocket,
+    type ConnectionState,
+} from "@/lib/services/realtime";
 import { toast } from "sonner";
 
+const MAX_NOTIFICATIONS_IN_MEMORY = 100;
+
 type NotificationsContextValue = {
+    // State
     notifications: Notification[];
     unreadCount: number;
     loading: boolean;
     error: string | null;
+    isConnected: boolean;
+    connectionState: ConnectionState;
+    hasMore: boolean;
+    page: number;
+    totalPages: number;
+
+    // Actions
     list: (params?: NotificationQuery) => Promise<NotificationListResponseDto>;
+    loadMore: () => Promise<void>;
     markRead: (id: string) => Promise<void>;
     markAllRead: () => Promise<void>;
     remove: (id: string) => Promise<void>;
+    refreshUnreadCount: () => Promise<void>;
+
+    // Internal (for components that need direct control)
     prepend: (n: Notification) => void;
 };
 
@@ -47,33 +66,166 @@ export function NotificationsProvider({
     const [unreadCount, setUnreadCount] = useState(0);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const paramsRef = useRef<NotificationQuery>({ page: 1, pageSize: 25 });
+    const [connectionState, setConnectionState] =
+        useState<ConnectionState>("disconnected");
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [hasMore, setHasMore] = useState(false);
+
+    const paramsRef = useRef<NotificationQuery>({ page: 1, limit: 20 });
     const shownToastIdsRef = useRef<Set<string>>(new Set());
+    const notificationIdsRef = useRef<Set<string>>(new Set());
 
-    const list = useCallback(async (params?: NotificationQuery) => {
-        const merged = { ...paramsRef.current, ...(params || {}) };
-        paramsRef.current = merged;
+    const isConnected = connectionState === "connected";
+
+    /**
+     * Normalize backend response to client-side model
+     */
+    const normalize = useCallback(
+        (dto: NotificationResponseDto | unknown): Notification => {
+            const obj = (dto ?? {}) as Record<string, unknown>;
+            const toIso = (d: unknown) =>
+                typeof d === "string" ? d : new Date().toISOString();
+
+            return {
+                id: String(obj["id"] ?? obj["_id"] ?? ""),
+                _id: obj["_id"] ? String(obj["_id"]) : undefined,
+                userId: String(obj["userId"] ?? ""),
+                type:
+                    (obj["type"] as NotificationType) ??
+                    NotificationType.SYSTEM_ANNOUNCEMENT,
+                severity:
+                    (obj["severity"] as NotificationSeverity) ??
+                    NotificationSeverity.INFO,
+                title: String(obj["title"] ?? ""),
+                message: String(obj["message"] ?? ""),
+                data:
+                    obj["data"] && typeof obj["data"] === "object"
+                        ? (obj["data"] as Record<string, unknown>)
+                        : {},
+                category: obj["category"] ? String(obj["category"]) : undefined,
+                read: Boolean(obj["read"]),
+                readAt: obj["readAt"] ? toIso(obj["readAt"]) : null,
+                emailStatus:
+                    (obj["emailStatus"] as NotificationEmailStatus) ??
+                    NotificationEmailStatus.PENDING,
+                emailedAt: obj["emailedAt"] ? toIso(obj["emailedAt"]) : null,
+                createdAt: toIso(obj["createdAt"]),
+                updatedAt: toIso(
+                    (obj["updatedAt"] ?? obj["createdAt"]) as unknown
+                ),
+            };
+        },
+        []
+    );
+
+    /**
+     * Fetch notifications with pagination and filters
+     */
+    const list = useCallback(
+        async (params?: NotificationQuery) => {
+            try {
+                const merged = { ...paramsRef.current, ...(params || {}) };
+                paramsRef.current = merged;
+                setLoading(true);
+                setError(null);
+
+                const res = await NotificationsApi.list(merged);
+                console.log(res);
+
+                // Clear the deduplication set for fresh loads (page 1)
+                // This ensures WebSocket notifications that arrived before
+                // the list load are included in the results
+                if ((merged.page ?? 1) === 1) {
+                    notificationIdsRef.current.clear();
+                }
+
+                // Normalize and deduplicate
+                const normalizedData = res.data
+                    .map((item) => normalize(item))
+                    .filter((n) => {
+                        if (notificationIdsRef.current.has(n.id)) return false;
+                        notificationIdsRef.current.add(n.id);
+                        return true;
+                    });
+                console.log(normalizedData);
+
+                setNotifications(normalizedData);
+                setUnreadCount(res.unreadCount ?? 0);
+                setPage(res.page ?? 1);
+                setTotalPages(res.totalPages ?? 1);
+                setHasMore((res.page ?? 1) < (res.totalPages ?? 1));
+                setLoading(false);
+
+                return res;
+            } catch (err) {
+                console.error("[NotificationsContext] Failed to load:", err);
+                setError("Failed to load notifications");
+                setLoading(false);
+                throw err;
+            }
+        },
+        [normalize]
+    );
+
+    /**
+     * Load next page of notifications
+     */
+    const loadMore = useCallback(async () => {
+        if (loading || !hasMore) return;
+
+        const nextPage = page + 1;
         setLoading(true);
-        setError(null);
-        const res = await NotificationsApi.list(merged);
-        // Normalize the response data
-        const normalizedData = res.data.map((item) => normalize(item));
-        setNotifications(normalizedData);
-        if (typeof res.unreadCount === "number")
-            setUnreadCount(res.unreadCount);
-        setLoading(false);
-        return res;
-    }, []);
 
-    const refreshUnread = useCallback(async () => {
+        try {
+            const res = await NotificationsApi.list({
+                ...paramsRef.current,
+                page: nextPage,
+            });
+
+            const normalizedData = res.data
+                .map((item) => normalize(item))
+                .filter((n) => {
+                    if (notificationIdsRef.current.has(n.id)) return false;
+                    notificationIdsRef.current.add(n.id);
+                    return true;
+                });
+
+            setNotifications((prev) => {
+                const combined = [...prev, ...normalizedData];
+                // Limit memory usage
+                return combined.slice(0, MAX_NOTIFICATIONS_IN_MEMORY);
+            });
+            setPage(res.page ?? nextPage);
+            setHasMore((res.page ?? nextPage) < (res.totalPages ?? 1));
+        } catch (err) {
+            console.error("[NotificationsContext] Failed to load more:", err);
+        } finally {
+            setLoading(false);
+        }
+    }, [loading, hasMore, page, normalize]);
+
+    /**
+     * Refresh unread count from server
+     */
+    const refreshUnreadCount = useCallback(async () => {
         try {
             const { count } = await NotificationsApi.unreadCount();
             setUnreadCount(count);
-        } catch {}
+        } catch (err) {
+            console.error(
+                "[NotificationsContext] Failed to refresh unread count:",
+                err
+            );
+        }
     }, []);
 
+    /**
+     * Mark a single notification as read (optimistic update)
+     */
     const markRead = useCallback(
         async (id: string) => {
+            // Optimistic update
             setNotifications((prev) =>
                 prev.map((n) =>
                     n.id === id
@@ -82,17 +234,26 @@ export function NotificationsProvider({
                 )
             );
             setUnreadCount((c) => Math.max(0, c - 1));
+
             try {
                 await NotificationsApi.markRead(id);
-            } catch {
-                // rollback on failure
+            } catch (err) {
+                console.error(
+                    "[NotificationsContext] Failed to mark as read:",
+                    err
+                );
+                // Rollback on failure
                 await list();
             }
         },
         [list]
     );
 
+    /**
+     * Mark all notifications as read (optimistic update)
+     */
     const markAllRead = useCallback(async () => {
+        // Optimistic update
         setNotifications((prev) =>
             prev.map((n) => ({
                 ...n,
@@ -101,84 +262,169 @@ export function NotificationsProvider({
             }))
         );
         setUnreadCount(0);
+
         try {
             await NotificationsApi.markAllRead();
-        } catch {
+        } catch (err) {
+            console.error(
+                "[NotificationsContext] Failed to mark all as read:",
+                err
+            );
+            // Rollback on failure
             await list();
         }
     }, [list]);
 
+    /**
+     * Delete a notification (optimistic update)
+     */
     const remove = useCallback(
         async (id: string) => {
+            // Store for potential rollback
+            const notification = notifications.find((n) => n.id === id);
+            const wasUnread = notification && !notification.read;
+
+            // Optimistic update
             setNotifications((prev) => prev.filter((n) => n.id !== id));
+            notificationIdsRef.current.delete(id);
+            if (wasUnread) {
+                setUnreadCount((c) => Math.max(0, c - 1));
+            }
+
             try {
                 await NotificationsApi.remove(id);
-            } catch {
+            } catch (err) {
+                console.error("[NotificationsContext] Failed to delete:", err);
+                // Rollback on failure
                 await list();
             }
         },
-        [list]
+        [notifications, list]
     );
 
+    /**
+     * Prepend a new notification to the list (for real-time updates)
+     */
     const prepend = useCallback((n: Notification) => {
-        setNotifications((prev) => [n, ...prev]);
-        if (!n.read) setUnreadCount((c) => c + 1);
+        // Deduplicate
+        if (notificationIdsRef.current.has(n.id)) {
+            return;
+        }
+
+        notificationIdsRef.current.add(n.id);
+        setNotifications((prev) => {
+            const updated = [n, ...prev];
+            // Limit memory
+            return updated.slice(0, MAX_NOTIFICATIONS_IN_MEMORY);
+        });
+
+        if (!n.read) {
+            setUnreadCount((c) => c + 1);
+        }
     }, []);
 
-    // Initial load and socket wiring
+    /**
+     * Setup WebSocket connection and listeners
+     */
     useEffect(() => {
-        list({ page: 1, pageSize: 25 }).catch(() => {});
-        refreshUnread().catch(() => {});
+        // Initial data load
+        list({ page: 1, limit: 20 }).catch(() => {});
+        refreshUnreadCount().catch(() => {});
 
+        // Connect to WebSocket
         notificationsSocket.connect();
-        const offNew = notificationsSocket.on(
-            "notification",
-            (payload: unknown) => {
+
+        // Listen for connection state changes
+        const offStateChange = notificationsSocket.onStateChange((state) => {
+            setConnectionState(state);
+        });
+
+        // Listen for new notifications
+        const offNew = notificationsSocket.on("notification", (payload) => {
+            try {
+                const n = normalize(payload);
+                prepend(n);
+
+                // Acknowledge receipt
+                if (n.id) {
+                    notificationsSocket.ack(n.id);
+                }
+
+                // Show toast (deduplicated)
+                if (n.id && !shownToastIdsRef.current.has(n.id)) {
+                    shownToastIdsRef.current.add(n.id);
+                    const title = n.title || "New notification";
+                    const description = n.message || undefined;
+
+                    // Use different toast types based on severity
+                    switch (n.severity) {
+                        case NotificationSeverity.SUCCESS:
+                            toast.success(title, { description });
+                            break;
+                        case NotificationSeverity.WARNING:
+                            toast.warning(title, { description });
+                            break;
+                        case NotificationSeverity.ERROR:
+                        case NotificationSeverity.CRITICAL:
+                            toast.error(title, { description });
+                            break;
+                        default:
+                            toast(title, { description });
+                    }
+                }
+            } catch (err) {
+                console.error(
+                    "[NotificationsContext] Failed to handle notification:",
+                    err
+                );
+            }
+        });
+
+        // Listen for retry events
+        const offRetry = notificationsSocket.on(
+            "notification:retry",
+            (payload) => {
                 try {
                     const n = normalize(payload);
-                    prepend(n);
-                    // client ack right away
-                    if (n.id) notificationsSocket.ack(n.id);
-
-                    // toast once per id to avoid duplicates on retry/reconnect
-                    const id = n.id;
-                    if (id && !shownToastIdsRef.current.has(id)) {
-                        shownToastIdsRef.current.add(id);
-                        const title = n.title || "New notification";
-                        const description = n.message || undefined;
-                        toast(title, { description });
+                    // Re-acknowledge
+                    if (n.id) {
+                        notificationsSocket.ack(n.id);
                     }
-                } catch {
-                    // ignore malformed payloads
+                } catch (err) {
+                    console.error(
+                        "[NotificationsContext] Failed to handle retry:",
+                        err
+                    );
                 }
             }
         );
-        const offRetry = notificationsSocket.on(
-            "notification:retry",
-            (payload: unknown) => {
-                const p = payload as { id?: string } | undefined;
-                const id = p && typeof p.id === "string" ? p.id : null;
-                if (id) notificationsSocket.ack(id);
-            }
-        );
 
+        // Cleanup
         return () => {
+            offStateChange();
             offNew();
             offRetry();
+            notificationsSocket.disconnect();
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [list, refreshUnreadCount, normalize, prepend]);
 
-    const value = useMemo(
+    const value = useMemo<NotificationsContextValue>(
         () => ({
             notifications,
             unreadCount,
             loading,
             error,
+            isConnected,
+            connectionState,
+            hasMore,
+            page,
+            totalPages,
             list,
+            loadMore,
             markRead,
             markAllRead,
             remove,
+            refreshUnreadCount,
             prepend,
         }),
         [
@@ -186,10 +432,17 @@ export function NotificationsProvider({
             unreadCount,
             loading,
             error,
+            isConnected,
+            connectionState,
+            hasMore,
+            page,
+            totalPages,
             list,
+            loadMore,
             markRead,
             markAllRead,
             remove,
+            refreshUnreadCount,
             prepend,
         ]
     );
@@ -203,41 +456,10 @@ export function NotificationsProvider({
 
 export function useNotificationsCtx() {
     const ctx = useContext(NotificationsContext);
-    if (!ctx)
+    if (!ctx) {
         throw new Error(
             "useNotificationsCtx must be used within NotificationsProvider"
         );
+    }
     return ctx;
-}
-
-function normalize(payload: unknown): Notification {
-    const obj = (payload ?? {}) as Record<string, unknown>;
-    const toIso = (d: unknown) =>
-        typeof d === "string" ? d : new Date().toISOString();
-    return {
-        id: String(obj["id"] ?? obj["_id"] ?? ""),
-        _id: obj["_id"] ? String(obj["_id"]) : undefined,
-        userId: String(obj["userId"] ?? ""),
-        type:
-            (obj["type"] as NotificationType) ??
-            NotificationType.SYSTEM_ANNOUNCEMENT,
-        priority:
-            (obj["priority"] as NotificationPriority) ??
-            NotificationPriority.NORMAL,
-        title: String(obj["title"] ?? ""),
-        message: String(obj["message"] ?? ""),
-        data:
-            obj["data"] && typeof obj["data"] === "object"
-                ? (obj["data"] as Record<string, unknown>)
-                : {},
-        read: Boolean(obj["read"]),
-        readAt: obj["readAt"] ? toIso(obj["readAt"]) : null,
-        deleted: Boolean(obj["deleted"]),
-        deletedAt: obj["deletedAt"] ? toIso(obj["deletedAt"]) : undefined,
-        expiresAt: obj["expiresAt"] ? toIso(obj["expiresAt"]) : undefined,
-        emailSent: Boolean(obj["emailSent"]),
-        emailSentAt: obj["emailSentAt"] ? toIso(obj["emailSentAt"]) : undefined,
-        createdAt: toIso(obj["createdAt"]),
-        updatedAt: toIso((obj["updatedAt"] ?? obj["createdAt"]) as unknown),
-    } as Notification;
 }
