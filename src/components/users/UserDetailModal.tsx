@@ -30,7 +30,7 @@ type Props = {
     trigger: React.ReactNode;
 };
 
-export function UserDetailDrawer({ userId, onClose, trigger }: Props) {
+export function UserDetailModal({ userId, onClose, trigger }: Props) {
     const [loading, setLoading] = useState(false);
     const [roles, setRoles] = useState<RBACRole[]>([]);
     const [userRoles, setUserRoles] = useState<UserRolesResponse | null>(null);
@@ -61,7 +61,7 @@ export function UserDetailDrawer({ userId, onClose, trigger }: Props) {
         return () => {
             cancelled = true;
         };
-    }, [open, userId]);
+    }, [userId]);
 
     const availableRoles = useMemo(() => {
         const currentIds = new Set<string>(

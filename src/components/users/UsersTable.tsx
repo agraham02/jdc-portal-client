@@ -5,7 +5,7 @@ import {
     GenericTable,
     type GenericTableConfig,
 } from "@/components/ui/generic-table";
-import { UserDetailDrawer } from "./UserDetailDrawer";
+import { UserDetailModal } from "./UserDetailModal";
 import { RBACService } from "@/lib/services/rbac";
 import { AuthService } from "@/lib/services/auth";
 import type { RBACRole, RBACUser } from "@/lib/types/rbac";
@@ -15,8 +15,10 @@ import { useAuthz } from "@/lib/authz/useAuthz";
 import { DropdownMenuItem } from "../ui/dropdown-menu";
 import StatusChip from "../common/statusChip";
 import TextPreview from "../common/TextPreview";
+import { useRouter } from "next/navigation";
 
 export function UsersTable() {
+    const router = useRouter();
     const { hasAny } = useAuthz();
     const canActivate = hasAny([P.USER_ACTIVATE]);
 
@@ -24,9 +26,6 @@ export function UsersTable() {
     const [roles, setRoles] = useState<RBACRole[]>([]);
     const [users, setUsers] = useState<RBACUser[]>([]);
     const [error, setError] = useState<string | null>(null);
-
-    const [drawerUserId, setDrawerUserId] = useState<string | null>(null);
-    const [drawerOpen, setDrawerOpen] = useState(false);
 
     // Track Admin role users to prevent removal of last admin via deactivation
     const [adminUserIds, setAdminUserIds] = useState<Set<string>>(new Set());
@@ -69,16 +68,6 @@ export function UsersTable() {
         loadAdmins();
     }, [roles]);
 
-    const openDrawer = (id: string) => {
-        setDrawerUserId(id);
-        setDrawerOpen(true);
-    };
-
-    const closeDrawer = () => {
-        setDrawerUserId(null);
-        setDrawerOpen(false);
-    };
-
     const doDeactivate = async (user: RBACUser) => {
         await AuthService.deactivateUser(user._id);
         setUsers((prev) =>
@@ -101,11 +90,11 @@ export function UsersTable() {
         await AuthService.unlockUser(user._id);
     };
 
-    const isLastAdmin = (userId: string) =>
-        adminUserIds.has(userId) && adminUserIds.size === 1;
+    const tableConfig: GenericTableConfig<RBACUser> = useMemo(() => {
+        const isLastAdmin = (userId: string) =>
+            adminUserIds.has(userId) && adminUserIds.size === 1;
 
-    const tableConfig: GenericTableConfig<RBACUser> = useMemo(
-        () => ({
+        return {
             columns: [
                 {
                     key: "name",
@@ -134,7 +123,11 @@ export function UsersTable() {
                     key: "roles",
                     label: "Roles",
                     render: (user) => {
-                        return <TextPreview items={user.roles.map((role) => role.name)} />;
+                        return (
+                            <TextPreview
+                                items={user.roles.map((role) => role.name)}
+                            />
+                        );
                     },
                 },
             ],
@@ -144,7 +137,7 @@ export function UsersTable() {
                     label: "Manage roles",
                     variant: "secondary",
                     render: (user: RBACUser) => (
-                        <UserDetailDrawer
+                        <UserDetailModal
                             userId={user._id}
                             trigger={
                                 <DropdownMenuItem
@@ -157,6 +150,13 @@ export function UsersTable() {
                             }
                         />
                     ),
+                },
+                {
+                    key: "view-details",
+                    label: "View details",
+                    variant: "ghost" as const,
+                    onClick: (user: RBACUser) =>
+                        router.push(`/users/${user._id}`),
                 },
                 ...(canActivate
                     ? [
@@ -249,9 +249,8 @@ export function UsersTable() {
 
                 return true;
             },
-        }),
-        [canActivate, roles, isLastAdmin]
-    );
+        };
+    }, [canActivate, roles, router, adminUserIds]);
 
     return (
         <>

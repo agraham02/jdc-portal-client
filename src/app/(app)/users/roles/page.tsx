@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { ProtectedRoute } from "@/components/routing/ProtectedRoute";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 import { RoleList } from "@/components/rbac/RoleList";

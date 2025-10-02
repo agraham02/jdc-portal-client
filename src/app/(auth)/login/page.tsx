@@ -5,7 +5,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff, Building2, AlertCircle } from "lucide-react";
+import { Building2, AlertCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,7 +29,6 @@ function LoginInner() {
     const { login } = useAuth();
     const router = useRouter();
     const searchParams = useSearchParams();
-    const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [requestId, setRequestId] = useState<string | undefined>();
@@ -310,15 +309,12 @@ function LoginInner() {
                                     className="flex flex-col items-start p-3"
                                     onClick={() =>
                                         autofill(
-                                            "vendor@example.com",
+                                            "vendor.test@jdc.com",
                                             "Password123!"
                                         )
                                     }
                                 >
                                     <span className="font-medium">Vendor</span>
-                                    <small className="text-muted-foreground">
-                                        vendor@example.com
-                                    </small>
                                 </Button>
                             </div>
                         </CardContent>

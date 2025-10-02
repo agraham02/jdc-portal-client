@@ -9,7 +9,6 @@ import {
 } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/navigation/app-sidebar";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
 import { Building2 } from "lucide-react";
 import { ProtectedRoute } from "@/components/routing/ProtectedRoute";
 import { useAuth } from "@/lib/contexts/auth-context";

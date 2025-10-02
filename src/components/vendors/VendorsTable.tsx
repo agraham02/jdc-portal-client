@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
     GenericTable,
     type GenericTableConfig,
@@ -24,7 +24,7 @@ export function VendorsTable() {
     const [vendors, setVendors] = useState<Vendor[]>([]);
     const [error, setError] = useState<string | null>(null);
 
-    const loadVendors = async () => {
+    const loadVendors = useCallback(async () => {
         if (!canRead) return;
 
         setLoading(true);
@@ -38,29 +38,29 @@ export function VendorsTable() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [canRead]);
 
     useEffect(() => {
         loadVendors();
-    }, [canRead]);
+    }, [loadVendors]);
 
-    const handleApprove = async (vendor: Vendor) => {
-        await VendorService.approveUser(vendor._id);
-        await loadVendors(); // Refresh the list
-    };
+    const tableConfig: GenericTableConfig<Vendor> = useMemo(() => {
+        const handleApprove = async (vendor: Vendor) => {
+            await VendorService.approveUser(vendor._id);
+            await loadVendors(); // Refresh the list
+        };
 
-    const handleReject = async (vendor: Vendor) => {
-        await VendorService.rejectUser(vendor._id, "Rejected by admin");
-        await loadVendors(); // Refresh the list
-    };
+        const handleReject = async (vendor: Vendor) => {
+            await VendorService.rejectUser(vendor._id, "Rejected by admin");
+            await loadVendors(); // Refresh the list
+        };
 
-    const handleDeactivate = async (vendor: Vendor) => {
-        await VendorService.deactivateUser(vendor._id);
-        await loadVendors(); // Refresh the list
-    };
+        const handleDeactivate = async (vendor: Vendor) => {
+            await VendorService.deactivateUser(vendor._id);
+            await loadVendors(); // Refresh the list
+        };
 
-    const tableConfig: GenericTableConfig<Vendor> = useMemo(
-        () => ({
+        return {
             columns: [
                 {
                     key: "companyName",
@@ -197,14 +197,13 @@ export function VendorsTable() {
                 }
                 return true;
             },
-        }),
-        [canUpdate, canDelete]
-    );
+        };
+    }, [canUpdate, canDelete, router, loadVendors]);
 
     if (!canRead) {
         return (
             <div className="text-center py-8 text-muted-foreground">
-                You don't have permission to view vendors.
+                You don&apos;t have permission to view vendors.
             </div>
         );
     }

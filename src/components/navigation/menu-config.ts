@@ -6,7 +6,6 @@ import {
     LayoutDashboard,
     Settings,
     Shield,
-    ShieldCheck,
     User,
     Users,
 } from "lucide-react";

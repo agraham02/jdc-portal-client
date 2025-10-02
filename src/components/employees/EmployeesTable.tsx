@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
     GenericTable,
     type GenericTableConfig,
@@ -19,7 +19,6 @@ export function EmployeesTable() {
     const router = useRouter();
     const { hasAny } = useAuthz();
     const canRead = hasAny([P.EMPLOYEE_READ, P.EMPLOYEE_READ_ALL]);
-    const canCreate = hasAny([P.EMPLOYEE_CREATE]);
     const canUpdate = hasAny([P.EMPLOYEE_UPDATE]);
     const canDelete = hasAny([P.EMPLOYEE_DELETE]);
 
@@ -27,7 +26,7 @@ export function EmployeesTable() {
     const [employees, setEmployees] = useState<EmployeeWithUser[]>([]);
     const [error, setError] = useState<string | null>(null);
 
-    const loadEmployees = async () => {
+    const loadEmployees = useCallback(async () => {
         if (!canRead) return;
 
         setLoading(true);
@@ -42,29 +41,24 @@ export function EmployeesTable() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [canRead]);
 
     useEffect(() => {
         loadEmployees();
-    }, [canRead]);
-
-    const handleApprove = async (employee: EmployeeWithUser) => {
-        await EmployeeService.approveEmployee(employee.userId._id);
-        await loadEmployees(); // Refresh the list
-    };
-
-    const handleDeactivate = async (employee: EmployeeWithUser) => {
-        await EmployeeService.deleteEmployee(employee.userId._id);
-        await loadEmployees(); // Refresh the list
-    };
+    }, [canRead, loadEmployees]);
 
     const formatDate = (date: Date | string | undefined) => {
         if (!date) return "—";
         return new Date(date).toLocaleDateString();
     };
 
-    const tableConfig: GenericTableConfig<EmployeeWithUser> = useMemo(
-        () => ({
+    const tableConfig: GenericTableConfig<EmployeeWithUser> = useMemo(() => {
+        const handleDeactivate = async (employee: EmployeeWithUser) => {
+            await EmployeeService.deleteEmployee(employee.userId._id);
+            await loadEmployees(); // Refresh the list
+        };
+
+        return {
             columns: [
                 {
                     key: "name",
@@ -123,22 +117,8 @@ export function EmployeesTable() {
                               variant: "secondary" as const,
                               onClick: (employee: EmployeeWithUser) => {
                                   // Navigate to edit page or open edit dialog
-                                  router.push(
-                                      `/employees/${employee._id}`
-                                  );
+                                  router.push(`/employees/${employee._id}`);
                               },
-                          },
-                      ]
-                    : []),
-                ...(canUpdate
-                    ? [
-                          {
-                              key: "approve",
-                              label: "Approve",
-                              variant: "default" as const,
-                              onClick: handleApprove,
-                              hidden: (employee: EmployeeWithUser) =>
-                                  employee.userId.status === UserStatus.ACTIVE,
                           },
                       ]
                     : []),
@@ -242,14 +222,13 @@ export function EmployeesTable() {
 
                 return true;
             },
-        }),
-        [canUpdate, canDelete]
-    );
+        };
+    }, [canUpdate, canDelete, loadEmployees, router]);
 
     if (!canRead) {
         return (
             <div className="text-center py-8 text-muted-foreground">
-                You don't have permission to view employees.
+                You don&apos;t have permission to view employees.
             </div>
         );
     }

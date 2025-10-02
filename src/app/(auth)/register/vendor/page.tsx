@@ -1,15 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useForm, FormProvider } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
-import { useRouter } from "next/navigation";
-
-import {
-    vendorRegistrationSchema,
-    type VendorRegistrationFormData,
-} from "@/lib/validations";
 
 import {
     Card,

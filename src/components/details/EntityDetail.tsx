@@ -4,7 +4,6 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { apiClient } from "@/lib/api";
 import { userService } from "@/lib/services/user";
 import { EmployeeService } from "@/lib/services/employee";
 import { VendorService } from "@/lib/services/vendor";
@@ -23,7 +22,9 @@ export function EntityDetail({ entityType, id, canUpdate }: Props) {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [editing, setEditing] = useState(false);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Generic component handles multiple entity types
     const [data, setData] = useState<any>(null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Dynamic form fields for different entities
     const [form, setForm] = useState<Record<string, any>>({});
 
     useEffect(() => {
@@ -31,6 +32,7 @@ export function EntityDetail({ entityType, id, canUpdate }: Props) {
         async function load() {
             setLoading(true);
             try {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Response type varies by entity type
                 let resp: any;
                 if (entityType === "user")
                     resp = await userService.getUserById(id);
@@ -59,6 +61,7 @@ export function EntityDetail({ entityType, id, canUpdate }: Props) {
         };
     }, [entityType, id]);
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Form values can be any type (string, number, boolean, etc.)
     const onChange = (key: string, value: any) => {
         setForm((f) => ({ ...f, [key]: value }));
     };

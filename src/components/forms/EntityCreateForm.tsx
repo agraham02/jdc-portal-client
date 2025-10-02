@@ -56,6 +56,7 @@ export default function EntityCreateForm<T extends Record<string, unknown>>({
 }: EntityCreateFormProps<T>) {
     const router = useRouter();
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- zodResolver requires specific type cast for generic schema
     const resolver = schema ? zodResolver(schema as any) : undefined;
 
     const {
@@ -70,6 +71,7 @@ export default function EntityCreateForm<T extends Record<string, unknown>>({
             await apiClient.post(apiPath, payload);
             toast.success("Created successfully");
             if (onSuccessPath) router.push(onSuccessPath);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Error type from catch is unknown
         } catch (e: any) {
             // Show friendly message; apiClient will emit global events as well
             const msg = e?.message || "Failed to create";
@@ -133,6 +135,7 @@ export default function EntityCreateForm<T extends Record<string, unknown>>({
                                                                 return (
                                                                     <PhoneInput
                                                                         value={
+                                                                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                                                             (field.value as any) ||
                                                                             undefined
                                                                         }
@@ -169,6 +172,7 @@ export default function EntityCreateForm<T extends Record<string, unknown>>({
                                                                 <Input
                                                                     {...field}
                                                                     value={
+                                                                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                                                         value as any
                                                                     }
                                                                     type={
@@ -193,6 +197,7 @@ export default function EntityCreateForm<T extends Record<string, unknown>>({
                                                     {errors[f.name] && (
                                                         <p className="text-sm text-destructive mt-1">
                                                             {
+                                                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                                                 (errors as any)[
                                                                     f.name
                                                                 ]?.message
@@ -230,6 +235,7 @@ export default function EntityCreateForm<T extends Record<string, unknown>>({
                                         return (
                                             <PhoneInput
                                                 value={
+                                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                                     (field.value as any) ||
                                                     undefined
                                                 }
@@ -253,6 +259,7 @@ export default function EntityCreateForm<T extends Record<string, unknown>>({
                                     return (
                                         <Input
                                             {...field}
+                                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                             value={value as any}
                                             type={f.type ?? "text"}
                                             placeholder={f.placeholder}
@@ -267,6 +274,7 @@ export default function EntityCreateForm<T extends Record<string, unknown>>({
                             />
                             {errors[f.name] && (
                                 <p className="text-sm text-destructive mt-1">
+                                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                                     {(errors as any)[f.name]?.message}
                                 </p>
                             )}

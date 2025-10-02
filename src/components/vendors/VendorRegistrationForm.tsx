@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import {
     Form,
     FormControl,
-    FormDescription,
     FormField,
     FormItem,
     FormLabel,
@@ -22,7 +21,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
-import { Vendor, VendorService } from "@/lib/services";
+import { VendorService } from "@/lib/services";
 import {
     VendorRegistrationFormData,
     vendorRegistrationSchema,
@@ -69,6 +68,7 @@ export default function VendorRegistrationForm() {
         // Final submit only on last step
         if (step < totalSteps - 1) {
             // Validate current step fields before moving forward
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- react-hook-form trigger accepts field paths as any
             const ok = await trigger(stepFields[step] as any);
             if (ok) setStep((s) => s + 1);
             return;
@@ -89,13 +89,16 @@ export default function VendorRegistrationForm() {
             }
         } catch (e: unknown) {
             const anyErr = e as Record<string, unknown> & {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Backend field errors have dynamic structure
                 fieldErrors?: any[];
             };
             setRequestId(anyErr?.requestId as string | undefined);
             // Map backend field errors to form fields
             if (Array.isArray(anyErr?.fieldErrors)) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Backend field error structure is dynamic
                 for (const fe of anyErr.fieldErrors as any[]) {
                     if (fe && fe.field) {
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Field name from backend can be any form field
                         setError(fe.field as any, {
                             type: "server",
                             message: String(fe.message || fe.code || "Invalid"),
@@ -394,6 +397,7 @@ export default function VendorRegistrationForm() {
                                             </FormLabel>
                                             <FormControl>
                                                 {/* PhoneInput is a controlled component; wire it to RHF field */}
+                                                {/* eslint-disable @typescript-eslint/no-explicit-any */}
                                                 <PhoneInput
                                                     value={field.value as any}
                                                     onChange={(val) =>
@@ -405,6 +409,7 @@ export default function VendorRegistrationForm() {
                                                     }
                                                     placeholder=""
                                                 />
+                                                {/* eslint-enable @typescript-eslint/no-explicit-any */}
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -535,6 +540,7 @@ export default function VendorRegistrationForm() {
 }
 
 /* Helper small component for services tags — kept local to avoid extra file */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- react-hook-form Controller field has complex internal type
 function ServicesInput({ field }: { field: any }) {
     const [input, setInput] = useState("");
 
@@ -554,6 +560,7 @@ function ServicesInput({ field }: { field: any }) {
 
     const removeTag = (idx: number) => {
         const next = (field.value || []).filter(
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (_: any, i: number) => i !== idx
         );
         field.onChange(next);

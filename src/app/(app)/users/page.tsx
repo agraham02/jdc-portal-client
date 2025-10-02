@@ -1,7 +1,6 @@
 import { ProtectedRoute } from "@/components/routing/ProtectedRoute";
 import { UsersTable } from "@/components/users/UsersTable";
 import { PermissionName as P } from "@/lib/constants/permission-names";
-import Link from "next/link";
 
 export default function UsersPage() {
     return (
