@@ -6,10 +6,26 @@ import type {
     UnreadCountResponseDto,
     CreateNotificationDto,
     BroadcastNotificationDto,
-    NotificationPreferencesDto,
-    NotificationPreferencesResponseDto,
+    UserPreferences,
+    UpdatePreferencesDto,
 } from "@/lib/types/notifications";
 
+/**
+ * Build query string from parameters, filtering out undefined/null values
+ */
+function buildQueryString(params: NotificationQuery): string {
+    const search = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) {
+        if (v !== undefined && v !== null) {
+            search.append(k, String(v));
+        }
+    }
+    return search.toString();
+}
+
+/**
+ * User-facing notifications API
+ */
 export const NotificationsApi = {
     /**
      * Get user notifications with pagination and filtering
@@ -17,17 +33,13 @@ export const NotificationsApi = {
     async list(
         params: NotificationQuery = {}
     ): Promise<NotificationListResponseDto> {
-        const search = new URLSearchParams();
-        for (const [k, v] of Object.entries(params)) {
-            if (v !== undefined && v !== null) search.append(k, String(v));
-        }
-        const qs = search.toString();
+        const qs = buildQueryString(params);
         const path = `/notifications${qs ? `?${qs}` : ""}`;
         return apiClient.get<NotificationListResponseDto>(path);
     },
 
     /**
-     * Get unread notification count
+     * Get unread notification count with breakdown by type
      */
     async unreadCount(): Promise<UnreadCountResponseDto> {
         return apiClient.get<UnreadCountResponseDto>(
@@ -57,50 +69,54 @@ export const NotificationsApi = {
     },
 
     /**
-     * Delete a notification
+     * Delete a notification (soft delete)
      */
     async remove(id: string): Promise<{ message: string }> {
         return apiClient.delete<{ message: string }>(`/notifications/${id}`);
     },
 
     /**
-     * Get notification preferences
+     * Get user notification preferences
      */
-    async getPreferences(): Promise<NotificationPreferencesResponseDto> {
-        return apiClient.get<NotificationPreferencesResponseDto>(
+    async getPreferences(): Promise<{ data: UserPreferences }> {
+        return apiClient.get<{ data: UserPreferences }>(
             "/notifications/preferences"
         );
     },
 
     /**
-     * Update notification preferences
+     * Update user notification preferences
      */
     async updatePreferences(
-        preferences: NotificationPreferencesDto
-    ): Promise<NotificationPreferencesResponseDto> {
-        return apiClient.patch<NotificationPreferencesResponseDto>(
+        preferences: UpdatePreferencesDto
+    ): Promise<{ data: UserPreferences }> {
+        return apiClient.patch<{ data: UserPreferences }>(
             "/notifications/preferences",
             preferences
         );
     },
 };
 
-// Admin endpoints for managing notifications
+/**
+ * Admin-only notifications API
+ * Requires appropriate permissions (NOTIFICATIONS_MANAGE, NOTIFICATIONS_BROADCAST)
+ */
 export const AdminNotificationsApi = {
     /**
-     * Create a notification (Admin only)
+     * Create a notification for a specific user (Admin only)
      */
     async create(
         dto: CreateNotificationDto
-    ): Promise<{ message: string; notification: NotificationResponseDto }> {
+    ): Promise<{ message: string; data: NotificationResponseDto }> {
         return apiClient.post<{
             message: string;
-            notification: NotificationResponseDto;
+            data: NotificationResponseDto;
         }>("/notifications", dto);
     },
 
     /**
      * Broadcast system announcement to multiple users
+     * Can target specific roles or all users
      */
     async broadcast(dto: BroadcastNotificationDto): Promise<{
         message: string;
@@ -113,47 +129,41 @@ export const AdminNotificationsApi = {
     },
 
     /**
-     * Get all notifications (Admin only)
+     * Get all notifications across all users (Admin only)
+     * Supports filtering by userId, type, severity, etc.
      */
     async listAll(
-        params: NotificationQuery & { userId?: string } = {}
+        params: NotificationQuery = {}
     ): Promise<NotificationListResponseDto> {
-        const search = new URLSearchParams();
-        for (const [k, v] of Object.entries(params)) {
-            if (v !== undefined && v !== null) search.append(k, String(v));
-        }
-        const qs = search.toString();
+        const qs = buildQueryString(params);
         return apiClient.get<NotificationListResponseDto>(
             `/notifications/admin/all${qs ? `?${qs}` : ""}`
         );
     },
 
     /**
-     * Get notification by ID (Admin only)
+     * Get a specific notification by ID (Admin only)
      */
-    async getById(id: string): Promise<NotificationResponseDto> {
-        return apiClient.get<NotificationResponseDto>(
+    async getById(id: string): Promise<{ data: NotificationResponseDto }> {
+        return apiClient.get<{ data: NotificationResponseDto }>(
             `/notifications/admin/${id}`
         );
     },
 
     /**
-     * Clean up old notifications (Admin only)
+     * Clean up old read notifications (Admin only)
+     * Helps maintain database performance
      */
     async cleanup(params?: {
         olderThanDays?: number;
         onlyRead?: boolean;
-    }): Promise<{ message: string; deletedCount: number }> {
-        const search = new URLSearchParams();
-        if (params?.olderThanDays)
-            search.append("olderThanDays", params.olderThanDays.toString());
-        if (params?.onlyRead)
-            search.append("onlyRead", params.onlyRead.toString());
-
-        const qs = search.toString();
-        return apiClient.post<{ message: string; deletedCount: number }>(
-            `/notifications/admin/cleanup${qs ? `?${qs}` : ""}`,
-            {}
-        );
+    }): Promise<{ message: string; data: { deletedCount: number } }> {
+        const qs = params
+            ? buildQueryString(params as unknown as NotificationQuery)
+            : "";
+        return apiClient.post<{
+            message: string;
+            data: { deletedCount: number };
+        }>(`/notifications/admin/cleanup${qs ? `?${qs}` : ""}`, {});
     },
 };

@@ -37,7 +37,7 @@ class UserService {
      * Get user by ID
      */
     async getUserById(userId: string): Promise<User> {
-        return apiClient.get<User>(`/admin/users/${userId}`);
+        return apiClient.get<User>(`/users/${userId}`);
     }
 
     /**

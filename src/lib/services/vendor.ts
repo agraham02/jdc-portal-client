@@ -1,10 +1,5 @@
 import { apiClient } from "@/lib/api";
-import type {
-    Vendor as VendorType,
-    User,
-    UserStatus,
-    RegisterVendorDto,
-} from "@/lib/types/auth";
+import type { Vendor as VendorType, User, UserStatus } from "@/lib/types/auth";
 import { PaginatedResponse } from "@/lib/types/api";
 import { VendorRegistrationFormData } from "../validations";
 
@@ -58,11 +53,11 @@ export class VendorService {
     /**
      * Get pending vendors (awaiting approval)
      */
-        static async getPendingVendors(): Promise<VendorListResponse> {
-            return apiClient.get<VendorListResponse>(`/vendors/pending`);
-        }
+    static async getPendingVendors(): Promise<VendorListResponse> {
+        return apiClient.get<VendorListResponse>(`/vendors/pending`);
+    }
 
-    /** 
+    /**
      * Approve vendor account
      */
     static async approveUser(vendorId: string): Promise<void> {
@@ -103,11 +98,20 @@ export class VendorService {
     static async createVendor(
         vendorData: VendorRegistrationFormData
     ): Promise<{ message: string; vendor: VendorWithUser }> {
-        const { confirmPassword, ...formData } = vendorData;
-
         return apiClient.post<{ message: string; vendor: VendorWithUser }>(
             `/vendors`,
-            formData
+            vendorData
+        );
+    }
+
+    register(formData: VendorRegistrationFormData) {
+        // Remove confirmPassword before sending to backend
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { confirmPassword, ...dataWithoutConfirm } = formData;
+
+        return apiClient.post<{ message: string; vendor: VendorWithUser }>(
+            `/vendors/register`,
+            dataWithoutConfirm
         );
     }
 
@@ -125,7 +129,7 @@ export class VendorService {
     }
 
     /**
-     * Delete vendor profile (Admin only)
+     * Delete vendor profile
      */
     static async deleteVendor(vendorId: string): Promise<{ message: string }> {
         return apiClient.delete<{ message: string }>(`/vendors/${vendorId}`);

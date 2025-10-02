@@ -91,18 +91,6 @@ export class EmployeeService {
     }
 
     /**
-     * Approve a pending employee
-     */
-    static async approveEmployee(
-        id: string
-    ): Promise<{ message: string; employee: EmployeeWithUser }> {
-        return apiClient.patch<{ message: string; employee: EmployeeWithUser }>(
-            `/employees/${id}/approve`,
-            {}
-        );
-    }
-
-    /**
      * Delete (deactivate) an employee
      */
     static async deleteEmployee(id: string): Promise<{ message: string }> {

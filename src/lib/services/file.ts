@@ -10,7 +10,10 @@ import {
     HrLink,
     CreateHrLinkDto,
     UpdateHrLinkDto,
-    HrLinksResponse,
+    HRDocument,
+    HRDocumentListResponse,
+    HRDocumentQueryDto,
+    HRLinkListResponse,
 } from "../types/file";
 
 export class FileService {
@@ -244,18 +247,6 @@ export class FileService {
             throw error;
         }
     }
-
-    /**
-     * Helper method to format file size
-     */
-    static formatFileSize(bytes: number): string {
-        if (bytes === 0) return "0 Bytes";
-        const k = 1024;
-        const sizes = ["Bytes", "KB", "MB", "GB"];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
-    }
-
     /**
      * Helper method to get file extension
      */
@@ -264,38 +255,53 @@ export class FileService {
     }
 }
 
-// HR Documents service for managing links and resources
+// HR Documents service for managing HR documents and links
 export class HrDocumentsService {
     /**
-     * Upload HR document file
+     * Helper method to build FormData for file upload
      */
-    static async uploadFile(
+    private static buildFormData(
         file: File,
-        metadata: UploadFileDto = {}
-    ): Promise<UploadedFile> {
+        metadata: { description?: string; tags?: string[] } = {}
+    ): FormData {
         const formData = new FormData();
         formData.append("file", file);
 
-        Object.entries(metadata).forEach(([key, value]) => {
-            if (value !== undefined && value !== null) {
-                if (Array.isArray(value)) {
-                    formData.append(key, value.join(","));
-                } else {
-                    formData.append(key, value.toString());
-                }
-            }
-        });
+        if (metadata.description) {
+            formData.append("description", metadata.description);
+        }
+        if (metadata.tags && metadata.tags.length > 0) {
+            // Backend expects tags as array items
+            metadata.tags.forEach((tag) => formData.append("tags", tag));
+        }
 
-        return apiClient.postFormData<UploadedFile>(
+        return formData;
+    }
+
+    // === HR DOCUMENTS (FILES) ===
+
+    /**
+     * Upload HR document file
+     * POST /hr-documents/files/upload
+     */
+    static async uploadFile(
+        file: File,
+        metadata: { description?: string; tags?: string[] } = {}
+    ): Promise<HRDocument> {
+        const formData = this.buildFormData(file, metadata);
+        return apiClient.postFormData<HRDocument>(
             "/hr-documents/files/upload",
             formData
         );
     }
 
     /**
-     * Get all HR document files
+     * Get all HR document files with pagination and filtering
+     * GET /hr-documents/files
      */
-    static async getFiles(query: FileQueryDto = {}): Promise<FileListResponse> {
+    static async getFiles(
+        query: HRDocumentQueryDto = {}
+    ): Promise<HRDocumentListResponse> {
         const params = new URLSearchParams();
 
         Object.entries(query).forEach(([key, value]) => {
@@ -305,77 +311,66 @@ export class HrDocumentsService {
         });
 
         const queryString = params.toString();
-        return apiClient.get<FileListResponse>(
+        return apiClient.get<HRDocumentListResponse>(
             `/hr-documents/files${queryString ? `?${queryString}` : ""}`
         );
     }
 
     /**
+     * Download HR document file directly as blob
+     * GET /hr-documents/files/:id/download
+     * Note: Backend returns the file directly, not a presigned URL
+     */
+    static async downloadFile(id: string): Promise<Blob> {
+        return apiClient.getBlob(`/hr-documents/files/${id}/download`);
+    }
+
+    /**
      * Replace HR document file
+     * PUT /hr-documents/files/:id
      */
     static async replaceFile(
         id: string,
         file: File,
-        updates: UpdateFileDto = {}
-    ): Promise<UploadedFile> {
-        const formData = new FormData();
-        formData.append("file", file);
-
-        Object.entries(updates).forEach(([key, value]) => {
-            if (value !== undefined && value !== null) {
-                if (Array.isArray(value)) {
-                    formData.append(key, value.join(","));
-                } else {
-                    formData.append(key, value.toString());
-                }
-            }
-        });
-
-        return apiClient.put<UploadedFile>(
-            `/hr-documents/files/${id}`,
-            formData
-        );
+        metadata: { description?: string; tags?: string[] } = {}
+    ): Promise<HRDocument> {
+        const formData = this.buildFormData(file, metadata);
+        return apiClient.put<HRDocument>(`/hr-documents/files/${id}`, formData);
     }
 
     /**
      * Delete HR document file
+     * DELETE /hr-documents/files/:id
      */
-    static async deleteFile(id: string): Promise<{ message: string }> {
-        return apiClient.delete<{ message: string }>(
-            `/hr-documents/files/${id}`
-        );
+    static async deleteFile(id: string): Promise<void> {
+        return apiClient.delete<void>(`/hr-documents/files/${id}`);
     }
 
-    /**
-     * Get HR document download URL
-     */
-    static async getDownloadUrl(id: string): Promise<{ url: string }> {
-        return apiClient.get<{ url: string }>(
-            `/hr-documents/files/${id}/download`
-        );
-    }
-
-    // HR Links Management
+    // === HR LINKS ===
 
     /**
      * Create HR link
+     * POST /hr-documents/links
      */
     static async createLink(data: CreateHrLinkDto): Promise<HrLink> {
         return apiClient.post<HrLink>("/hr-documents/links", data);
     }
 
     /**
-     * Get all HR links
+     * Get all HR links with pagination and filtering
+     * GET /hr-documents/links
      */
     static async getLinks(
         query: {
             page?: number;
-            pageSize?: number;
-            category?: string;
+            limit?: number;
             search?: string;
+            category?: string;
             isActive?: boolean;
+            sortBy?: string;
+            sortOrder?: "asc" | "desc";
         } = {}
-    ): Promise<HrLinksResponse> {
+    ): Promise<HRLinkListResponse> {
         const params = new URLSearchParams();
 
         Object.entries(query).forEach(([key, value]) => {
@@ -385,13 +380,14 @@ export class HrDocumentsService {
         });
 
         const queryString = params.toString();
-        return apiClient.get<HrLinksResponse>(
+        return apiClient.get<HRLinkListResponse>(
             `/hr-documents/links${queryString ? `?${queryString}` : ""}`
         );
     }
 
     /**
      * Get HR link by ID
+     * GET /hr-documents/links/:id
      */
     static async getLink(id: string): Promise<HrLink> {
         return apiClient.get<HrLink>(`/hr-documents/links/${id}`);
@@ -399,6 +395,7 @@ export class HrDocumentsService {
 
     /**
      * Update HR link
+     * PUT /hr-documents/links/:id
      */
     static async updateLink(
         id: string,
@@ -409,10 +406,31 @@ export class HrDocumentsService {
 
     /**
      * Delete HR link
+     * DELETE /hr-documents/links/:id
      */
-    static async deleteLink(id: string): Promise<{ message: string }> {
-        return apiClient.delete<{ message: string }>(
-            `/hr-documents/links/${id}`
-        );
+    static async deleteLink(id: string): Promise<void> {
+        return apiClient.delete<void>(`/hr-documents/links/${id}`);
+    }
+
+    // === HELPER METHODS ===
+
+    /**
+     * Helper method to trigger file download in browser
+     */
+    static async triggerDownload(id: string, filename: string): Promise<void> {
+        try {
+            const blob = await this.downloadFile(id);
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (error) {
+            console.error("Download failed:", error);
+            throw error;
+        }
     }
 }
