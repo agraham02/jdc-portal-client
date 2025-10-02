@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState, ReactNode } from "react";
+import {
+    useEffect,
+    useMemo,
+    useState,
+    ReactNode,
+    Dispatch,
+    SetStateAction,
+} from "react";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -123,8 +130,8 @@ export interface TableStateSnapshot {
 }
 
 export interface TableStateControls extends TableStateSnapshot {
-    setPage: (page: number) => void;
-    setPageSize: (size: number) => void;
+    setPage: Dispatch<SetStateAction<number>>;
+    setPageSize: Dispatch<SetStateAction<number>>;
     updateFilter: (key: string, value: string) => void;
     resetFilters: () => void;
 }
@@ -193,14 +200,8 @@ export function GenericTable<T extends BaseEntity>({
     totalItems,
 }: GenericTableProps<T>) {
     const internalState = useTableState(config);
-    const {
-        page,
-        setPage,
-        pageSize,
-        setPageSize,
-        filters,
-        updateFilter,
-    } = state ?? internalState;
+    const { page, setPage, pageSize, setPageSize, filters, updateFilter } =
+        state ?? internalState;
 
     const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
 
@@ -208,10 +209,7 @@ export function GenericTable<T extends BaseEntity>({
         () => config.searchFields ?? [],
         [config.searchFields]
     );
-    const tableFilters = useMemo(
-        () => config.filters ?? [],
-        [config.filters]
-    );
+    const tableFilters = useMemo(() => config.filters ?? [], [config.filters]);
     const manualFiltering = config.manualFiltering ?? false;
     const manualPagination = config.manualPagination ?? false;
     const enablePagination = config.enablePagination !== false;
@@ -258,7 +256,14 @@ export function GenericTable<T extends BaseEntity>({
                 }) ?? true
             );
         });
-    }, [data, filters, manualFiltering, searchFields, tableFilters, customFilter]);
+    }, [
+        data,
+        filters,
+        manualFiltering,
+        searchFields,
+        tableFilters,
+        customFilter,
+    ]);
 
     // Pagination
     const total = manualPagination
@@ -274,16 +279,14 @@ export function GenericTable<T extends BaseEntity>({
             ? data
             : filteredData.slice(start, start + pageSize)
         : filteredData;
-    const startDisplay = total > 0
-        ? enablePagination
-            ? Math.min(total, start + 1)
-            : 1
-        : 0;
-    const endDisplay = total > 0
-        ? enablePagination
-            ? Math.min(total, start + pageItems.length)
-            : pageItems.length
-        : 0;
+    const startDisplay =
+        total > 0 ? (enablePagination ? Math.min(total, start + 1) : 1) : 0;
+    const endDisplay =
+        total > 0
+            ? enablePagination
+                ? Math.min(total, start + pageItems.length)
+                : pageItems.length
+            : 0;
 
     // Handle action clicks with loading state
     const handleAction = async (action: TableAction<T>, item: T) => {

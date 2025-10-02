@@ -1,3 +1,4 @@
+import type { QueryValue } from "@/lib/utils/queryParams";
 import { PaginatedResponse } from "./api";
 
 /**
@@ -217,4 +218,5 @@ export interface NotificationQuery {
     priority?: NotificationPriority;
     startDate?: string;
     endDate?: string;
+    [key: string]: QueryValue;
 }
