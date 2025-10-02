@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, ReactNode } from "react";
+import { useMemo, useState, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -30,6 +30,7 @@ import { Badge } from "@/components/ui/badge";
 // Base interface that all entities must implement
 export interface BaseEntity {
     _id: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Index signature allows flexible entity properties
     [key: string]: any;
 }
 
@@ -107,6 +108,7 @@ export interface GenericTableProps<T extends BaseEntity> {
 }
 
 // Hook for managing table state
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Generic hook works with any entity type
 export function useTableState(config: GenericTableConfig<any>) {
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(config.defaultPageSize || 25);
@@ -193,13 +195,7 @@ export function GenericTable<T extends BaseEntity>({
                 }) ?? true
             );
         });
-    }, [
-        data,
-        filters,
-        config.searchFields,
-        config.filters,
-        config.customFilter,
-    ]);
+    }, [data, filters, config]);
 
     // Pagination
     const total = filteredData.length;

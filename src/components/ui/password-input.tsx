@@ -1,4 +1,3 @@
-import { Label } from "@/components/ui/label";
 import { EyeOff, Eye } from "lucide-react";
 import React, { useState } from "react";
 import { Button } from "./button";
@@ -8,6 +7,7 @@ export function PasswordInput({
     register,
     placeholder,
 }: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- react-hook-form register has complex internal type
     register: any;
     placeholder?: string;
 }) {
@@ -22,6 +22,7 @@ export function PasswordInput({
                 {...register("password")}
             />
             <Button
+                type="button"
                 variant="ghost"
                 size="sm"
                 className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
