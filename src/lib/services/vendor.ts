@@ -98,19 +98,9 @@ export class VendorService {
     static async createVendor(
         vendorData: VendorRegistrationFormData
     ): Promise<{ message: string; vendor: VendorWithUser }> {
+        const { confirmPassword, ...dataWithoutConfirm } = vendorData;
         return apiClient.post<{ message: string; vendor: VendorWithUser }>(
             `/vendors`,
-            vendorData
-        );
-    }
-
-    register(formData: VendorRegistrationFormData) {
-        // Remove confirmPassword before sending to backend
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { confirmPassword, ...dataWithoutConfirm } = formData;
-
-        return apiClient.post<{ message: string; vendor: VendorWithUser }>(
-            `/vendors/register`,
             dataWithoutConfirm
         );
     }
