@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, ReactNode } from "react";
+import { useEffect, useMemo, useState, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -82,12 +82,16 @@ export interface StatusConfig {
 }
 
 // Main table configuration
+export type SearchField<T extends BaseEntity> =
+    | keyof T
+    | ((item: T) => unknown);
+
 export interface GenericTableConfig<T extends BaseEntity> {
     columns: TableColumn<T>[];
     actions?: TableAction<T>[];
     filters?: TableFilter[];
     statusConfig?: StatusConfig;
-    searchFields?: (keyof T)[];
+    searchFields?: SearchField<T>[];
     defaultPageSize?: number;
     enablePagination?: boolean;
     onRowClick?: (item: T) => void;
@@ -95,6 +99,8 @@ export interface GenericTableConfig<T extends BaseEntity> {
     emptyMessage?: string;
     errorClassName?: string;
     customFilter?: (item: T, filters: Record<string, string>) => boolean;
+    manualFiltering?: boolean;
+    manualPagination?: boolean;
 }
 
 // Props for the GenericTable component
@@ -105,11 +111,32 @@ export interface GenericTableProps<T extends BaseEntity> {
     config: GenericTableConfig<T>;
     onRefresh?: () => void;
     className?: string;
+    state?: TableStateControls;
+    totalItems?: number;
 }
 
 // Hook for managing table state
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Generic hook works with any entity type
-export function useTableState(config: GenericTableConfig<any>) {
+export interface TableStateSnapshot {
+    page: number;
+    pageSize: number;
+    filters: Record<string, string>;
+}
+
+export interface TableStateControls extends TableStateSnapshot {
+    setPage: (page: number) => void;
+    setPageSize: (size: number) => void;
+    updateFilter: (key: string, value: string) => void;
+    resetFilters: () => void;
+}
+
+interface UseTableStateOptions {
+    onChange?: (state: TableStateSnapshot) => void;
+}
+
+export function useTableState<T extends BaseEntity>(
+    config: GenericTableConfig<T>,
+    options: UseTableStateOptions = {}
+): TableStateControls {
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(config.defaultPageSize || 25);
     const [filters, setFilters] = useState<Record<string, string>>(() => {
@@ -134,12 +161,21 @@ export function useTableState(config: GenericTableConfig<any>) {
         setPage(1);
     };
 
+    const snapshot: TableStateSnapshot = useMemo(
+        () => ({ page, pageSize, filters }),
+        [page, pageSize, filters]
+    );
+
+    const { onChange } = options;
+
+    useEffect(() => {
+        onChange?.(snapshot);
+    }, [onChange, snapshot]);
+
     return {
-        page,
+        ...snapshot,
         setPage,
-        pageSize,
         setPageSize,
-        filters,
         updateFilter,
         resetFilters,
     };
@@ -153,39 +189,66 @@ export function GenericTable<T extends BaseEntity>({
     config,
     onRefresh,
     className = "",
+    state,
+    totalItems,
 }: GenericTableProps<T>) {
-    const { page, setPage, pageSize, setPageSize, filters, updateFilter } =
-        useTableState(config);
+    const internalState = useTableState(config);
+    const {
+        page,
+        setPage,
+        pageSize,
+        setPageSize,
+        filters,
+        updateFilter,
+    } = state ?? internalState;
 
     const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
 
+    const searchFields = useMemo(
+        () => config.searchFields ?? [],
+        [config.searchFields]
+    );
+    const tableFilters = useMemo(
+        () => config.filters ?? [],
+        [config.filters]
+    );
+    const manualFiltering = config.manualFiltering ?? false;
+    const manualPagination = config.manualPagination ?? false;
+    const enablePagination = config.enablePagination !== false;
+    const customFilter = config.customFilter;
+
     // Filter and search data
     const filteredData = useMemo(() => {
+        if (manualFiltering) {
+            return data;
+        }
+
         return data.filter((item) => {
-            // Apply search filter
-            const searchFilter = filters.search || "";
-            if (searchFilter && config.searchFields) {
-                const searchMatch = config.searchFields.some((field) => {
-                    const value = item[field];
-                    return (
-                        value &&
-                        String(value)
-                            .toLowerCase()
-                            .includes(searchFilter.toLowerCase())
-                    );
+            const searchFilter = filters.search?.trim() ?? "";
+            if (searchFilter && searchFields.length > 0) {
+                const loweredQuery = searchFilter.toLowerCase();
+                const searchMatch = searchFields.some((field) => {
+                    const rawValue =
+                        typeof field === "function" ? field(item) : item[field];
+                    if (rawValue === undefined || rawValue === null) {
+                        return false;
+                    }
+                    return String(rawValue)
+                        .toLowerCase()
+                        .includes(loweredQuery);
                 });
-                if (!searchMatch) return false;
+                if (!searchMatch) {
+                    return false;
+                }
             }
 
-            // Apply custom filter if provided
-            if (config.customFilter) {
-                return config.customFilter(item, filters);
+            if (customFilter) {
+                return customFilter(item, filters);
             }
 
-            // Apply other filters
             return (
-                config.filters?.every((filter) => {
-                    if (filter.type === "search") return true; // Already handled above
+                tableFilters.every((filter) => {
+                    if (filter.type === "search") return true;
 
                     const filterValue = filters[filter.key];
                     if (!filterValue || filterValue === "all") return true;
@@ -195,22 +258,32 @@ export function GenericTable<T extends BaseEntity>({
                 }) ?? true
             );
         });
-    }, [data, filters, config]);
+    }, [data, filters, manualFiltering, searchFields, tableFilters, customFilter]);
 
     // Pagination
-    const total = filteredData.length;
-    const totalPages =
-        config.enablePagination !== false
-            ? Math.max(1, Math.ceil(total / pageSize))
-            : 1;
+    const total = manualPagination
+        ? totalItems ?? filteredData.length
+        : filteredData.length;
+    const totalPages = enablePagination
+        ? Math.max(1, Math.ceil(total / pageSize))
+        : 1;
     const currentPage = Math.min(page, totalPages);
-    const start =
-        config.enablePagination !== false ? (currentPage - 1) * pageSize : 0;
-    const end = config.enablePagination !== false ? start + pageSize : total;
-    const pageItems =
-        config.enablePagination !== false
-            ? filteredData.slice(start, end)
-            : filteredData;
+    const start = enablePagination ? (currentPage - 1) * pageSize : 0;
+    const pageItems = enablePagination
+        ? manualPagination
+            ? data
+            : filteredData.slice(start, start + pageSize)
+        : filteredData;
+    const startDisplay = total > 0
+        ? enablePagination
+            ? Math.min(total, start + 1)
+            : 1
+        : 0;
+    const endDisplay = total > 0
+        ? enablePagination
+            ? Math.min(total, start + pageItems.length)
+            : pageItems.length
+        : 0;
 
     // Handle action clicks with loading state
     const handleAction = async (action: TableAction<T>, item: T) => {
@@ -256,9 +329,9 @@ export function GenericTable<T extends BaseEntity>({
     return (
         <div className={`space-y-4 ${className}`}>
             {/* Filters */}
-            {config.filters && config.filters.length > 0 && (
+            {tableFilters.length > 0 && (
                 <div className="flex flex-wrap gap-2 items-center">
-                    {config.filters.map((filter) => (
+                    {tableFilters.map((filter) => (
                         <div key={filter.key}>
                             {filter.type === "search" ? (
                                 <Input
@@ -306,7 +379,7 @@ export function GenericTable<T extends BaseEntity>({
                     ))}
 
                     {/* Page size selector */}
-                    {config.enablePagination !== false && (
+                    {enablePagination && (
                         <Select
                             value={String(pageSize)}
                             onValueChange={(v) => {
@@ -509,11 +582,10 @@ export function GenericTable<T extends BaseEntity>({
             </div>
 
             {/* Pagination */}
-            {config.enablePagination !== false && total > 0 && (
+            {enablePagination && total > 0 && (
                 <div className="flex items-center justify-between text-sm text-muted-foreground">
                     <div>
-                        Showing {Math.min(total, start + 1)}-
-                        {Math.min(total, end)} of {total}
+                        Showing {startDisplay}-{endDisplay} of {total}
                     </div>
                     <div className="flex items-center gap-2">
                         <Button

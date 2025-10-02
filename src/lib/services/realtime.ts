@@ -4,6 +4,26 @@ import { io, Socket } from "socket.io-client";
 import { session } from "@/lib/session";
 import type { Notification } from "@/lib/types/notifications";
 
+const socketDebug = process.env.NEXT_PUBLIC_DEBUG_SOCKET === "true";
+
+const debugLog = (...args: Parameters<typeof console.log>) => {
+    if (socketDebug) {
+        console.log(...args);
+    }
+};
+
+const debugWarn = (...args: Parameters<typeof console.warn>) => {
+    if (socketDebug) {
+        console.warn(...args);
+    }
+};
+
+const debugInfo = (...args: Parameters<typeof console.debug>) => {
+    if (socketDebug) {
+        console.debug(...args);
+    }
+};
+
 /**
  * WebSocket event types from the backend
  * Backend events: notification, notification:retry, notification:ack:ok, pong
@@ -92,7 +112,7 @@ export class NotificationsSocketClient {
 
         const token = session.getAccessToken();
         if (!token) {
-            console.warn(
+            debugWarn(
                 "[NotificationsSocket] No access token available, skipping connection"
             );
             this.setState("failed");
@@ -155,7 +175,7 @@ export class NotificationsSocketClient {
 
         // Connection successful
         s.on("connect", () => {
-            console.log("[NotificationsSocket] Connected");
+            debugLog("[NotificationsSocket] Connected");
             this.attempt = 0;
             this.setState("connected");
             this.startHealthCheck();
@@ -173,7 +193,7 @@ export class NotificationsSocketClient {
                 error.message.includes("jwt") ||
                 error.message.includes("Unauthorized")
             ) {
-                console.warn("[NotificationsSocket] Token expired or invalid");
+                debugWarn("[NotificationsSocket] Token expired or invalid");
                 // The auth context will handle refresh, we just need to reconnect after
             }
 
@@ -182,7 +202,7 @@ export class NotificationsSocketClient {
 
         // Disconnected
         s.on("disconnect", (reason) => {
-            console.log("[NotificationsSocket] Disconnected:", reason);
+            debugLog("[NotificationsSocket] Disconnected:", reason);
             this.stopHealthCheck();
 
             // Only reconnect if not intentional
@@ -199,7 +219,7 @@ export class NotificationsSocketClient {
         });
 
         s.on("notification:retry", (payload: unknown) => {
-            console.warn("[NotificationsSocket] Retry event received");
+            debugWarn("[NotificationsSocket] Retry event received");
             this.emitLocal("notification:retry", payload);
         });
 
@@ -209,7 +229,7 @@ export class NotificationsSocketClient {
 
         s.on("pong", (payload: { ok: boolean; ts: number; echo?: unknown }) => {
             const latency = Date.now() - payload.ts;
-            console.debug(`[NotificationsSocket] Pong received (${latency}ms)`);
+            debugInfo(`[NotificationsSocket] Pong received (${latency}ms)`);
             this.emitLocal("pong", payload);
         });
     }
@@ -229,7 +249,7 @@ export class NotificationsSocketClient {
 
         // Server kicked us - might be rate limit or other issue
         if (reason === "io server disconnect") {
-            console.warn("[NotificationsSocket] Server forcibly disconnected");
+            debugWarn("[NotificationsSocket] Server forcibly disconnected");
         }
 
         this.setState("reconnecting");
@@ -247,7 +267,7 @@ export class NotificationsSocketClient {
 
         this.attempt++;
 
-        console.log(
+        debugLog(
             `[NotificationsSocket] Reconnecting in ${Math.round(
                 delay / 1000
             )}s (attempt ${this.attempt}/${this.maxAttempts})`
@@ -266,7 +286,7 @@ export class NotificationsSocketClient {
         // Get fresh token
         const token = session.getAccessToken();
         if (!token) {
-            console.warn("[NotificationsSocket] No token for reconnect");
+            debugWarn("[NotificationsSocket] No token for reconnect");
             // Retry after a delay
             if (this.attempt < this.maxAttempts) {
                 this.scheduleReconnect();
@@ -359,7 +379,7 @@ export class NotificationsSocketClient {
      */
     ack(notificationId: string) {
         if (!this.socket?.connected) {
-            console.warn("[NotificationsSocket] Cannot ack - not connected");
+            debugWarn("[NotificationsSocket] Cannot ack - not connected");
             return;
         }
         this.socket.emit("notification:ack", { notificationId });

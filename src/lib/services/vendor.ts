@@ -2,6 +2,7 @@ import { apiClient } from "@/lib/api";
 import type { Vendor as VendorType, User, UserStatus } from "@/lib/types/auth";
 import { PaginatedResponse } from "@/lib/types/api";
 import { VendorRegistrationFormData } from "../validations";
+import { buildApiPath } from "@/lib/utils/queryParams";
 
 export type Vendor = VendorType;
 
@@ -37,17 +38,13 @@ export class VendorService {
         search?: string;
         status?: UserStatus;
     }): Promise<VendorListResponse> {
-        const queryParams = new URLSearchParams();
-        if (params?.page) queryParams.append("page", params.page.toString());
-        if (params?.pageSize)
-            queryParams.append("pageSize", params.pageSize.toString());
-        if (params?.search) queryParams.append("search", params.search);
-        if (params?.status) queryParams.append("status", params.status);
-
-        const query = queryParams.toString();
-        return apiClient.get<VendorListResponse>(
-            `/vendors${query ? `?${query}` : ""}`
-        );
+        const path = buildApiPath("/vendors", {
+            page: params?.page,
+            pageSize: params?.pageSize,
+            search: params?.search,
+            status: params?.status,
+        });
+        return apiClient.get<VendorListResponse>(path);
     }
 
     /**

@@ -1,4 +1,5 @@
 import { apiClient } from "@/lib/api";
+import { buildApiPath } from "@/lib/utils/queryParams";
 import type {
     NotificationResponseDto,
     NotificationListResponseDto,
@@ -11,19 +12,6 @@ import type {
 } from "@/lib/types/notifications";
 
 /**
- * Build query string from parameters, filtering out undefined/null values
- */
-function buildQueryString(params: NotificationQuery): string {
-    const search = new URLSearchParams();
-    for (const [k, v] of Object.entries(params)) {
-        if (v !== undefined && v !== null) {
-            search.append(k, String(v));
-        }
-    }
-    return search.toString();
-}
-
-/**
  * User-facing notifications API
  */
 export const NotificationsApi = {
@@ -33,8 +21,7 @@ export const NotificationsApi = {
     async list(
         params: NotificationQuery = {}
     ): Promise<NotificationListResponseDto> {
-        const qs = buildQueryString(params);
-        const path = `/notifications${qs ? `?${qs}` : ""}`;
+        const path = buildApiPath("/notifications", params);
         return apiClient.get<NotificationListResponseDto>(path);
     },
 
@@ -135,10 +122,8 @@ export const AdminNotificationsApi = {
     async listAll(
         params: NotificationQuery = {}
     ): Promise<NotificationListResponseDto> {
-        const qs = buildQueryString(params);
-        return apiClient.get<NotificationListResponseDto>(
-            `/notifications/admin/all${qs ? `?${qs}` : ""}`
-        );
+        const path = buildApiPath("/notifications/admin/all", params);
+        return apiClient.get<NotificationListResponseDto>(path);
     },
 
     /**
@@ -158,12 +143,13 @@ export const AdminNotificationsApi = {
         olderThanDays?: number;
         onlyRead?: boolean;
     }): Promise<{ message: string; data: { deletedCount: number } }> {
-        const qs = params
-            ? buildQueryString(params as unknown as NotificationQuery)
-            : "";
+        const path = buildApiPath(
+            "/notifications/admin/cleanup",
+            params as unknown as NotificationQuery | undefined
+        );
         return apiClient.post<{
             message: string;
             data: { deletedCount: number };
-        }>(`/notifications/admin/cleanup${qs ? `?${qs}` : ""}`, {});
+        }>(path, {});
     },
 };
