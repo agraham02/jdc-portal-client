@@ -1,5 +1,14 @@
 import { PaginatedResponse } from "./api";
 
+// Extend FileQueryDto for HR Documents specific queries
+export interface HRDocumentQueryDto {
+    page?: number;
+    limit?: number;
+    search?: string;
+    sortBy?: string;
+    sortOrder?: "asc" | "desc";
+}
+
 export enum FileCategory {
     HR_DOCUMENT = "hr_document",
     CONTRACT_DOCUMENT = "contract_document",
@@ -116,45 +125,100 @@ export interface FileStats {
 }
 
 // HR Documents specific types
+
+// User reference (populated)
+export interface UserReference {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    email?: string;
+}
+
+// HR Document (File) - Response from /hr-documents/files endpoints
+export interface HRDocument {
+    _id: string;
+    originalName: string;
+    filename: string;
+    size: number;
+    mimetype: string;
+    description?: string;
+    tags: string[];
+    uploadedBy: UserReference;
+    approvedBy?: UserReference;
+    createdAt: string; // ISO 8601
+    updatedAt: string; // ISO 8601
+}
+
+// HR Document List Response
+export interface HRDocumentListResponse {
+    files: HRDocument[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+}
+
+// HR Document Download Response
+export interface HRDocumentDownloadResponse {
+    url: string;
+    expiresIn: number; // seconds
+    filename: string;
+}
+
+// HR Link Category Enum
+export enum HRLinkCategory {
+    PAYROLL = "payroll",
+    BENEFITS = "benefits",
+    TRAINING = "training",
+    POLICY = "policy",
+    DIRECTORY = "directory",
+    OTHER = "other",
+}
+
+// HR Link
 export interface HrLink {
     _id: string;
     title: string;
-    url: string;
     description?: string;
-    category:
-        | "payroll"
-        | "benefits"
-        | "training"
-        | "policies"
-        | "directory"
-        | "other";
-    tags: string[];
+    url: string;
+    category: HRLinkCategory;
     isActive: boolean;
-    createdBy: {
-        _id: string;
-        fullName: string;
-        email: string;
-    };
-    createdAt: string;
-    updatedAt: string;
+    sortOrder: number;
+    tags: string[];
+    createdBy: UserReference;
+    updatedBy?: UserReference;
+    createdAt: string; // ISO 8601
+    updatedAt: string; // ISO 8601
 }
 
+// HR Link List Response
+export interface HRLinkListResponse {
+    links: HrLink[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+}
+
+// Create HR Link DTO
 export interface CreateHrLinkDto {
     title: string;
-    url: string;
     description?: string;
-    category: string;
+    url: string;
+    category?: HRLinkCategory | string;
+    sortOrder?: number;
     tags?: string[];
-    isActive?: boolean;
 }
 
+// Update HR Link DTO
 export interface UpdateHrLinkDto {
     title?: string;
-    url?: string;
     description?: string;
-    category?: string;
-    tags?: string[];
+    url?: string;
+    category?: HRLinkCategory | string;
     isActive?: boolean;
+    sortOrder?: number;
+    tags?: string[];
 }
 
-export type HrLinksResponse = PaginatedResponse<HrLink>;
+export type HrLinksResponse = HRLinkListResponse;

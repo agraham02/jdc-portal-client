@@ -27,6 +27,7 @@ export interface RBACUser extends User {
 // API Response types matching new API structure
 export interface PermissionsResponse {
     permissions: RBACPermission[];
+    categorized?: Record<string, RBACPermission[]>;
 }
 
 export type RoleListResponse = PaginatedResponse<RBACRole>;
@@ -43,6 +44,7 @@ export interface UserPermissionsResponse {
 
 export interface RoleUsersResponse extends PaginatedResponse<RBACUser> {
     role: RBACRole;
+    totalUsers?: number;
 }
 
 // DTO types matching the new API
@@ -57,6 +59,10 @@ export interface UpdateRoleDto {
     description?: string;
     permissions?: string[]; // Array of permission IDs
 }
+
+// Type aliases for backward compatibility
+export type CreateRoleRequest = CreateRoleDto;
+export type UpdateRoleRequest = UpdateRoleDto;
 
 export interface AssignRoleDto {
     roleId: string;
