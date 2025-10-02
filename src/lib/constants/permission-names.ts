@@ -33,9 +33,12 @@ export const PermissionName = {
     CONTRACT_READ_ALL: "contract:read:all",
     CONTRACT_UPDATE: "contract:update",
     CONTRACT_DELETE: "contract:delete",
+    CONTRACT_PUBLISH: "contract:publish",
+    CONTRACT_AWARD: "contract:award",
     CONTRACT_APPLY: "contract:apply",
-    CONTRACT_APPROVE: "contract:approve",
-    CONTRACT_REJECT: "contract:reject",
+    CONTRACT_REVIEW_APPLICATIONS: "contract:review_applications",
+    CONTRACT_MANAGE_APPLICATIONS: "contract:manage_applications",
+    APPLICATION_WITHDRAW: "application:withdraw",
 
     // File management
     FILE_UPLOAD: "file:upload",
@@ -57,6 +60,7 @@ export const PermissionName = {
     // Internal Notes (procurement)
     INTERNAL_NOTE_CREATE: "internal_note:create",
     INTERNAL_NOTE_READ: "internal_note:read",
+    INTERNAL_NOTE_UPDATE: "internal_note:update",
     INTERNAL_NOTE_DELETE: "internal_note:delete",
 
     // System administration
