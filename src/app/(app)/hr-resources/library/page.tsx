@@ -25,7 +25,7 @@ import {
 
 export default function HRLibraryPage() {
     return (
-        <ProtectedRoute anyOf={[P.FILE_READ, P.FILE_READ_ALL]}>
+        <ProtectedRoute anyOf={[P.HR_DOCUMENT_READ]}>
             <main className="space-y-6 p-6 max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="flex items-center gap-4">

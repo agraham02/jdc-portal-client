@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,8 +21,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { FileService } from "@/lib/services/file";
-import { FileStatus, FilesResponse, UploadedFile } from "@/lib/types/file";
+import { HrDocumentsService } from "@/lib/services/file";
+import { HRDocument } from "@/lib/types/file";
 import {
     DownloadIcon,
     EyeIcon,
@@ -34,13 +34,16 @@ import {
 import { format } from "date-fns";
 import { Can } from "@/components/authz/Can";
 import { PermissionName as P } from "@/lib/constants/permission-names";
+import { formatBytes } from "@/lib/utils/formatters";
 
 type SortDir = "asc" | "desc";
 
 export function HrDocumentsTable() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [data, setData] = useState<FilesResponse | null>(null);
+    const [documents, setDocuments] = useState<HRDocument[]>([]);
+    const [total, setTotal] = useState(0);
+    const [totalPages, setTotalPages] = useState(1);
     const [page, setPage] = useState(1);
     const [limit, setLimit] = useState(25);
     const [search, setSearch] = useState("");
@@ -51,14 +54,16 @@ export function HrDocumentsTable() {
         setLoading(true);
         setError(null);
         try {
-            const res = await FileService.getHrDocuments({
+            const res = await HrDocumentsService.getFiles({
                 page,
                 limit,
-                search,
+                search: search || undefined,
                 sortBy,
                 sortOrder,
             });
-            setData(res);
+            setDocuments(res.files);
+            setTotal(res.total);
+            setTotalPages(res.totalPages);
         } catch (e: unknown) {
             console.error(e);
             const msg =
@@ -76,38 +81,38 @@ export function HrDocumentsTable() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [page, limit, search, sortBy, sortOrder]);
 
-    const onDownload = async (file: UploadedFile) => {
+    const onDownload = async (file: HRDocument) => {
         try {
-            // Use fresh signed URL to avoid expiry issues
-            const { url } = await FileService.getSignedDownloadUrl(file._id);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = file.originalName;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            await HrDocumentsService.triggerDownload(
+                file._id,
+                file.originalName
+            );
+            toast.success("Download started");
         } catch {
             toast.error("Download failed");
         }
     };
 
-    const onView = async (file: UploadedFile) => {
+    const onView = async (file: HRDocument) => {
         try {
-            const { url } = await FileService.getSignedViewUrl(file._id);
+            const blob = await HrDocumentsService.downloadFile(file._id);
+            const url = window.URL.createObjectURL(blob);
             window.open(url, "_blank");
+            // Clean up after a delay to ensure the new tab has loaded the blob
+            setTimeout(() => window.URL.revokeObjectURL(url), 1000);
         } catch {
-            toast.error("Open failed");
+            toast.error("Failed to open document");
         }
     };
 
-    const onDelete = async (file: UploadedFile) => {
+    const onDelete = async (file: HRDocument) => {
         if (!confirm(`Delete ${file.originalName}?`)) return;
         try {
-            await FileService.deleteFile(file._id);
-            toast.success("Deleted");
+            await HrDocumentsService.deleteFile(file._id);
+            toast.success("Document deleted successfully");
             load();
         } catch {
-            toast.error("Delete failed");
+            toast.error("Failed to delete document");
         }
     };
 
@@ -120,30 +125,29 @@ export function HrDocumentsTable() {
         "image/png",
         "image/jpeg",
     ];
-    const maxBytes = 10 * 1024 * 1024; // 10MB
+    const maxBytes = 100 * 1024 * 1024; // 100MB
 
-    const onReplace = async (file: UploadedFile, picked: File | null) => {
+    const onReplace = async (file: HRDocument, picked: File | null) => {
         if (!picked) return;
         if (!allowedTypes.includes(picked.type)) {
             toast.error("Unsupported file type");
             return;
         }
         if (picked.size > maxBytes) {
-            toast.error("File too large (max 10MB)");
+            toast.error("File too large (max 100MB)");
             return;
         }
         try {
-            await FileService.replaceFile(file._id, picked, {
+            await HrDocumentsService.replaceFile(file._id, picked, {
                 description: file.description,
+                tags: file.tags,
             });
-            toast.success("File replaced");
+            toast.success("Document replaced successfully");
             load();
         } catch {
-            toast.error("Replace failed");
+            toast.error("Failed to replace document");
         }
     };
-
-    const totalPages = useMemo(() => data?.totalPages ?? 1, [data]);
 
     return (
         <div className="w-full">
@@ -236,7 +240,6 @@ export function HrDocumentsTable() {
                                     )}
                                 </div>
                             </TableHead>
-                            <TableHead>Status</TableHead>
                             <TableHead className="text-right">
                                 Actions
                             </TableHead>
@@ -246,22 +249,22 @@ export function HrDocumentsTable() {
                         {loading &&
                             Array.from({ length: 5 }).map((_, i) => (
                                 <TableRow key={i}>
-                                    <TableCell colSpan={7}>
+                                    <TableCell colSpan={6}>
                                         <Skeleton className="h-6 w-full" />
                                     </TableCell>
                                 </TableRow>
                             ))}
                         {error && !loading && (
                             <TableRow>
-                                <TableCell colSpan={7} className="text-red-600">
+                                <TableCell colSpan={6} className="text-red-600">
                                     {error}
                                 </TableCell>
                             </TableRow>
                         )}
-                        {!loading && !error && data?.files?.length === 0 && (
+                        {!loading && !error && documents.length === 0 && (
                             <TableRow>
                                 <TableCell
-                                    colSpan={7}
+                                    colSpan={6}
                                     className="text-center py-12"
                                 >
                                     <div className="flex flex-col items-center gap-3 text-muted-foreground">
@@ -282,7 +285,7 @@ export function HrDocumentsTable() {
                         )}
                         {!loading &&
                             !error &&
-                            data?.files?.map((f) => (
+                            documents.map((f: HRDocument) => (
                                 <TableRow
                                     key={f._id}
                                     className="hover:bg-muted/50 transition-colors"
@@ -317,7 +320,7 @@ export function HrDocumentsTable() {
                                         </Badge>
                                     </TableCell>
                                     <TableCell className="text-sm">
-                                        {FileService.formatFileSize(f.size)}
+                                        {formatBytes(f.size)}
                                     </TableCell>
                                     <TableCell className="text-sm">
                                         <div className="flex flex-col">
@@ -334,20 +337,6 @@ export function HrDocumentsTable() {
                                                 )}
                                             </span>
                                         </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Badge
-                                            variant={
-                                                f.status === FileStatus.APPROVED
-                                                    ? "secondary"
-                                                    : "outline"
-                                            }
-                                            className="capitalize"
-                                        >
-                                            {f.status === FileStatus.APPROVED
-                                                ? "Available"
-                                                : f.status}
-                                        </Badge>
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex items-center justify-end gap-1">
@@ -369,7 +358,7 @@ export function HrDocumentsTable() {
                                             >
                                                 <DownloadIcon className="h-4 w-4" />
                                             </Button>
-                                            <Can anyOf={[P.FILE_UPDATE_ALL]}>
+                                            <Can anyOf={[P.HR_DOCUMENT_UPDATE]}>
                                                 <label className="inline-flex">
                                                     <input
                                                         type="file"
@@ -396,7 +385,7 @@ export function HrDocumentsTable() {
                                                     </Button>
                                                 </label>
                                             </Can>
-                                            <Can anyOf={[P.FILE_DELETE_ALL]}>
+                                            <Can anyOf={[P.HR_DOCUMENT_DELETE]}>
                                                 <Button
                                                     size="sm"
                                                     variant="ghost"
@@ -417,11 +406,11 @@ export function HrDocumentsTable() {
 
             <div className="flex items-center justify-between px-6 py-4 border-t bg-muted/20">
                 <div className="text-sm text-muted-foreground">
-                    {data?.total ? (
+                    {total > 0 ? (
                         <>
-                            Showing {(data.page - 1) * limit + 1} to{" "}
-                            {Math.min(data.page * limit, data.total)} of{" "}
-                            {data.total.toLocaleString()} documents
+                            Showing {(page - 1) * limit + 1} to{" "}
+                            {Math.min(page * limit, total)} of{" "}
+                            {total.toLocaleString()} documents
                         </>
                     ) : (
                         "No documents to show"
@@ -429,7 +418,7 @@ export function HrDocumentsTable() {
                 </div>
                 <div className="flex items-center gap-3">
                     <div className="text-sm text-muted-foreground">
-                        Page {data?.page ?? page} of {totalPages}
+                        Page {page} of {totalPages}
                     </div>
                     <div className="flex gap-2">
                         <Button

@@ -16,7 +16,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { motion } from "motion/react";
-import { FileService } from "@/lib/services/file";
+import { HrDocumentsService } from "@/lib/services/file";
 import { toast } from "sonner";
 import {
     Upload,
@@ -37,6 +37,7 @@ const ALLOWED_TYPES = [
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     "image/png",
     "image/jpeg",
+    "text/plain",
 ];
 
 const TYPE_LABELS: Record<string, string> = {
@@ -48,6 +49,7 @@ const TYPE_LABELS: Record<string, string> = {
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "XLSX",
     "image/png": "PNG",
     "image/jpeg": "JPEG",
+    "text/plain": "TXT",
 };
 
 export default function HRUploadPage() {
@@ -57,14 +59,14 @@ export default function HRUploadPage() {
     const [submitting, setSubmitting] = useState(false);
     const [dragActive, setDragActive] = useState(false);
 
-    const maxBytes = 10 * 1024 * 1024; // 10MB
+    const maxBytes = 100 * 1024 * 1024; // 100MB per backend guide
 
     const validateFile = (file: File): string | null => {
         if (!ALLOWED_TYPES.includes(file.type)) {
-            return "Unsupported file type. Please upload PDF, DOC, DOCX, XLS, XLSX, PNG, or JPEG files.";
+            return "Unsupported file type. Please upload PDF, DOC, DOCX, XLS, XLSX, PNG, JPEG, or TXT files.";
         }
         if (file.size > maxBytes) {
-            return "File too large. Maximum size is 10MB.";
+            return "File too large. Maximum size is 100MB.";
         }
         return null;
     };
@@ -116,8 +118,8 @@ export default function HRUploadPage() {
 
         setSubmitting(true);
         try {
-            await FileService.uploadHrDocument(file, {
-                description: description || undefined,
+            await HrDocumentsService.uploadFile(file, {
+                description: description.trim() || undefined,
                 tags: tags
                     ? tags
                           .split(",")
@@ -297,7 +299,7 @@ export default function HRUploadPage() {
                                                         </p>
                                                         <p className="text-sm text-muted-foreground mt-1">
                                                             Maximum file size:
-                                                            10MB
+                                                            100MB
                                                         </p>
                                                     </div>
                                                 </div>
@@ -421,7 +423,7 @@ export default function HRUploadPage() {
                                         Maximum size:
                                     </p>
                                     <p className="text-sm text-muted-foreground">
-                                        10MB per file
+                                        100MB per file
                                     </p>
                                 </div>
 

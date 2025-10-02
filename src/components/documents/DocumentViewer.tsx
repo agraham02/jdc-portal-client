@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { FileService } from "@/lib/services/file";
 import { UploadedFile } from "@/lib/types/file";
+import { formatBytes } from "@/lib/utils/formatters";
 
 interface DocumentViewerProps {
     /** Single document ID or array of document IDs */
@@ -110,7 +111,7 @@ export function DocumentViewer({
 
     const handleView = async (doc: DocumentWithStatus) => {
         try {
-            const { url } = await FileService.getSignedViewUrl(doc._id);
+            const { url } = await FileService.getViewUrl(doc._id);
             window.open(url, "_blank");
         } catch (error) {
             toast.error("Failed to open file");
@@ -250,9 +251,7 @@ export function DocumentViewer({
                                                     ).toUpperCase() || "FILE"}
                                                 </Badge>
                                                 <span className="text-xs text-muted-foreground">
-                                                    {FileService.formatFileSize(
-                                                        doc.size
-                                                    )}
+                                                    {formatBytes(doc.size)}
                                                 </span>
                                             </div>
                                         )}
@@ -337,7 +336,7 @@ export function DocumentViewer({
                                         ).toUpperCase() || "FILE"}
                                     </Badge>
                                     <span className="text-sm text-muted-foreground">
-                                        {FileService.formatFileSize(doc.size)}
+                                        {formatBytes(doc.size)}
                                     </span>
                                 </div>
                             )}
