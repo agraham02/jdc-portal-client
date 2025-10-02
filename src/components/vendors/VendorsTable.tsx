@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import {
     GenericTable,
     type GenericTableConfig,
+    useTableState,
 } from "@/components/ui/generic-table";
 import { VendorService } from "@/lib/services/vendor";
 import { UserStatus, type User, type Vendor } from "@/lib/types/auth";
@@ -22,7 +23,48 @@ export function VendorsTable() {
 
     const [loading, setLoading] = useState(true);
     const [vendors, setVendors] = useState<Vendor[]>([]);
+    const [totalVendors, setTotalVendors] = useState(0);
     const [error, setError] = useState<string | null>(null);
+
+    const filterDefinitions = useMemo<GenericTableConfig<Vendor>["filters"]>(
+        () => [
+            {
+                key: "search",
+                label: "Search",
+                type: "search",
+                placeholder: "Search company or contact",
+                className: "w-64",
+            },
+            {
+                key: "status",
+                label: "Status",
+                type: "select",
+                className: "w-40",
+                options: [
+                    { value: UserStatus.ACTIVE, label: "Active" },
+                    { value: UserStatus.PENDING, label: "Pending" },
+                    { value: UserStatus.INACTIVE, label: "Inactive" },
+                ],
+            },
+        ],
+        []
+    );
+
+    const tableState = useTableState<Vendor>(
+        {
+            filters: filterDefinitions,
+            defaultPageSize: 25,
+            enablePagination: true,
+        } as GenericTableConfig<Vendor>
+    );
+
+    const { page, pageSize, filters: activeFilters, setPage, setPageSize } =
+        tableState;
+    const searchFilter = activeFilters.search?.trim() ?? "";
+    const statusFilter =
+        activeFilters.status && activeFilters.status !== "all"
+            ? (activeFilters.status as UserStatus)
+            : undefined;
 
     const loadVendors = useCallback(async () => {
         if (!canRead) return;
@@ -30,15 +72,34 @@ export function VendorsTable() {
         setLoading(true);
         setError(null);
         try {
-            const response = await VendorService.getVendors();
-            console.log(response);
+            const response = await VendorService.getVendors({
+                page,
+                pageSize,
+                search: searchFilter || undefined,
+                status: statusFilter,
+            });
             setVendors(response.data);
+            setTotalVendors(response.total);
+            if (response.page && response.page !== page) {
+                setPage(response.page);
+            }
+            if (response.pageSize && response.pageSize !== pageSize) {
+                setPageSize(response.pageSize);
+            }
         } catch (e) {
             setError(e instanceof Error ? e.message : "Failed to load vendors");
         } finally {
             setLoading(false);
         }
-    }, [canRead]);
+    }, [
+        canRead,
+        page,
+        pageSize,
+        searchFilter,
+        statusFilter,
+        setPage,
+        setPageSize,
+    ]);
 
     useEffect(() => {
         loadVendors();
@@ -161,44 +222,16 @@ export function VendorsTable() {
                       ]
                     : []),
             ],
-            filters: [
-                {
-                    key: "search",
-                    label: "Search",
-                    type: "search",
-                    placeholder: "Search company name or contact",
-                    className: "w-64",
-                },
-                {
-                    key: "serviceFilter",
-                    label: "Service Type",
-                    type: "select",
-                    className: "w-48",
-                    options: [
-                        { value: "Maintenance", label: "Maintenance" },
-                        { value: "Cleaning", label: "Cleaning" },
-                        { value: "Security", label: "Security" },
-                        { value: "Landscaping", label: "Landscaping" },
-                        { value: "IT Services", label: "IT Services" },
-                    ],
-                },
-            ],
+            filters: filterDefinitions,
             searchFields: ["companyName", "contactName", "website"],
             defaultPageSize: 25,
             enablePagination: true,
+            manualFiltering: true,
+            manualPagination: true,
             loadingMessage: "Loading vendors…",
             emptyMessage: "No vendors found",
-            customFilter: (vendor, filters) => {
-                // Service filter
-                const serviceFilter = filters.serviceFilter;
-                if (serviceFilter && serviceFilter !== "all") {
-                    const services = vendor.servicesOffered || [];
-                    if (!services.includes(serviceFilter)) return false;
-                }
-                return true;
-            },
         };
-    }, [canUpdate, canDelete, router, loadVendors]);
+    }, [canUpdate, canDelete, router, loadVendors, filterDefinitions]);
 
     if (!canRead) {
         return (
@@ -215,6 +248,8 @@ export function VendorsTable() {
             error={error}
             config={tableConfig}
             onRefresh={loadVendors}
+            state={tableState}
+            totalItems={totalVendors}
         />
     );
 }

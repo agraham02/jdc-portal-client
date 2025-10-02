@@ -1,6 +1,7 @@
 import { apiClient } from "@/lib/api";
 import { Employee, User, UserStatus } from "../types/auth";
 import { PaginatedResponse } from "../types/api";
+import { buildApiPath } from "@/lib/utils/queryParams";
 
 export type EmployeeWithUser = Omit<Employee, "userId"> & {
     userId: User & { status: UserStatus };
@@ -36,19 +37,14 @@ export class EmployeeService {
         department?: string;
         status?: UserStatus;
     }): Promise<EmployeeListResponse> {
-        const queryParams = new URLSearchParams();
-        if (params?.page) queryParams.append("page", params.page.toString());
-        if (params?.pageSize)
-            queryParams.append("pageSize", params.pageSize.toString());
-        if (params?.search) queryParams.append("search", params.search);
-        if (params?.department)
-            queryParams.append("department", params.department);
-        if (params?.status) queryParams.append("status", params.status);
-
-        const query = queryParams.toString();
-        return apiClient.get<EmployeeListResponse>(
-            `/employees${query ? `?${query}` : ""}`
-        );
+        const path = buildApiPath("/employees", {
+            page: params?.page,
+            pageSize: params?.pageSize,
+            search: params?.search,
+            department: params?.department,
+            status: params?.status,
+        });
+        return apiClient.get<EmployeeListResponse>(path);
     }
 
     /**

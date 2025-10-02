@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import {
     GenericTable,
     type GenericTableConfig,
+    useTableState,
 } from "@/components/ui/generic-table";
 import {
     EmployeeService,
@@ -24,7 +25,71 @@ export function EmployeesTable() {
 
     const [loading, setLoading] = useState(true);
     const [employees, setEmployees] = useState<EmployeeWithUser[]>([]);
+    const [totalEmployees, setTotalEmployees] = useState(0);
     const [error, setError] = useState<string | null>(null);
+
+    const filterDefinitions = useMemo<GenericTableConfig<EmployeeWithUser>["filters"]>(
+        () => [
+            {
+                key: "search",
+                label: "Search",
+                type: "search",
+                placeholder: "Search name, email, or employee ID",
+                className: "w-64",
+            },
+            {
+                key: "status",
+                label: "Status",
+                type: "select",
+                className: "w-40",
+                options: [
+                    { value: UserStatus.ACTIVE, label: "Active" },
+                    { value: UserStatus.PENDING, label: "Pending" },
+                    { value: UserStatus.INACTIVE, label: "Inactive" },
+                ],
+            },
+            {
+                key: "department",
+                label: "Department",
+                type: "select",
+                className: "w-48",
+                options: [
+                    { value: "Engineering", label: "Engineering" },
+                    { value: "HR", label: "Human Resources" },
+                    { value: "Sales", label: "Sales" },
+                    { value: "Marketing", label: "Marketing" },
+                    { value: "Finance", label: "Finance" },
+                    { value: "Operations", label: "Operations" },
+                ],
+            },
+        ],
+        []
+    );
+
+    const tableState = useTableState<EmployeeWithUser>(
+        {
+            filters: filterDefinitions,
+            defaultPageSize: 25,
+            enablePagination: true,
+        } as GenericTableConfig<EmployeeWithUser>
+    );
+
+    const {
+        page,
+        pageSize,
+        filters: activeFilters,
+        setPage,
+        setPageSize,
+    } = tableState;
+    const searchFilter = activeFilters.search?.trim() ?? "";
+    const statusFilter =
+        activeFilters.status && activeFilters.status !== "all"
+            ? (activeFilters.status as UserStatus)
+            : undefined;
+    const departmentFilter =
+        activeFilters.department && activeFilters.department !== "all"
+            ? activeFilters.department
+            : undefined;
 
     const loadEmployees = useCallback(async () => {
         if (!canRead) return;
@@ -32,8 +97,21 @@ export function EmployeesTable() {
         setLoading(true);
         setError(null);
         try {
-            const response = await EmployeeService.getEmployees();
+            const response = await EmployeeService.getEmployees({
+                page,
+                pageSize,
+                search: searchFilter || undefined,
+                status: statusFilter,
+                department: departmentFilter,
+            });
             setEmployees(response.data);
+            setTotalEmployees(response.total);
+            if (response.page && response.page !== page) {
+                setPage(response.page);
+            }
+            if (response.pageSize && response.pageSize !== pageSize) {
+                setPageSize(response.pageSize);
+            }
         } catch (e) {
             setError(
                 e instanceof Error ? e.message : "Failed to load employees"
@@ -41,11 +119,20 @@ export function EmployeesTable() {
         } finally {
             setLoading(false);
         }
-    }, [canRead]);
+    }, [
+        canRead,
+        page,
+        pageSize,
+        searchFilter,
+        statusFilter,
+        departmentFilter,
+        setPage,
+        setPageSize,
+    ]);
 
     useEffect(() => {
         loadEmployees();
-    }, [canRead, loadEmployees]);
+    }, [loadEmployees]);
 
     const formatDate = (date: Date | string | undefined) => {
         if (!date) return "—";
@@ -136,94 +223,33 @@ export function EmployeesTable() {
                       ]
                     : []),
             ],
-            filters: [
-                {
-                    key: "search",
-                    label: "Search",
-                    type: "search",
-                    placeholder: "Search name, email, or employee ID",
-                    className: "w-64",
-                },
-                {
-                    key: "status",
-                    label: "Status",
-                    type: "select",
-                    className: "w-40",
-                    options: [
-                        { value: "Active", label: "Active" },
-                        { value: "Pending", label: "Pending" },
-                        { value: "Inactive", label: "Inactive" },
-                    ],
-                },
-                {
-                    key: "department",
-                    label: "Department",
-                    type: "select",
-                    className: "w-48",
-                    options: [
-                        { value: "Engineering", label: "Engineering" },
-                        { value: "HR", label: "Human Resources" },
-                        { value: "Sales", label: "Sales" },
-                        { value: "Marketing", label: "Marketing" },
-                        { value: "Finance", label: "Finance" },
-                        { value: "Operations", label: "Operations" },
-                    ],
-                },
-            ],
+            filters: filterDefinitions,
             statusConfig: {
                 Active: { variant: "default" },
                 Pending: { variant: "secondary" },
                 Inactive: { variant: "outline" },
             },
-            searchFields: ["userId", "employeeId", "jobTitle"], // Note: userId search would need custom handling
+            searchFields: [
+                (employee) => employee.userId.email,
+                (employee) => employee.userId.firstName,
+                (employee) => employee.userId.lastName,
+                "employeeId",
+                "jobTitle",
+            ],
             defaultPageSize: 25,
             enablePagination: true,
+            manualFiltering: true,
+            manualPagination: true,
             loadingMessage: "Loading employees…",
             emptyMessage: "No employees found",
-            customFilter: (employee, filters) => {
-                // Status filter
-                const statusFilter = filters.status;
-                if (
-                    statusFilter &&
-                    statusFilter !== "all" &&
-                    employee.userId.status !== statusFilter
-                ) {
-                    return false;
-                }
-
-                // Department filter
-                const departmentFilter = filters.department;
-                if (
-                    departmentFilter &&
-                    departmentFilter !== "all" &&
-                    employee.department !== departmentFilter
-                ) {
-                    return false;
-                }
-
-                // Custom search for user fields
-                const searchFilter = filters.search;
-                if (searchFilter) {
-                    const query = searchFilter.toLowerCase();
-                    const user = employee.userId;
-                    const searchableFields = [
-                        user.email,
-                        user.firstName,
-                        user.lastName,
-                        employee.employeeId,
-                        employee.jobTitle,
-                    ].filter(Boolean);
-
-                    const matches = searchableFields.some((field) =>
-                        String(field).toLowerCase().includes(query)
-                    );
-                    if (!matches) return false;
-                }
-
-                return true;
-            },
         };
-    }, [canUpdate, canDelete, loadEmployees, router]);
+    }, [
+        canUpdate,
+        canDelete,
+        loadEmployees,
+        router,
+        filterDefinitions,
+    ]);
 
     if (!canRead) {
         return (
@@ -240,6 +266,8 @@ export function EmployeesTable() {
             error={error}
             config={tableConfig}
             onRefresh={loadEmployees}
+            state={tableState}
+            totalItems={totalEmployees}
         />
     );
 }

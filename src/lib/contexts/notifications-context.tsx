@@ -28,6 +28,18 @@ import {
 import { toast } from "sonner";
 
 const MAX_NOTIFICATIONS_IN_MEMORY = 100;
+const notificationsDebug =
+    process.env.NEXT_PUBLIC_DEBUG_NOTIFICATIONS === "true";
+
+const limitNotifications = (items: Notification[]): Notification[] => {
+    return [...items]
+        .sort(
+            (a, b) =>
+                new Date(b.createdAt).getTime() -
+                new Date(a.createdAt).getTime()
+        )
+        .slice(0, MAX_NOTIFICATIONS_IN_MEMORY);
+};
 
 type NotificationsContextValue = {
     // State
@@ -131,7 +143,9 @@ export function NotificationsProvider({
                 setError(null);
 
                 const res = await NotificationsApi.list(merged);
-                console.log(res);
+                if (notificationsDebug) {
+                    console.log("[NotificationsContext] list", res);
+                }
 
                 // Clear the deduplication set for fresh loads (page 1)
                 // This ensures WebSocket notifications that arrived before
@@ -148,9 +162,14 @@ export function NotificationsProvider({
                         notificationIdsRef.current.add(n.id);
                         return true;
                     });
-                console.log(normalizedData);
+                if (notificationsDebug) {
+                    console.log(
+                        "[NotificationsContext] normalized",
+                        normalizedData
+                    );
+                }
 
-                setNotifications(normalizedData);
+                setNotifications(limitNotifications(normalizedData));
                 setUnreadCount(res.unreadCount ?? 0);
                 setPage(res.page ?? 1);
                 setTotalPages(res.totalPages ?? 1);
@@ -193,8 +212,8 @@ export function NotificationsProvider({
 
             setNotifications((prev) => {
                 const combined = [...prev, ...normalizedData];
-                // Limit memory usage
-                return combined.slice(0, MAX_NOTIFICATIONS_IN_MEMORY);
+                // Limit memory usage to newest notifications
+                return limitNotifications(combined);
             });
             setPage(res.page ?? nextPage);
             setHasMore((res.page ?? nextPage) < (res.totalPages ?? 1));
@@ -315,7 +334,7 @@ export function NotificationsProvider({
         setNotifications((prev) => {
             const updated = [n, ...prev];
             // Limit memory
-            return updated.slice(0, MAX_NOTIFICATIONS_IN_MEMORY);
+            return limitNotifications(updated);
         });
 
         if (!n.read) {
