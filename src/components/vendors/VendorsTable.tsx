@@ -14,6 +14,19 @@ import StatusChip from "../common/statusChip";
 import TextPreview from "@/components/common/TextPreview";
 import { useRouter } from "next/navigation";
 
+function getPopulatedUser(vendor: Vendor): User | null {
+    const user = vendor.userId;
+    if (
+        typeof user === "object" &&
+        user !== null &&
+        "status" in user &&
+        typeof (user as User).status === "string"
+    ) {
+        return user as User;
+    }
+    return null;
+}
+
 export function VendorsTable() {
     const router = useRouter();
     const { hasAny } = useAuthz();
@@ -50,16 +63,19 @@ export function VendorsTable() {
         []
     );
 
-    const tableState = useTableState<Vendor>(
-        {
-            filters: filterDefinitions,
-            defaultPageSize: 25,
-            enablePagination: true,
-        } as GenericTableConfig<Vendor>
-    );
+    const tableState = useTableState<Vendor>({
+        filters: filterDefinitions,
+        defaultPageSize: 25,
+        enablePagination: true,
+    } as GenericTableConfig<Vendor>);
 
-    const { page, pageSize, filters: activeFilters, setPage, setPageSize } =
-        tableState;
+    const {
+        page,
+        pageSize,
+        filters: activeFilters,
+        setPage,
+        setPageSize,
+    } = tableState;
     const searchFilter = activeFilters.search?.trim() ?? "";
     const statusFilter =
         activeFilters.status && activeFilters.status !== "all"
@@ -164,9 +180,16 @@ export function VendorsTable() {
                 {
                     key: "status",
                     label: "Status",
-                    render: (vendor) => (
-                        <StatusChip status={(vendor.userId as User).status} />
-                    ),
+                    render: (vendor) => {
+                        const user = getPopulatedUser(vendor);
+                        return user ? (
+                            <StatusChip status={user.status} />
+                        ) : (
+                            <span className="text-muted-foreground">
+                                Unknown
+                            </span>
+                        );
+                    },
                 },
             ],
             actions: [
@@ -190,10 +213,8 @@ export function VendorsTable() {
                               variant: "default" as const,
                               onClick: handleApprove,
                               hidden: (vendor: Vendor) => {
-                                  return (
-                                      (vendor.userId as User).status ===
-                                      UserStatus.ACTIVE
-                                  );
+                                  const user = getPopulatedUser(vendor);
+                                  return user?.status === UserStatus.ACTIVE;
                               },
                           },
                           {
@@ -203,10 +224,8 @@ export function VendorsTable() {
                               onClick: handleReject,
                               hidden: (vendor: Vendor) => {
                                   // Only show for pending vendors
-                                  return (
-                                      (vendor.userId as User).status !==
-                                      UserStatus.PENDING
-                                  );
+                                  const user = getPopulatedUser(vendor);
+                                  return user?.status !== UserStatus.PENDING;
                               },
                           },
                       ]
