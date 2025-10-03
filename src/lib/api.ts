@@ -25,11 +25,11 @@ class ApiClient {
         // Ensure default base URL includes "/api" to match server routes
         const rawBase =
             process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
-        // Always append /api to the base URL if not already present
-        const baseWithoutSlash = rawBase.replace(/\/$/, "");
-        this.baseUrl = baseWithoutSlash.endsWith("/api")
-            ? baseWithoutSlash
-            : `${baseWithoutSlash}/api`;
+        // Use URL constructor to robustly append /api
+        const url = new URL(rawBase);
+        // Ensure pathname ends with /api
+        url.pathname = url.pathname.replace(/\/?$/, "/api");
+        this.baseUrl = url.toString().replace(/\/$/, "");
         
         this.deviceFingerprint = this.ensureFingerprint();
         this.defaultTimeoutMs = Number(

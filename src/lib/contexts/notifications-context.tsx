@@ -93,6 +93,7 @@ export function NotificationsProvider({
     /**
      * Normalize backend response to client-side model
      */
+    // Stable normalize function (no external dependencies)
     const normalize = useCallback(
         (dto: NotificationResponseDto | unknown): Notification => {
             const obj = (dto ?? {}) as Record<string, unknown>;
@@ -128,7 +129,7 @@ export function NotificationsProvider({
                 ),
             };
         },
-        []
+        [] // No dependencies, so reference is stable
     );
 
     /**
@@ -324,6 +325,7 @@ export function NotificationsProvider({
     /**
      * Prepend a new notification to the list (for real-time updates)
      */
+    // Stable prepend function (no external dependencies)
     const prepend = useCallback((n: Notification) => {
         // Deduplicate
         if (notificationIdsRef.current.has(n.id)) {
@@ -340,7 +342,7 @@ export function NotificationsProvider({
         if (!n.read) {
             setUnreadCount((c) => c + 1);
         }
-    }, []);
+    }, []); // No dependencies, so reference is stable
 
     /**
      * Setup WebSocket connection and listeners
@@ -425,7 +427,7 @@ export function NotificationsProvider({
             offRetry();
             notificationsSocket.disconnect();
         };
-    }, [list, refreshUnreadCount, normalize, prepend]);
+    }, [list, refreshUnreadCount, normalize, prepend]); // All dependencies are now stable
 
     const value = useMemo<NotificationsContextValue>(
         () => ({

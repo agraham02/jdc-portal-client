@@ -71,10 +71,17 @@ export default function EntityCreateForm<T extends Record<string, unknown>>({
             await apiClient.post(apiPath, payload);
             toast.success("Created successfully");
             if (onSuccessPath) router.push(onSuccessPath);
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Error type from catch is unknown
-        } catch (e: any) {
+        } catch (e: unknown) {
             // Show friendly message; apiClient will emit global events as well
-            const msg = e?.message || "Failed to create";
+            let msg = "Failed to create";
+            if (
+                typeof e === "object" &&
+                e !== null &&
+                "message" in e &&
+                typeof (e as { message?: unknown }).message === "string"
+            ) {
+                msg = (e as { message: string }).message;
+            }
             toast.error(msg);
         }
     }

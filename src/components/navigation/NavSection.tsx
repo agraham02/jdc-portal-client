@@ -15,7 +15,7 @@ import { Can } from "@/components/authz/Can";
 
 function isActive(pathname: string, url: string) {
     if (url === "/") return pathname === "/";
-    return pathname === url || pathname.endsWith(url + "/");
+    return pathname === url || pathname.startsWith(url + "/");
 }
 
 export function NavSection({

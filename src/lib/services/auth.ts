@@ -41,11 +41,11 @@ export const AuthService = {
     ): Promise<{ message: string }> {
         // Remove confirmPassword before sending to backend
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { confirmPassword, ...formData } = data;
+        const { confirmPassword, ...registrationData } = data;
 
         return apiClient.post<{ message: string }>(
             "/auth/register/employee",
-            formData
+            registrationData
         );
     },
     logout() {

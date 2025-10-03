@@ -4,7 +4,7 @@ import {
     ContractListResponse,
     CreateContractDto,
     UpdateContractDto,
-    ApplyToContractDto,
+    // ApplyToContractDto,
     UpdateApplicationStatusDto,
     AwardContractDto,
     ContractStatus,
@@ -98,7 +98,17 @@ export const contractService = {
     },
 
     // Create new contract (Admin/Employee only)
-    async createContract(data: CreateContractDto): Promise<Contract> {
+    // Accepts either a DTO or FormData for file uploads
+    async createContract(
+        data: CreateContractDto | FormData
+    ): Promise<Contract> {
+        // If FormData, send as multipart/form-data
+        if (data instanceof FormData) {
+            return await apiClient.post<Contract>("/contracts", data, {
+                headers: { "Content-Type": "multipart/form-data" },
+            });
+        }
+        // Otherwise, send as JSON
         return await apiClient.post<Contract>("/contracts", data);
     },
 
@@ -124,15 +134,19 @@ export const contractService = {
             applicationId?: string;
         }>(`/contracts/${id}/check-application`);
     },
-
-    // Apply to contract (Vendor only)
+    // Apply to contract (Vendor only) with file upload support
     async applyToContract(
         id: string,
-        data: ApplyToContractDto
+        formData: FormData
     ): Promise<{ application: ContractApplication }> {
         return await apiClient.post<{ application: ContractApplication }>(
             `/contracts/${id}/apply`,
-            data
+            formData,
+            {
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                },
+            }
         );
     },
 

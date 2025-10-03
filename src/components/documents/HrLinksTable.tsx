@@ -115,8 +115,13 @@ export function HrLinksTable() {
                     : "Link activated successfully"
             );
             load();
-        } catch {
-            toast.error("Failed to update link");
+        } catch (e: unknown) {
+            const action = link.isActive ? "deactivate" : "activate";
+            const msg =
+                typeof e === "object" && e && "message" in e
+                    ? String((e as { message?: string }).message)
+                    : `Failed to ${action} link`;
+            toast.error(msg);
         }
     };
 
