@@ -198,19 +198,38 @@ export class ApplicationsService {
     /**
      * Submit an application to a contract
      * @param contractId Contract ID
-     * @param data Application details
-     * @param documents Required documents (File objects)
+     * @param data Application details (includes proposalDetails, bidValue, and document names)
+     * @param documents Map of document names to their File objects
      */
     static async submitApplication(
         contractId: string,
         data: ApplyToContractDto,
-        documents: File[]
+        documents: Map<string, File[]>
     ): Promise<ApplicationResponse> {
         const formData = new FormData();
         formData.append("proposalDetails", data.proposalDetails);
-        documents.forEach((file) => {
-            formData.append("files", file);
+        if (data.bidValue !== undefined) {
+            formData.append("bidValue", data.bidValue.toString());
+        }
+
+        // Add document names array for backend validation
+        const documentNames: string[] = [];
+        documents.forEach((files, docName) => {
+            if (files.length > 0) {
+                documentNames.push(docName);
+            }
         });
+        documentNames.forEach((name) => {
+            formData.append("documents", name);
+        });
+
+        // Add all files
+        documents.forEach((files) => {
+            files.forEach((file) => {
+                formData.append("files", file);
+            });
+        });
+
         return apiClient.postFormData<ApplicationResponse>(
             `/contracts/${contractId}/apply`,
             formData

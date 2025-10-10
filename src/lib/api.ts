@@ -20,6 +20,8 @@ class ApiClient {
     private baseUrl: string;
     private deviceFingerprint: string;
     private readonly defaultTimeoutMs: number;
+    // Paths where 401 errors are expected and should not be logged
+    private readonly quietAuthPaths = ["/auth/me", "/users/permissions"];
 
     constructor() {
         // Ensure default base URL includes "/api" to match server routes
@@ -30,7 +32,7 @@ class ApiClient {
         // Ensure pathname ends with /api
         url.pathname = url.pathname.replace(/\/?$/, "/api");
         this.baseUrl = url.toString().replace(/\/$/, "");
-        
+
         this.deviceFingerprint = this.ensureFingerprint();
         this.defaultTimeoutMs = Number(
             process.env.NEXT_PUBLIC_API_TIMEOUT_MS || 20000
@@ -66,6 +68,17 @@ class ApiClient {
             headers["Content-Type"] = "application/json";
         }
         return headers;
+    }
+
+    /**
+     * Check if an error is expected and should not be logged
+     */
+    private isExpectedError(error: StandardError, path: string): boolean {
+        // Don't log 401s for auth-checking endpoints
+        if (error.status === 401) {
+            return this.quietAuthPaths.some((p) => path.includes(p));
+        }
+        return false;
     }
 
     private parseStandardError = async (
@@ -267,7 +280,12 @@ class ApiClient {
             const std = await this.parseStandardError(res, path, method);
             const err = new Error(std.message);
             Object.assign(err as unknown as object, std);
-            emitApiError({ ...std, status: std.status ?? res.status });
+
+            // Only emit API error event if NOT an expected error
+            if (!this.isExpectedError(std, path)) {
+                emitApiError({ ...std, status: std.status ?? res.status });
+            }
+
             throw err;
         }
 
@@ -378,7 +396,12 @@ class ApiClient {
             const std = await this.parseStandardError(res, path, "GET");
             const err = new Error(std.message);
             Object.assign(err as unknown as object, std);
-            emitApiError({ ...std, status: std.status ?? res.status });
+
+            // Only emit API error event if NOT an expected error
+            if (!this.isExpectedError(std, path)) {
+                emitApiError({ ...std, status: std.status ?? res.status });
+            }
+
             throw err;
         }
         return res.blob();

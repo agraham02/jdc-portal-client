@@ -140,7 +140,7 @@ export interface RefreshTokenDto {
 }
 
 export interface UpdatePasswordDto {
-    currentPassword: string;
+    oldPassword: string;
     newPassword: string;
 }
 
@@ -159,4 +159,10 @@ export interface UpdateProfileDto {
     contactPhone?: string;
     physicalAddress?: Address;
     mailingAddress?: Address;
+}
+
+export interface UserDetailsResponse {
+    user: User;
+    vendor?: Vendor;
+    employee?: Employee;
 }

@@ -210,7 +210,9 @@ export function ApplicationList({
                                                 <Calendar className="h-3 w-3" />
                                                 {formatDistanceToNow(
                                                     new Date(
-                                                        application.submittedAt
+                                                        application.applicationDate ||
+                                                            application.submittedAt ||
+                                                            application.createdAt
                                                     ),
                                                     {
                                                         addSuffix: true,

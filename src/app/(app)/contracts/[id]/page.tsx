@@ -205,7 +205,7 @@ export default function ContractDetailsPage() {
 
     async function handleApply(
         proposalDetails: string,
-        documents: File[],
+        documents: Map<string, File[]>,
         bidValue?: number
     ) {
         if (!contract) return;
@@ -227,6 +227,7 @@ export default function ContractDetailsPage() {
                     : "Failed to submit application";
             showContractActionError("Submit Application", message);
             setError(message);
+            throw err; // Re-throw so dialog can handle it
         }
     }
 

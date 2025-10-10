@@ -182,38 +182,36 @@ export function VendorsTable() {
                     label: "Status",
                     render: (vendor) => {
                         const user = getPopulatedUser(vendor);
-                        return <StatusBadge type="user" status={user?.status} />;
+                        return (
+                            <StatusBadge type="user" status={user?.status} />
+                        );
                     },
                 },
             ],
             actions: [
-                ...(canUpdate
-                    ? [
-                          {
-                              key: "view",
-                              label: "View details",
-                              variant: "secondary" as const,
-                              onClick: (vendor: Vendor) => {
-                                  router.push(`/vendors/${vendor._id}`);
-                              },
-                          },
-                      ]
-                    : []),
+                {
+                    key: "view",
+                    label: "View details",
+                    variant: "secondary" as const,
+                    onClick: (vendor: Vendor) => {
+                        router.push(`/vendors/${vendor._id}`);
+                    },
+                },
                 ...(canUpdate
                     ? [
                           {
                               key: "approve",
-                              label: "Approve",
+                              label: "Quick Approve",
                               variant: "default" as const,
                               onClick: handleApprove,
                               hidden: (vendor: Vendor) => {
                                   const user = getPopulatedUser(vendor);
-                                  return user?.status === UserStatus.ACTIVE;
+                                  return user?.status !== UserStatus.PENDING;
                               },
                           },
                           {
                               key: "reject",
-                              label: "Reject",
+                              label: "Quick Reject",
                               variant: "destructive" as const,
                               onClick: handleReject,
                               hidden: (vendor: Vendor) => {
@@ -231,6 +229,10 @@ export function VendorsTable() {
                               label: "Deactivate",
                               variant: "destructive" as const,
                               onClick: handleDeactivate,
+                              hidden: (vendor: Vendor) => {
+                                  const user = getPopulatedUser(vendor);
+                                  return user?.status === UserStatus.INACTIVE;
+                              },
                           },
                       ]
                     : []),

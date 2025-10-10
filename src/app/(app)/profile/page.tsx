@@ -133,6 +133,11 @@ export default function ProfilePage() {
         control: passwordControl,
     } = useForm<PasswordFormData>({
         resolver: zodResolver(passwordSchema),
+        defaultValues: {
+            oldPassword: "",
+            newPassword: "",
+            confirmPassword: "",
+        },
         mode: "onBlur",
     });
 

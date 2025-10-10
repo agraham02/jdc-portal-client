@@ -64,7 +64,8 @@ export interface Application {
     proposalDetails: string;
     status: ApplicationStatus;
     documents: FileDocument[];
-    submittedAt: string; // ISO date string
+    applicationDate: string; // ISO date string - when application was submitted
+    submittedAt?: string; // Alias for applicationDate (for backwards compatibility)
     reviewedAt?: string | null;
     acceptedAt?: string | null;
     rejectedAt?: string | null;

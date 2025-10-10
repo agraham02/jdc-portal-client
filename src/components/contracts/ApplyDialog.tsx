@@ -38,7 +38,7 @@ interface ApplyDialogProps {
     contract: Contract;
     onSubmit: (
         proposalDetails: string,
-        documents: File[],
+        documents: Map<string, File[]>,
         bidValue?: number
     ) => Promise<void>;
     onDownloadDocument?: (fileId: string, filename: string) => Promise<void>;
@@ -69,7 +69,12 @@ export function ApplyDialog({
         handleSubmit,
         formState: { errors },
         reset,
-    } = useForm<FormData>();
+    } = useForm<FormData>({
+        defaultValues: {
+            proposalDetails: "",
+            bidValue: "",
+        },
+    });
 
     const requiredDocs =
         contract.requiredDocuments?.filter((doc) => doc.required) || [];
@@ -110,13 +115,14 @@ export function ApplyDialog({
                 ? parseFloat(data.bidValue)
                 : undefined;
 
-            // Collect all files from all document uploads
-            const allFiles: File[] = [];
-            documentUploads.forEach((files) => {
-                files.forEach((uf) => allFiles.push(uf.file));
+            // Convert UploadingFileMetadata[] to File[] for each document
+            const documentsMap = new Map<string, File[]>();
+            documentUploads.forEach((uploadingFiles, docName) => {
+                const files = uploadingFiles.map((uf) => uf.file);
+                documentsMap.set(docName, files);
             });
 
-            await onSubmit(data.proposalDetails, allFiles, bidValue);
+            await onSubmit(data.proposalDetails, documentsMap, bidValue);
 
             // Reset form on success
             reset();

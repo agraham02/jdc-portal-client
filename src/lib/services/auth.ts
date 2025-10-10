@@ -115,7 +115,7 @@ export const AuthService = {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { confirmPassword, ...payload } = data;
         const updateDto: UpdatePasswordDto = {
-            currentPassword: payload.oldPassword,
+            oldPassword: payload.oldPassword,
             newPassword: payload.newPassword,
         };
         return apiClient.patch<{ message: string }>(

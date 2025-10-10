@@ -52,7 +52,11 @@ export default function MyApplicationsPage() {
             const response = await ApplicationsService.getMyApplications({
                 status: statusFilter === "all" ? undefined : statusFilter,
             });
-            setApplications(response.data);
+
+            // Backend returns applications array directly
+            const allApplications: Application[] = response.data;
+
+            setApplications(allApplications);
         } catch (err) {
             setError(
                 err instanceof Error
@@ -236,12 +240,14 @@ export default function MyApplicationsPage() {
                                                             <p className="font-medium">
                                                                 Contract
                                                             </p>
-                                                            <p className="text-xs text-muted-foreground">
-                                                                ID:{" "}
-                                                                {application.contractId.slice(
-                                                                    -8
-                                                                )}
-                                                            </p>
+                                                            {application.contractId && (
+                                                                <p className="text-xs text-muted-foreground">
+                                                                    ID:{" "}
+                                                                    {application.contractId.slice(
+                                                                        -8
+                                                                    )}
+                                                                </p>
+                                                            )}
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>
@@ -258,7 +264,9 @@ export default function MyApplicationsPage() {
                                                             <Calendar className="h-3 w-3" />
                                                             {formatDistanceToNow(
                                                                 new Date(
-                                                                    application.submittedAt
+                                                                    application.applicationDate ||
+                                                                        application.submittedAt ||
+                                                                        application.createdAt
                                                                 ),
                                                                 {
                                                                     addSuffix:

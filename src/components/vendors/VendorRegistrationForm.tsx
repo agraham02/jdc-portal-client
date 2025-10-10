@@ -42,6 +42,33 @@ export default function VendorRegistrationForm() {
 
     const form = useForm<VendorRegistrationFormData>({
         resolver: zodResolver(vendorRegistrationSchema),
+        defaultValues: {
+            email: "",
+            password: "",
+            confirmPassword: "",
+            firstName: "",
+            lastName: "",
+            companyName: "",
+            contactName: "",
+            contactEmail: "",
+            contactPhone: "",
+            website: "",
+            servicesOffered: [],
+            physicalAddress: {
+                line1: "",
+                line2: "",
+                city: "",
+                state: "",
+                zip: "",
+            },
+            mailingAddress: {
+                line1: "",
+                line2: "",
+                city: "",
+                state: "",
+                zip: "",
+            },
+        },
     });
 
     const { handleSubmit, control, reset, setError, trigger, setValue } = form;

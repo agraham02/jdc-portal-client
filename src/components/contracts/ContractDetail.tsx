@@ -37,7 +37,7 @@ interface ContractDetailProps {
     onDownloadDocument?: (fileId: string, filename: string) => Promise<void>;
     onApply?: (
         proposalDetails: string,
-        documents: File[],
+        documents: Map<string, File[]>,
         bidValue?: number
     ) => Promise<void>;
     showActions?: boolean;
@@ -106,7 +106,7 @@ export function ContractDetail({
 
     async function handleApply(
         proposalDetails: string,
-        documents: File[],
+        documents: Map<string, File[]>,
         bidValue?: number
     ) {
         if (onApply) {
@@ -126,7 +126,10 @@ export function ContractDetail({
                                 {contract.title}
                             </h1>
                             <div className="flex items-center gap-3 mt-2">
-                                <StatusBadge type="contract" status={contract.status} />
+                                <StatusBadge
+                                    type="contract"
+                                    status={contract.status}
+                                />
                                 {contract.requiresResponsiveSupport && (
                                     <Badge variant="secondary">
                                         <ClockIcon className="h-3 w-3 mr-1" />

@@ -1,5 +1,5 @@
 import { apiClient } from "@/lib/api";
-import type { User } from "@/lib/types/auth";
+import type { User, UserDetailsResponse } from "@/lib/types/auth";
 
 export interface UserListResponse {
     data: User[];
@@ -57,6 +57,30 @@ class UserService {
         });
 
         return response.data;
+    }
+
+    /**
+     * Get detailed user information including entity data (vendor/employee)
+     */
+    async getUserDetails(userId: string): Promise<UserDetailsResponse> {
+        return apiClient.get<UserDetailsResponse>(`/users/${userId}`);
+    }
+
+    /**
+     * Approve a pending user account
+     */
+    async approveUser(userId: string): Promise<User> {
+        return apiClient.patch<User>(`/users/${userId}/approve`);
+    }
+
+    /**
+     * Reject a pending user account with optional reason
+     */
+    async rejectUser(userId: string, reason?: string): Promise<User> {
+        return apiClient.patch<User>(
+            `/users/${userId}/reject`,
+            reason ? { reason } : undefined
+        );
     }
 }
 
