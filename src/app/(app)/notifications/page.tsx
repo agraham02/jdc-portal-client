@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ProtectedRoute } from "@/components/routing/ProtectedRoute";
-import { Can } from "@/components/authz/Can";
+import { Can } from "@/components/auth/Can";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 import {
     Card,

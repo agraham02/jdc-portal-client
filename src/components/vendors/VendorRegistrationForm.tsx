@@ -268,14 +268,11 @@ export default function VendorRegistrationForm() {
                                             <FormControl>
                                                 <PasswordInput
                                                     {...field}
-                                                    placeholder=""
-                                                    register={form.register}
+                                                    placeholder="Create a secure password"
+                                                    showPasswordHint
                                                 />
                                             </FormControl>
                                             <FormMessage />
-                                            <PasswordPolicyHints
-                                                password={passwordValue}
-                                            />
                                         </FormItem>
                                     )}
                                 />
@@ -292,8 +289,7 @@ export default function VendorRegistrationForm() {
                                             <FormControl>
                                                 <PasswordInput
                                                     {...field}
-                                                    placeholder=""
-                                                    register={form.register}
+                                                    placeholder="Re-enter your password"
                                                 />
                                             </FormControl>
                                             <FormMessage />

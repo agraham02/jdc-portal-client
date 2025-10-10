@@ -36,7 +36,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusChip } from "./StatusChip";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { Can } from "@/components/authz/Can";
+import { Can } from "@/components/auth/Can";
 import { PermissionName } from "@/lib/constants/permission-names";
 import { cn } from "@/lib/utils";
 import type {

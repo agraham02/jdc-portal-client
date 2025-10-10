@@ -135,6 +135,7 @@ export interface UpdateContractDto {
 
 export interface ApplyToContractDto {
     proposalDetails: string;
+    bidValue?: number;
     // Documents are uploaded via multipart/form-data, not JSON
 }
 

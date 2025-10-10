@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { Can } from "@/components/authz/Can";
+import { Can } from "@/components/auth/Can";
 import { PermissionName } from "@/lib/constants/permission-names";
 import { cn } from "@/lib/utils";
 import type { InternalNote } from "@/lib/types/contracts";

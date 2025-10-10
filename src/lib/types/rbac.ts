@@ -51,13 +51,13 @@ export interface RoleUsersResponse extends PaginatedResponse<RBACUser> {
 export interface CreateRoleDto {
     name: string;
     description?: string;
-    permissions: string[]; // Array of permission IDs
+    permissionIds: string[]; // Array of permission IDs
 }
 
 export interface UpdateRoleDto {
     name?: string;
     description?: string;
-    permissions?: string[]; // Array of permission IDs
+    permissionIds?: string[]; // Array of permission IDs
 }
 
 // Type aliases for backward compatibility

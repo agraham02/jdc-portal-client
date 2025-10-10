@@ -13,7 +13,7 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
-import { Can } from "@/components/authz/Can";
+import { Can } from "@/components/auth/Can";
 import {
     FolderOpen,
     Upload,

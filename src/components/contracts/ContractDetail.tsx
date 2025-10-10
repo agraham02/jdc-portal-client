@@ -9,7 +9,7 @@ import { StatusChip } from "./StatusChip";
 import { FileList } from "./FileList";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Contract, ContractStatus } from "@/lib/types/contracts";
-import { Can } from "@/components/authz/Can";
+import { Can } from "@/components/auth/Can";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 import { formatCurrency } from "@/lib/utils/formatters";
 import { format } from "date-fns";

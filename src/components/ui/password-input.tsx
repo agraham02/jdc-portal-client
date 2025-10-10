@@ -32,8 +32,7 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
         const [showPassword, setShowPassword] = useState(false);
 
         // Get the actual value for password hints
-        const passwordValue =
-            typeof value === "string" ? value : "";
+        const passwordValue = typeof value === "string" ? value : "";
 
         // Generate an ID for accessibility if not provided
         const inputId = id || name || "password-input";

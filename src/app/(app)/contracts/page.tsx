@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { ProtectedRoute } from "@/components/routing/ProtectedRoute";
-import { Can } from "@/components/authz/Can";
+import { Can } from "@/components/auth/Can";
 import { Button } from "@/components/ui/button";
 import { ContractList } from "@/components/contracts";
 import { ContractsService } from "@/lib/services/contracts";

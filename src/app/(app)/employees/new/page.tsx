@@ -33,6 +33,12 @@ export default function EmployeeCreatePage() {
                     label: "Phone",
                     placeholder: "(555) 555-5555",
                 },
+                {
+                    name: "contactEmail",
+                    type: "email",
+                    label: "Contact Email (Optional)",
+                    placeholder: "personal@example.com",
+                },
             ],
         },
         {

@@ -32,7 +32,7 @@ import {
     PlusIcon,
 } from "lucide-react";
 import { format } from "date-fns";
-import { Can } from "@/components/authz/Can";
+import { Can } from "@/components/auth/Can";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 import { CreateHrLinkDialog } from "./CreateHrLinkDialog";
 import { EditHrLinkDialog } from "./EditHrLinkDialog";

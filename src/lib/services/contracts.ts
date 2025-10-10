@@ -209,10 +209,10 @@ export class ApplicationsService {
         const formData = new FormData();
         formData.append("proposalDetails", data.proposalDetails);
         documents.forEach((file) => {
-            formData.append("documents[]", file);
+            formData.append("files", file);
         });
         return apiClient.postFormData<ApplicationResponse>(
-            `/contracts/${contractId}/applications`,
+            `/contracts/${contractId}/apply`,
             formData
         );
     }

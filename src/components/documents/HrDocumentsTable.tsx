@@ -32,7 +32,7 @@ import {
     Search,
 } from "lucide-react";
 import { format } from "date-fns";
-import { Can } from "@/components/authz/Can";
+import { Can } from "@/components/auth/Can";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 import { formatBytes } from "@/lib/utils/formatters";
 
