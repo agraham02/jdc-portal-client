@@ -4,8 +4,6 @@ import {
     Search,
     AlertCircle,
     Inbox,
-    PackageX,
-    FolderX,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -96,103 +94,6 @@ export function NoContractsFound({
                       }
                     : undefined
             }
-        />
-    );
-}
-
-/**
- * Empty state for applications list
- */
-export function NoApplicationsFound({
-    hasFilters,
-    onClearFilters,
-    onBrowseContracts,
-}: {
-    hasFilters?: boolean;
-    onClearFilters?: () => void;
-    onBrowseContracts?: () => void;
-}) {
-    if (hasFilters && onClearFilters) {
-        return (
-            <EmptyState
-                icon={<Search className="h-8 w-8 text-muted-foreground" />}
-                title="No applications match your filters"
-                description="Try adjusting your status filter to see more applications."
-                action={{
-                    label: "Clear Filters",
-                    onClick: onClearFilters,
-                }}
-            />
-        );
-    }
-
-    return (
-        <EmptyState
-            icon={<PackageX className="h-8 w-8 text-muted-foreground" />}
-            title="No applications yet"
-            description="You haven't applied to any contracts yet. Browse available contracts to get started."
-            action={
-                onBrowseContracts
-                    ? {
-                          label: "Browse Contracts",
-                          onClick: onBrowseContracts,
-                      }
-                    : undefined
-            }
-        />
-    );
-}
-
-/**
- * Empty state for documents list
- */
-export function NoDocumentsFound({
-    canUpload,
-    onUpload,
-}: {
-    canUpload?: boolean;
-    onUpload?: () => void;
-}) {
-    return (
-        <EmptyState
-            icon={<FolderX className="h-8 w-8 text-muted-foreground" />}
-            title="No documents"
-            description={
-                canUpload
-                    ? "Upload documents to share with vendors or reviewers."
-                    : "No documents have been uploaded for this contract yet."
-            }
-            action={
-                canUpload && onUpload
-                    ? {
-                          label: "Upload Documents",
-                          onClick: onUpload,
-                      }
-                    : undefined
-            }
-        />
-    );
-}
-
-/**
- * Empty state for search results
- */
-export function NoSearchResults({
-    searchTerm,
-    onClearSearch,
-}: {
-    searchTerm: string;
-    onClearSearch: () => void;
-}) {
-    return (
-        <EmptyState
-            icon={<Search className="h-8 w-8 text-muted-foreground" />}
-            title={`No results for "${searchTerm}"`}
-            description="Try searching with different keywords or check your spelling."
-            action={{
-                label: "Clear Search",
-                onClick: onClearSearch,
-            }}
         />
     );
 }
