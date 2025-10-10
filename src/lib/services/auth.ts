@@ -157,4 +157,36 @@ export const AuthService = {
             { skipAuthRetry: true }
         );
     },
+    // Account activation
+    validateActivationToken(token: string) {
+        return apiClient.get<{
+            valid: boolean;
+            email?: string;
+            firstName?: string;
+            lastName?: string;
+        }>(
+            `/auth/validate-activation-token?token=${encodeURIComponent(
+                token
+            )}`,
+            { skipAuthRetry: true }
+        );
+    },
+    completeActivation(
+        data: import("../validations/auth").AccountActivationFormData
+    ) {
+        // Remove confirmPassword before sending
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { confirmPassword, ...activationData } = data;
+        return apiClient.post<{ message: string }>(
+            "/auth/activate-account",
+            activationData,
+            { skipAuthRetry: true }
+        );
+    },
+    resendActivation(userId: string) {
+        return apiClient.post<{ message: string }>(
+            `/auth/resend-activation/${encodeURIComponent(userId)}`,
+            {}
+        );
+    },
 };
