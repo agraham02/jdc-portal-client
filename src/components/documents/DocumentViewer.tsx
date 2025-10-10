@@ -13,10 +13,25 @@ import {
     FileTextIcon,
     LoaderIcon,
     AlertCircleIcon,
+    Trash2Icon,
 } from "lucide-react";
 import { FileService } from "@/lib/services/file";
 import { UploadedFile } from "@/lib/types/file";
 import { formatBytes } from "@/lib/utils/formatters";
+
+/**
+ * Helper to get file name from either UploadedFile or FileDocument
+ * UploadedFile has 'originalName', FileDocument has 'filename'
+ */
+function getFileName(doc: DocumentWithStatus): string {
+    if ("originalName" in doc && doc.originalName) {
+        return doc.originalName;
+    }
+    if ("filename" in doc && typeof doc.filename === "string") {
+        return doc.filename;
+    }
+    return "document";
+}
 
 interface DocumentViewerProps {
     /** Single document ID or array of document IDs */
@@ -27,6 +42,8 @@ interface DocumentViewerProps {
     showDownload?: boolean;
     /** Show view button */
     showView?: boolean;
+    /** Show delete button */
+    showDelete?: boolean;
     /** Show file metadata (size, type, etc.) */
     showMetadata?: boolean;
     /** Maximum number of documents to show initially */
@@ -35,7 +52,8 @@ interface DocumentViewerProps {
     className?: string;
     /** Loading placeholder */
     loadingPlaceholder?: React.ReactNode;
-    /** Error placeholder */
+    /** Callback when delete is clicked */
+    onDelete?: (doc: UploadedFile) => void;
 }
 
 interface DocumentWithStatus extends UploadedFile {
@@ -48,10 +66,12 @@ export function DocumentViewer({
     displayMode = "list",
     showDownload = true,
     showView = true,
+    showDelete = false,
     showMetadata = false,
     maxVisible,
     className = "",
     loadingPlaceholder,
+    onDelete,
 }: DocumentViewerProps) {
     const [documents, setDocuments] = useState<DocumentWithStatus[]>([]);
     const [loading, setLoading] = useState(true);
@@ -80,6 +100,7 @@ export function DocumentViewer({
                     return {
                         _id: id,
                         originalName: `Document ${id}`,
+                        filename: `Document ${id}`,
                         mimetype: "unknown",
                         size: 0,
                         loading: false,
@@ -98,11 +119,9 @@ export function DocumentViewer({
 
     const handleDownload = async (doc: DocumentWithStatus) => {
         try {
-            await FileService.triggerDownload(
-                doc._id,
-                doc.originalName || "document"
-            );
-            toast.success(`Downloaded ${doc.originalName}`);
+            const fileName = getFileName(doc);
+            await FileService.triggerDownload(doc._id, fileName);
+            toast.success(`Downloaded ${fileName}`);
         } catch (error) {
             toast.error("Failed to download file");
             console.error("Download error:", error);
@@ -178,7 +197,7 @@ export function DocumentViewer({
                         <div className="flex items-center gap-2 min-w-0 flex-1">
                             {getFileIcon(doc.mimetype)}
                             <span className="truncate">
-                                {doc.originalName || `Document ${index + 1}`}
+                                {getFileName(doc) || `Document ${index + 1}`}
                             </span>
                             {doc.error && (
                                 <AlertCircleIcon className="h-3 w-3 text-red-500 flex-shrink-0" />
@@ -203,6 +222,16 @@ export function DocumentViewer({
                                     className="h-6 px-2"
                                 >
                                     <DownloadIcon className="h-3 w-3" />
+                                </Button>
+                            )}
+                            {showDelete && onDelete && !doc.error && (
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => onDelete(doc)}
+                                    className="h-6 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                >
+                                    <Trash2Icon className="h-3 w-3" />
                                 </Button>
                             )}
                         </div>
@@ -235,7 +264,7 @@ export function DocumentViewer({
                                     {getFileIcon(doc.mimetype)}
                                     <div className="min-w-0 flex-1">
                                         <div className="text-sm font-medium truncate">
-                                            {doc.originalName ||
+                                            {getFileName(doc) ||
                                                 `Document ${index + 1}`}
                                         </div>
                                         {showMetadata && !doc.error && (
@@ -288,6 +317,17 @@ export function DocumentViewer({
                                                 Download
                                             </Button>
                                         )}
+                                        {showDelete && onDelete && (
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => onDelete(doc)}
+                                                className="flex-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                            >
+                                                <Trash2Icon className="h-4 w-4 mr-1" />
+                                                Delete
+                                            </Button>
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -321,7 +361,7 @@ export function DocumentViewer({
                         {getFileIcon(doc.mimetype)}
                         <div className="min-w-0 flex-1">
                             <div className="font-medium truncate">
-                                {doc.originalName || `Document ${index + 1}`}
+                                {getFileName(doc) || `Document ${index + 1}`}
                             </div>
                             {showMetadata && !doc.error && (
                                 <div className="flex gap-2 mt-1">
@@ -368,6 +408,17 @@ export function DocumentViewer({
                                 >
                                     <DownloadIcon className="h-4 w-4 mr-2" />
                                     Download
+                                </Button>
+                            )}
+                            {showDelete && onDelete && (
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => onDelete(doc)}
+                                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                >
+                                    <Trash2Icon className="h-4 w-4 mr-2" />
+                                    Delete
                                 </Button>
                             )}
                         </div>
