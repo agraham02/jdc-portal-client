@@ -5,9 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { StatusChip } from "./StatusChip";
 import { FileList } from "./FileList";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { ApplyDialog } from "./ApplyDialog";
 import { Contract, ContractStatus } from "@/lib/types/contracts";
 import { Can } from "@/components/auth/Can";
 import { PermissionName as P } from "@/lib/constants/permission-names";
@@ -26,6 +26,7 @@ import {
     CheckCircleIcon,
 } from "lucide-react";
 import Link from "next/link";
+import { StatusBadge } from "../common";
 
 interface ContractDetailProps {
     contract: Contract;
@@ -34,6 +35,11 @@ interface ContractDetailProps {
     onAward?: (applicationId: string) => Promise<void>;
     onDelete?: () => Promise<void>;
     onDownloadDocument?: (fileId: string, filename: string) => Promise<void>;
+    onApply?: (
+        proposalDetails: string,
+        documents: File[],
+        bidValue?: number
+    ) => Promise<void>;
     showActions?: boolean;
     className?: string;
 }
@@ -45,6 +51,7 @@ export function ContractDetail({
     onAward,
     onDelete,
     onDownloadDocument,
+    onApply,
     showActions = true,
     className,
 }: ContractDetailProps) {
@@ -61,6 +68,7 @@ export function ContractDetail({
         action: async () => {},
     });
     const [isLoading, setIsLoading] = useState(false);
+    const [showApplyDialog, setShowApplyDialog] = useState(false);
 
     const isDraft = contract.status === ContractStatus.DRAFT;
     const isOpen = contract.status === ContractStatus.OPEN;
@@ -96,6 +104,17 @@ export function ContractDetail({
         }
     }
 
+    async function handleApply(
+        proposalDetails: string,
+        documents: File[],
+        bidValue?: number
+    ) {
+        if (onApply) {
+            await onApply(proposalDetails, documents, bidValue);
+            setShowApplyDialog(false);
+        }
+    }
+
     return (
         <>
             <div className={`space-y-6 ${className || ""}`}>
@@ -107,7 +126,7 @@ export function ContractDetail({
                                 {contract.title}
                             </h1>
                             <div className="flex items-center gap-3 mt-2">
-                                <StatusChip status={contract.status} />
+                                <StatusBadge type="contract" status={contract.status} />
                                 {contract.requiresResponsiveSupport && (
                                     <Badge variant="secondary">
                                         <ClockIcon className="h-3 w-3 mr-1" />
@@ -170,6 +189,22 @@ export function ContractDetail({
                                         >
                                             <XCircleIcon className="h-4 w-4 mr-2" />
                                             Close
+                                        </Button>
+                                    </Can>
+                                )}
+
+                                {/* Apply - shown for vendors when contract is open */}
+                                {isOpen && onApply && (
+                                    <Can anyOf={[P.CONTRACT_APPLY]}>
+                                        <Button
+                                            variant="default"
+                                            onClick={() =>
+                                                setShowApplyDialog(true)
+                                            }
+                                            disabled={isLoading}
+                                        >
+                                            <CheckCircleIcon className="h-4 w-4 mr-2" />
+                                            Apply to Contract
                                         </Button>
                                     </Can>
                                 )}
@@ -432,6 +467,17 @@ export function ContractDetail({
                 variant={confirmDialog.variant}
                 loading={isLoading}
             />
+
+            {/* Apply Dialog */}
+            {onApply && (
+                <ApplyDialog
+                    open={showApplyDialog}
+                    onOpenChange={setShowApplyDialog}
+                    contract={contract}
+                    onSubmit={handleApply}
+                    isLoading={isLoading}
+                />
+            )}
         </>
     );
 }

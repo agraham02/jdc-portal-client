@@ -13,8 +13,8 @@ import {
 import { useAuthz } from "@/lib/authz/useAuthz";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 import { UserStatus } from "@/lib/types/auth";
-import StatusChip from "../common/statusChip";
 import { useRouter } from "next/navigation";
+import { StatusBadge } from "../common";
 
 export function EmployeesTable() {
     const router = useRouter();
@@ -28,7 +28,9 @@ export function EmployeesTable() {
     const [totalEmployees, setTotalEmployees] = useState(0);
     const [error, setError] = useState<string | null>(null);
 
-    const filterDefinitions = useMemo<GenericTableConfig<EmployeeWithUser>["filters"]>(
+    const filterDefinitions = useMemo<
+        GenericTableConfig<EmployeeWithUser>["filters"]
+    >(
         () => [
             {
                 key: "search",
@@ -66,13 +68,11 @@ export function EmployeesTable() {
         []
     );
 
-    const tableState = useTableState<EmployeeWithUser>(
-        {
-            filters: filterDefinitions,
-            defaultPageSize: 25,
-            enablePagination: true,
-        } as GenericTableConfig<EmployeeWithUser>
-    );
+    const tableState = useTableState<EmployeeWithUser>({
+        filters: filterDefinitions,
+        defaultPageSize: 25,
+        enablePagination: true,
+    } as GenericTableConfig<EmployeeWithUser>);
 
     const {
         page,
@@ -191,7 +191,7 @@ export function EmployeesTable() {
                     key: "status",
                     label: "Status",
                     render: (employee) => (
-                        <StatusChip status={employee.userId.status} />
+                        <StatusBadge type="user" status={employee.userId.status} />
                     ),
                 },
             ],
@@ -243,13 +243,7 @@ export function EmployeesTable() {
             loadingMessage: "Loading employees…",
             emptyMessage: "No employees found",
         };
-    }, [
-        canUpdate,
-        canDelete,
-        loadEmployees,
-        router,
-        filterDefinitions,
-    ]);
+    }, [canUpdate, canDelete, loadEmployees, router, filterDefinitions]);
 
     if (!canRead) {
         return (

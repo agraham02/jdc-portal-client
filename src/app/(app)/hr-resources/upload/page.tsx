@@ -1,6 +1,6 @@
 "use client";
 
-import { ProtectedRoute } from "@/components/routing/ProtectedRoute";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,16 +17,12 @@ import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { motion } from "motion/react";
 import { HrDocumentsService } from "@/lib/services/file";
-import { toast } from "sonner";
 import {
-    Upload,
-    AlertCircle,
-    CheckCircle,
-    X,
-    FileIcon,
-    ArrowLeft,
-    Cloud,
-} from "lucide-react";
+    FileUpload,
+    type UploadingFileMetadata,
+} from "@/components/common/FileUpload";
+import { toast } from "sonner";
+import { Upload, AlertCircle, FileIcon, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
 const ALLOWED_TYPES = [
@@ -53,70 +49,35 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 export default function HRUploadPage() {
-    const [file, setFile] = useState<File | null>(null);
+    const [uploadingFiles, setUploadingFiles] = useState<
+        UploadingFileMetadata[]
+    >([]);
     const [description, setDescription] = useState("");
     const [tags, setTags] = useState("");
     const [submitting, setSubmitting] = useState(false);
-    const [dragActive, setDragActive] = useState(false);
-
-    const maxBytes = 100 * 1024 * 1024; // 100MB per backend guide
-
-    const validateFile = (file: File): string | null => {
-        if (!ALLOWED_TYPES.includes(file.type)) {
-            return "Unsupported file type. Please upload PDF, DOC, DOCX, XLS, XLSX, PNG, JPEG, or TXT files.";
-        }
-        if (file.size > maxBytes) {
-            return "File too large. Maximum size is 100MB.";
-        }
-        return null;
-    };
-
-    const handleFile = (selectedFile: File) => {
-        const error = validateFile(selectedFile);
-        if (error) {
-            toast.error(error);
-            return;
-        }
-        setFile(selectedFile);
-    };
-
-    const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const selectedFile = e.target.files?.[0];
-        if (!selectedFile) {
-            setFile(null);
-            return;
-        }
-        handleFile(selectedFile);
-    };
-
-    const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
-        e.preventDefault();
-        setDragActive(false);
-
-        const selectedFile = e.dataTransfer.files?.[0];
-        if (selectedFile) {
-            handleFile(selectedFile);
-        }
-    };
-
-    const onDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-        e.preventDefault();
-        setDragActive(true);
-    };
-
-    const onDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
-        e.preventDefault();
-        setDragActive(false);
-    };
 
     const onSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!file) {
+        if (uploadingFiles.length === 0) {
             toast.error("Please select a file to upload");
             return;
         }
 
+        const file = uploadingFiles[0].file;
+
         setSubmitting(true);
+
+        // Simulate progress updates since HrDocumentsService doesn't provide progress callbacks
+        const progressInterval = setInterval(() => {
+            setUploadingFiles((prev) =>
+                prev.map((uf) =>
+                    uf.file === file
+                        ? { ...uf, progress: Math.min(uf.progress + 10, 90) }
+                        : uf
+                )
+            );
+        }, 200);
+
         try {
             await HrDocumentsService.uploadFile(file, {
                 description: description.trim() || undefined,
@@ -127,21 +88,47 @@ export default function HRUploadPage() {
                           .filter(Boolean)
                     : undefined,
             });
+
+            clearInterval(progressInterval);
+
+            // Set progress to 100%
+            setUploadingFiles((prev) =>
+                prev.map((uf) =>
+                    uf.file === file ? { ...uf, progress: 100 } : uf
+                )
+            );
+
             toast.success("HR document uploaded successfully!");
 
-            // Reset form
-            setFile(null);
-            setDescription("");
-            setTags("");
-
-            // Clear file input
-            const fileInput = document.getElementById(
-                "file"
-            ) as HTMLInputElement;
-            if (fileInput) {
-                fileInput.value = "";
-            }
+            // Reset form after a short delay to show completion
+            setTimeout(() => {
+                setUploadingFiles([]);
+                setDescription("");
+                setTags("");
+            }, 1000);
         } catch (err: unknown) {
+            clearInterval(progressInterval);
+
+            // Set error state
+            setUploadingFiles((prev) =>
+                prev.map((uf) =>
+                    uf.file === file
+                        ? {
+                              ...uf,
+                              error:
+                                  typeof err === "object" &&
+                                  err &&
+                                  "message" in err
+                                      ? String(
+                                            (err as { message?: string })
+                                                .message
+                                        )
+                                      : "Upload failed",
+                          }
+                        : uf
+                )
+            );
+
             const msg =
                 typeof err === "object" && err && "message" in err
                     ? String((err as { message?: string }).message)
@@ -149,14 +136,6 @@ export default function HRUploadPage() {
             toast.error(msg);
         } finally {
             setSubmitting(false);
-        }
-    };
-
-    const removeFile = () => {
-        setFile(null);
-        const fileInput = document.getElementById("file") as HTMLInputElement;
-        if (fileInput) {
-            fileInput.value = "";
         }
     };
 
@@ -219,92 +198,16 @@ export default function HRUploadPage() {
                                 <form onSubmit={onSubmit} className="space-y-6">
                                     {/* File Upload Area */}
                                     <div className="space-y-2">
-                                        <Label htmlFor="file">File *</Label>
-                                        <div
-                                            className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                                                dragActive
-                                                    ? "border-primary bg-primary/5"
-                                                    : file
-                                                    ? "border-green-300 bg-green-50 dark:bg-green-900/20"
-                                                    : "border-muted-foreground/25 hover:border-muted-foreground/50"
-                                            }`}
-                                            onDrop={onDrop}
-                                            onDragOver={onDragOver}
-                                            onDragLeave={onDragLeave}
-                                        >
-                                            {file ? (
-                                                <div className="space-y-4">
-                                                    <div className="flex items-center justify-center">
-                                                        <div className="p-3 rounded-lg bg-green-100 dark:bg-green-900/30">
-                                                            <CheckCircle className="w-8 h-8 text-green-600" />
-                                                        </div>
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-medium text-green-700 dark:text-green-400">
-                                                            File selected
-                                                            successfully
-                                                        </p>
-                                                        <p className="text-sm text-muted-foreground mt-1">
-                                                            {file.name} •{" "}
-                                                            {(
-                                                                file.size /
-                                                                (1024 * 1024)
-                                                            ).toFixed(2)}{" "}
-                                                            MB
-                                                        </p>
-                                                        <Badge
-                                                            variant="secondary"
-                                                            className="mt-2"
-                                                        >
-                                                            {TYPE_LABELS[
-                                                                file.type
-                                                            ] || file.type}
-                                                        </Badge>
-                                                    </div>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={removeFile}
-                                                        className="flex items-center gap-2"
-                                                    >
-                                                        <X className="w-4 h-4" />
-                                                        Remove File
-                                                    </Button>
-                                                </div>
-                                            ) : (
-                                                <div className="space-y-4">
-                                                    <div className="flex items-center justify-center">
-                                                        <div className="p-3 rounded-lg bg-muted">
-                                                            <Cloud className="w-8 h-8 text-muted-foreground" />
-                                                        </div>
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-medium">
-                                                            Drop your file here,
-                                                            or{" "}
-                                                            <label className="text-primary cursor-pointer hover:underline">
-                                                                browse
-                                                                <Input
-                                                                    id="file"
-                                                                    type="file"
-                                                                    onChange={
-                                                                        onFileChange
-                                                                    }
-                                                                    className="hidden"
-                                                                    accept={ALLOWED_TYPES.join(
-                                                                        ","
-                                                                    )}
-                                                                />
-                                                            </label>
-                                                        </p>
-                                                        <p className="text-sm text-muted-foreground mt-1">
-                                                            Maximum file size:
-                                                            100MB
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
+                                        <Label>File *</Label>
+                                        <FileUpload
+                                            uploadingFiles={uploadingFiles}
+                                            onUploadingFilesChange={
+                                                setUploadingFiles
+                                            }
+                                            acceptedFileTypes={ALLOWED_TYPES}
+                                            maxFiles={1}
+                                            maxFileSizeMB={100}
+                                        />
                                     </div>
 
                                     {/* Description */}
@@ -345,7 +248,10 @@ export default function HRUploadPage() {
                                     <div className="flex gap-3 pt-4">
                                         <Button
                                             type="submit"
-                                            disabled={!file || submitting}
+                                            disabled={
+                                                uploadingFiles.length === 0 ||
+                                                submitting
+                                            }
                                             className="flex items-center gap-2"
                                         >
                                             {submitting ? (
@@ -364,15 +270,9 @@ export default function HRUploadPage() {
                                             variant="outline"
                                             disabled={submitting}
                                             onClick={() => {
-                                                setFile(null);
+                                                setUploadingFiles([]);
                                                 setDescription("");
                                                 setTags("");
-                                                const fileInput =
-                                                    document.getElementById(
-                                                        "file"
-                                                    ) as HTMLInputElement;
-                                                if (fileInput)
-                                                    fileInput.value = "";
                                             }}
                                         >
                                             Clear Form

@@ -3,7 +3,7 @@
 import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Building2, AlertCircle } from "lucide-react";
 
@@ -38,9 +38,14 @@ function LoginInner() {
         register,
         handleSubmit,
         formState: { errors },
-        setValue,
+        reset,
+        control,
     } = useForm<LoginFormData>({
         resolver: zodResolver(loginSchema),
+        defaultValues: {
+            email: "",
+            password: "",
+        },
     });
 
     const onSubmit = async (data: LoginFormData) => {
@@ -90,9 +95,18 @@ function LoginInner() {
 
     // Demo credential autofill handler
     const autofill = (email: string, password: string) => {
-        // react-hook-form's setValue
-        setValue("email", email);
-        setValue("password", password);
+        // Use reset to properly update all fields including those registered via custom components
+        reset({
+            email,
+            password,
+        }, {
+            keepErrors: false,
+            keepDirty: false,
+            keepIsSubmitted: false,
+            keepTouched: false,
+            keepIsValid: false,
+            keepSubmitCount: false,
+        });
     };
 
     const registeredBanner = useMemo(
@@ -186,7 +200,18 @@ function LoginInner() {
                                     </p>
                                 )}
                             </div>
-                            <PasswordInput register={register} />
+                            <Controller
+                                name="password"
+                                control={control}
+                                render={({ field }) => (
+                                    <PasswordInput
+                                        {...field}
+                                        label="Password"
+                                        id="password"
+                                        error={errors.password?.message}
+                                    />
+                                )}
+                            />
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <Checkbox

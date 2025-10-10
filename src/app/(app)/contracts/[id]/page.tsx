@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { ProtectedRoute } from "@/components/routing/ProtectedRoute";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { Button } from "@/components/ui/button";
 import {
     ContractDetail,
@@ -23,6 +23,7 @@ import type {
 } from "@/lib/types/contracts";
 import { ApplicationStatus } from "@/lib/types/contracts";
 import { useNotificationsCtx } from "@/lib/contexts/notifications-context";
+import { useAuthz } from "@/lib/authz/useAuthz";
 import {
     handleContractNotification,
     isContractNotification,
@@ -34,11 +35,13 @@ export default function ContractDetailsPage() {
     const params = useParams<{ id: string }>();
     const router = useRouter();
     const { notifications } = useNotificationsCtx();
+    const { hasAny } = useAuthz();
     const [contract, setContract] = useState<Contract | null>(null);
     const [applications, setApplications] = useState<Application[]>([]);
     const [notes, setNotes] = useState<InternalNote[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string>();
+    const canReadNotes = hasAny([P.INTERNAL_NOTE_READ]);
 
     const loadContractData = useCallback(async () => {
         try {
@@ -55,11 +58,15 @@ export default function ContractDetailsPage() {
             );
             setApplications(appsResponse.data);
 
-            // Load internal notes
-            const notesResponse = await InternalNotesService.listNotes(
-                params.id
-            );
-            setNotes(notesResponse.data);
+            // Load internal notes (only if user has permission)
+            if (canReadNotes) {
+                const notesResponse = await InternalNotesService.listNotes(
+                    params.id
+                );
+                setNotes(notesResponse.data);
+            } else {
+                setNotes([]);
+            }
         } catch (err) {
             console.error("Error loading contract:", err);
 
@@ -90,7 +97,7 @@ export default function ContractDetailsPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [params.id]);
+    }, [params.id, canReadNotes]);
 
     useEffect(() => {
         loadContractData();
@@ -192,6 +199,33 @@ export default function ContractDetailsPage() {
                     ? err.message
                     : "Failed to delete contract";
             showContractActionError("Delete Contract", message);
+            setError(message);
+        }
+    }
+
+    async function handleApply(
+        proposalDetails: string,
+        documents: File[],
+        bidValue?: number
+    ) {
+        if (!contract) return;
+        try {
+            await ApplicationsService.submitApplication(
+                contract._id,
+                { proposalDetails, bidValue },
+                documents
+            );
+            showContractActionSuccess(
+                "Application Submitted",
+                "Your application has been submitted successfully"
+            );
+            await loadContractData();
+        } catch (err) {
+            const message =
+                err instanceof Error
+                    ? err.message
+                    : "Failed to submit application";
+            showContractActionError("Submit Application", message);
             setError(message);
         }
     }
@@ -373,6 +407,7 @@ export default function ContractDetailsPage() {
                     onClose={handleClose}
                     onAward={handleAward}
                     onDelete={handleDelete}
+                    onApply={handleApply}
                 />
 
                 <ApplicationList
@@ -386,13 +421,15 @@ export default function ContractDetailsPage() {
                     }}
                 />
 
-                <InternalNotes
-                    contractId={params.id}
-                    notes={notes}
-                    onCreate={handleCreateNote}
-                    onUpdate={handleUpdateNote}
-                    onDelete={handleDeleteNote}
-                />
+                {canReadNotes && (
+                    <InternalNotes
+                        contractId={params.id}
+                        notes={notes}
+                        onCreate={handleCreateNote}
+                        onUpdate={handleUpdateNote}
+                        onDelete={handleDeleteNote}
+                    />
+                )}
             </main>
         </ProtectedRoute>
     );

@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Zap } from "lucide-react";
-import { ProtectedRoute } from "@/components/routing/ProtectedRoute";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ContractEditor, FilePicker } from "@/components/contracts";
+import { ContractEditor } from "@/components/contracts";
+import { FileUpload } from "@/components/common/FileUpload";
 import { ContractsService } from "@/lib/services/contracts";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 import type { CreateContractDto } from "@/lib/types/contracts";
@@ -157,12 +158,29 @@ export default function ContractCreatePage() {
                         </p>
                     </CardHeader>
                     <CardContent>
-                        <FilePicker
-                            files={files}
-                            onChange={setFiles}
+                        <FileUpload
+                            acceptedFileTypes={[
+                                ".pdf",
+                                ".doc",
+                                ".docx",
+                                ".xls",
+                                ".xlsx",
+                                ".png",
+                                ".jpg",
+                                ".jpeg",
+                            ]}
                             maxFiles={5}
                             maxFileSizeMB={5}
                             disabled={isSubmitting}
+                            uploadingFiles={files.map((file) => ({
+                                file,
+                                progress: 0,
+                            }))}
+                            onUploadingFilesChange={(uploadingFiles) =>
+                                setFiles(uploadingFiles.map((uf) => uf.file))
+                            }
+                            showUploadButton={true}
+                            uploadButtonText="Select Files"
                         />
                     </CardContent>
                 </Card>
