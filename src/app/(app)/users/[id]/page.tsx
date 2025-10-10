@@ -1,6 +1,6 @@
-import { ProtectedRoute } from "@/components/routing/ProtectedRoute";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { PermissionName as P } from "@/lib/constants/permission-names";
-import EntityDetail from "@/components/details/EntityDetail";
+import EntityDetail from "@/components/common/EntityDetail";
 
 interface Params {
     id: string;

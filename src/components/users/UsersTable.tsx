@@ -13,9 +13,9 @@ import { RoleName, UserStatus } from "@/lib/types/auth";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 import { useAuthz } from "@/lib/authz/useAuthz";
 import { DropdownMenuItem } from "../ui/dropdown-menu";
-import StatusChip from "../common/statusChip";
 import TextPreview from "../common/TextPreview";
 import { useRouter } from "next/navigation";
+import { StatusBadge } from "../common";
 
 export function UsersTable() {
     const router = useRouter();
@@ -117,7 +117,7 @@ export function UsersTable() {
                 {
                     key: "status",
                     label: "Status",
-                    render: (user) => <StatusChip status={user.status} />,
+                    render: (user) => <StatusBadge type="user" status={user.status} showIcon={false} />,
                 },
                 {
                     key: "roles",

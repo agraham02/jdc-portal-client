@@ -1,4 +1,4 @@
-import { ProtectedRoute } from "@/components/routing/ProtectedRoute";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 import { RoleList } from "@/components/rbac/RoleList";
 

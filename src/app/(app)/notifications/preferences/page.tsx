@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ProtectedRoute } from "@/components/routing/ProtectedRoute";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 import { NotificationsApi } from "@/lib/services/notifications";
 import { Button } from "@/components/ui/button";

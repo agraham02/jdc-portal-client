@@ -1,7 +1,6 @@
 "use client";
 
 import { ReactNode } from "react";
-// import { AuthDebugPanel } from "@/components/auth/AuthDebugPanel";
 import {
     SidebarInset,
     SidebarProvider,
@@ -10,7 +9,7 @@ import {
 import { AppSidebar } from "@/components/navigation/app-sidebar";
 import { Button } from "@/components/ui/button";
 import { Building2 } from "lucide-react";
-import { ProtectedRoute } from "@/components/routing/ProtectedRoute";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { useAuth } from "@/lib/contexts/auth-context";
 import { BellDropdown } from "@/components/notifications/BellDropdown";
 import { ThemeToggle } from "@/components/navigation/ThemeToggle";

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ProtectedRoute } from "@/components/routing/ProtectedRoute";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { Can } from "@/components/auth/Can";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 import {

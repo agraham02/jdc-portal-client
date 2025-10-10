@@ -1,6 +1,6 @@
-import { ProtectedRoute } from "@/components/routing/ProtectedRoute";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { PermissionName as P } from "@/lib/constants/permission-names";
-import EntityCreateForm from "@/components/forms/EntityCreateForm";
+import EntityCreateForm from "@/components/common/EntityCreateForm";
 
 export default function VendorCreatePage() {
     const sections = [

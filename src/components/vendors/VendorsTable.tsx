@@ -10,9 +10,9 @@ import { VendorService } from "@/lib/services/vendor";
 import { UserStatus, type User, type Vendor } from "@/lib/types/auth";
 import { useAuthz } from "@/lib/authz/useAuthz";
 import { PermissionName as P } from "@/lib/constants/permission-names";
-import StatusChip from "../common/statusChip";
 import TextPreview from "@/components/common/TextPreview";
 import { useRouter } from "next/navigation";
+import { StatusBadge } from "../common";
 
 function getPopulatedUser(vendor: Vendor): User | null {
     const user = vendor.userId;
@@ -182,13 +182,7 @@ export function VendorsTable() {
                     label: "Status",
                     render: (vendor) => {
                         const user = getPopulatedUser(vendor);
-                        return user ? (
-                            <StatusChip status={user.status} />
-                        ) : (
-                            <span className="text-muted-foreground">
-                                Unknown
-                            </span>
-                        );
+                        return <StatusBadge type="user" status={user?.status} />;
                     },
                 },
             ],

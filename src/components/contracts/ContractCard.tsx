@@ -8,7 +8,6 @@ import {
     CardHeader,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { StatusChip } from "./StatusChip";
 import { Contract } from "@/lib/types/contracts";
 import { formatCurrency } from "@/lib/utils/formatters";
 import { format, isPast } from "date-fns";
@@ -19,6 +18,7 @@ import {
     UsersIcon,
     ClockIcon,
 } from "lucide-react";
+import { StatusBadge } from "../common";
 
 interface ContractCardProps {
     contract: Contract;
@@ -54,7 +54,7 @@ export function ContractCard({
                             {contract.description}
                         </p>
                     </div>
-                    <StatusChip status={contract.status} />
+                    <StatusBadge type="contract" status={contract.status} />
                 </div>
             </CardHeader>
 

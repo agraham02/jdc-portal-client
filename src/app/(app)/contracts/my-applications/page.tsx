@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import { Eye, Calendar, FileText } from "lucide-react";
-import { ProtectedRoute } from "@/components/routing/ProtectedRoute";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -22,7 +22,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { StatusChip } from "@/components/contracts";
 import { ApplicationsService } from "@/lib/services/contracts";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 import type { Application, ApplicationStatus } from "@/lib/types/contracts";
@@ -34,6 +33,7 @@ import {
     showContractActionError,
 } from "@/lib/utils/contract-notifications";
 import { NotificationType } from "@/lib/types/notifications";
+import { StatusBadge } from "@/components/common";
 
 export default function MyApplicationsPage() {
     const router = useRouter();
@@ -245,10 +245,12 @@ export default function MyApplicationsPage() {
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>
-                                                        <StatusChip
+                                                        <StatusBadge
+                                                            type="application"
                                                             status={
                                                                 application.status
                                                             }
+                                                            showIcon={false}
                                                         />
                                                     </TableCell>
                                                     <TableCell>

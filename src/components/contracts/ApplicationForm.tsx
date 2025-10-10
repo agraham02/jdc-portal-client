@@ -17,7 +17,12 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
-import { DocumentsUploader } from "./DocumentsUploader";
+// import { ApplicationStatus } from "@/lib/types/contracts";
+// import { ContractsService } from "@/lib/services/contracts";
+// import { toast } from "sonner";
+import { FileUpload } from "@/components/common/FileUpload";
+import { FILE_VALIDATION_RULES } from "@/lib/types/contracts";
+// import { ConfirmDialog } from "@/components/contracts/ConfirmDialog";
 import { cn } from "@/lib/utils";
 import type {
     Contract,
@@ -190,9 +195,12 @@ export function ApplicationForm({
                                     </ul>
                                 </div>
 
-                                <DocumentsUploader
-                                    contractId={contract._id}
-                                    onUploadComplete={handleUploadComplete}
+                                <FileUpload
+                                    uploadEndpoint={`/api/contracts/${contract._id}/documents`}
+                                    acceptedFileTypes={FILE_VALIDATION_RULES.allowedTypes}
+                                    maxFiles={FILE_VALIDATION_RULES.maxFiles}
+                                    maxFileSizeMB={FILE_VALIDATION_RULES.maxSizeMB}
+                                    onUploadComplete={(fileIds) => handleUploadComplete(fileIds)}
                                     onUploadError={handleUploadError}
                                 />
 

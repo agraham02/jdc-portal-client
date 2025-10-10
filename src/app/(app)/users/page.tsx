@@ -1,4 +1,4 @@
-import { ProtectedRoute } from "@/components/routing/ProtectedRoute";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { UsersTable } from "@/components/users/UsersTable";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 

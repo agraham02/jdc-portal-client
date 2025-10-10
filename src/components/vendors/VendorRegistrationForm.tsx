@@ -29,10 +29,8 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { FormMessage } from "@/components/ui/form";
-import PasswordPolicyHints from "@/components/auth/PasswordPolicyHints";
-import { AddressForm } from "@/components/auth/AddressForm";
-import { useEffect } from "react";
 import { PhoneInput } from "../ui/phone-input";
+import { AddressForm, ServicesInput } from "../common";
 
 export default function VendorRegistrationForm() {
     const [step, setStep] = useState<number>(0);
@@ -46,9 +44,7 @@ export default function VendorRegistrationForm() {
         resolver: zodResolver(vendorRegistrationSchema),
     });
 
-    const { handleSubmit, control, reset, setError, trigger, watch, setValue } =
-        form;
-    const passwordValue = watch("password") || "";
+    const { handleSubmit, control, reset, setError, trigger, setValue } = form;
 
     // Fields to validate per-step
     const stepFields: string[][] = [
@@ -469,7 +465,13 @@ export default function VendorRegistrationForm() {
                                                 Services Offered
                                             </FormLabel>
                                             <FormControl>
-                                                <ServicesInput field={field} />
+                                                <ServicesInput
+                                                    id="servicesOffered"
+                                                    label=""
+                                                    value={field.value || []}
+                                                    onChange={field.onChange}
+                                                    placeholder="Type and press Enter to add"
+                                                />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -531,73 +533,6 @@ export default function VendorRegistrationForm() {
                     )}
                 </CardContent>
             </Card>
-        </div>
-    );
-}
-
-/* Helper small component for services tags — kept local to avoid extra file */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- react-hook-form Controller field has complex internal type
-function ServicesInput({ field }: { field: any }) {
-    const [input, setInput] = useState("");
-
-    useEffect(() => {
-        // ensure field value is always an array
-        if (!Array.isArray(field.value)) field.onChange([]);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
-    const addTag = () => {
-        const v = input.trim();
-        if (!v) return;
-        const next = Array.isArray(field.value) ? [...field.value, v] : [v];
-        field.onChange(next);
-        setInput("");
-    };
-
-    const removeTag = (idx: number) => {
-        const next = (field.value || []).filter(
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (_: any, i: number) => i !== idx
-        );
-        field.onChange(next);
-    };
-
-    return (
-        <div>
-            <div className="flex gap-2">
-                <Input
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                            e.preventDefault();
-                            addTag();
-                        }
-                    }}
-                    placeholder="Add a service and press Enter"
-                />
-                <Button type="button" onClick={addTag} size="sm">
-                    Add
-                </Button>
-            </div>
-            <div className="mt-2 flex flex-wrap gap-2">
-                {(field.value || []).map((t: string, idx: number) => (
-                    <span
-                        key={idx}
-                        className="inline-flex items-center gap-2 px-2 py-1 rounded bg-muted text-sm"
-                    >
-                        {t}
-                        <Button
-                            type="button"
-                            onClick={() => removeTag(idx)}
-                            className="ml-1 text-destructive"
-                            aria-label={`Remove ${t}`}
-                        >
-                            ×
-                        </Button>
-                    </span>
-                ))}
-            </div>
         </div>
     );
 }

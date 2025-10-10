@@ -34,7 +34,6 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { StatusChip } from "./StatusChip";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Can } from "@/components/auth/Can";
 import { PermissionName } from "@/lib/constants/permission-names";
@@ -44,6 +43,7 @@ import type {
     ApplicationStatus,
     Contract,
 } from "@/lib/types/contracts";
+import { StatusBadge } from "../common";
 
 interface ApplicationListProps {
     contract: Contract;
@@ -199,8 +199,10 @@ export function ApplicationList({
                                             </div>
                                         </TableCell>
                                         <TableCell>
-                                            <StatusChip
+                                            <StatusBadge
+                                                type="application"
                                                 status={application.status}
+                                                showIcon={false}
                                             />
                                         </TableCell>
                                         <TableCell>
