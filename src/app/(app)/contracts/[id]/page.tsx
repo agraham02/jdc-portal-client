@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
@@ -18,8 +18,8 @@ import {
 import { PermissionName as P } from "@/lib/constants/permission-names";
 import type {
     Contract,
-    Application,
-    InternalNote,
+    ApplicationListResponse,
+    InternalNoteListResponse,
 } from "@/lib/types/contracts";
 import { ApplicationStatus } from "@/lib/types/contracts";
 import { useNotificationsCtx } from "@/lib/contexts/notifications-context";
@@ -30,74 +30,80 @@ import {
     showContractActionSuccess,
     showContractActionError,
 } from "@/lib/utils/contract-notifications";
+import { useApi, useConditionalApi } from "@/lib/hooks/useApi";
 
 export default function ContractDetailsPage() {
     const params = useParams<{ id: string }>();
     const router = useRouter();
     const { notifications } = useNotificationsCtx();
     const { hasAny } = useAuthz();
-    const [contract, setContract] = useState<Contract | null>(null);
-    const [applications, setApplications] = useState<Application[]>([]);
-    const [notes, setNotes] = useState<InternalNote[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string>();
     const canReadNotes = hasAny([P.INTERNAL_NOTE_READ]);
 
+    // Fetch contract details with SWR
+    const {
+        data: contract,
+        error: contractError,
+        isLoading: loadingContract,
+        mutate: revalidateContract,
+    } = useApi<Contract>(`/contracts/${params.id}`);
+
+    // Fetch applications for this contract
+    const {
+        data: applicationsResponse,
+        isLoading: loadingApplications,
+        mutate: revalidateApplications,
+    } = useApi<ApplicationListResponse>(`/contracts/${params.id}/applications`);
+
+    // Fetch internal notes (only if user has permission)
+    const {
+        data: notesResponse,
+        isLoading: loadingNotes,
+        mutate: revalidateNotes,
+    } = useConditionalApi<InternalNoteListResponse>(
+        `/contracts/${params.id}/notes`,
+        canReadNotes
+    );
+
+    const applications = applicationsResponse?.data || [];
+    const notes = notesResponse?.data || [];
+    const isLoading = loadingContract || loadingApplications || loadingNotes;
+
+    // Helper to revalidate all data
     const loadContractData = useCallback(async () => {
-        try {
-            setIsLoading(true);
-            setError(undefined);
+        await Promise.all([
+            revalidateContract(),
+            revalidateApplications(),
+            revalidateNotes(),
+        ]);
+    }, [revalidateContract, revalidateApplications, revalidateNotes]);
 
-            // Load contract details
-            const contractData = await ContractsService.getContract(params.id);
-            setContract(contractData);
+    // Determine error message with user-friendly descriptions
+    const error = contractError
+        ? (() => {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const errorObj = contractError as any;
+              const status = errorObj?.status;
+              const message =
+                  errorObj?.message ||
+                  (contractError instanceof Error
+                      ? contractError.message
+                      : String(contractError));
 
-            // Load applications for this contract
-            const appsResponse = await ApplicationsService.listApplications(
-                params.id
-            );
-            setApplications(appsResponse.data);
-
-            // Load internal notes (only if user has permission)
-            if (canReadNotes) {
-                const notesResponse = await InternalNotesService.listNotes(
-                    params.id
-                );
-                setNotes(notesResponse.data);
-            } else {
-                setNotes([]);
-            }
-        } catch (err) {
-            console.error("Error loading contract:", err);
-
-            // Handle different error types with safer property access
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const errorObj = err as any;
-            const status = errorObj?.status;
-            const message =
-                errorObj?.message ||
-                (err instanceof Error ? err.message : String(err));
-
-            // Provide user-friendly error messages based on status
-            if (status === 404) {
-                setError("Contract not found. It may have been deleted.");
-            } else if (status === 403) {
-                setError("You don't have permission to view this contract.");
-            } else if (status === 500 || (status >= 500 && status < 600)) {
-                setError(
-                    "Server error while loading contract. The backend may be having issues. Please try again later or contact support."
-                );
-            } else if (status === 401) {
-                setError("Authentication required. Please log in again.");
-            } else if (message && typeof message === "string") {
-                setError(message);
-            } else {
-                setError("Failed to load contract. Please try again.");
-            }
-        } finally {
-            setIsLoading(false);
-        }
-    }, [params.id, canReadNotes]);
+              if (status === 404) {
+                  return "Contract not found. It may have been deleted.";
+              } else if (status === 403) {
+                  return "You don't have permission to view this contract.";
+              } else if (status === 500 || (status >= 500 && status < 600)) {
+                  return "Server error while loading contract. The backend may be having issues. Please try again later or contact support.";
+              } else if (status === 401) {
+                  return "Authentication required. Please log in again.";
+              } else if (message && typeof message === "string") {
+                  return message;
+              } else {
+                  return "Failed to load contract. Please try again.";
+              }
+          })()
+        : undefined;
 
     useEffect(() => {
         loadContractData();
@@ -144,7 +150,6 @@ export default function ContractDetailsPage() {
                     ? err.message
                     : "Failed to publish contract";
             showContractActionError("Publish Contract", message);
-            setError(message);
         }
     }
 
@@ -161,7 +166,6 @@ export default function ContractDetailsPage() {
             const message =
                 err instanceof Error ? err.message : "Failed to close contract";
             showContractActionError("Close Contract", message);
-            setError(message);
         }
     }
 
@@ -180,7 +184,6 @@ export default function ContractDetailsPage() {
             const message =
                 err instanceof Error ? err.message : "Failed to award contract";
             showContractActionError("Award Contract", message);
-            setError(message);
         }
     }
 
@@ -199,7 +202,6 @@ export default function ContractDetailsPage() {
                     ? err.message
                     : "Failed to delete contract";
             showContractActionError("Delete Contract", message);
-            setError(message);
         }
     }
 
@@ -226,7 +228,6 @@ export default function ContractDetailsPage() {
                     ? err.message
                     : "Failed to submit application";
             showContractActionError("Submit Application", message);
-            setError(message);
             throw err; // Re-throw so dialog can handle it
         }
     }
@@ -249,7 +250,6 @@ export default function ContractDetailsPage() {
                     ? err.message
                     : "Failed to accept application";
             showContractActionError("Accept Application", message);
-            setError(message);
         }
     }
 
@@ -271,7 +271,6 @@ export default function ContractDetailsPage() {
                     ? err.message
                     : "Failed to reject application";
             showContractActionError("Reject Application", message);
-            setError(message);
         }
     }
 
@@ -290,7 +289,6 @@ export default function ContractDetailsPage() {
             const message =
                 err instanceof Error ? err.message : "Failed to create note";
             showContractActionError("Create Note", message);
-            setError(message);
         }
     }
 
@@ -308,7 +306,6 @@ export default function ContractDetailsPage() {
             const message =
                 err instanceof Error ? err.message : "Failed to update note";
             showContractActionError("Update Note", message);
-            setError(message);
         }
     }
 
@@ -324,7 +321,6 @@ export default function ContractDetailsPage() {
             const message =
                 err instanceof Error ? err.message : "Failed to delete note";
             showContractActionError("Delete Note", message);
-            setError(message);
         }
     }
 

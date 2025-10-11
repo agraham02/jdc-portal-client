@@ -88,7 +88,22 @@ export function NotificationsProvider({
     const shownToastIdsRef = useRef<Set<string>>(new Set());
     const notificationIdsRef = useRef<Set<string>>(new Set());
 
-    const isConnected = connectionState === "connected";
+    // Memoize derived state to prevent unnecessary re-renders
+    const isConnected = useMemo(
+        () => connectionState === "connected",
+        [connectionState]
+    );
+
+    // Memoize sorted notifications to avoid recalculating on every render
+    const sortedNotifications = useMemo(
+        () =>
+            [...notifications].sort(
+                (a, b) =>
+                    new Date(b.createdAt).getTime() -
+                    new Date(a.createdAt).getTime()
+            ),
+        [notifications]
+    );
 
     /**
      * Normalize backend response to client-side model
@@ -345,12 +360,29 @@ export function NotificationsProvider({
     }, []); // No dependencies, so reference is stable
 
     /**
+     * Store stable references to callbacks for use in useEffect
+     */
+    const listRef = useRef(list);
+    const refreshUnreadCountRef = useRef(refreshUnreadCount);
+    const normalizeRef = useRef(normalize);
+    const prependRef = useRef(prepend);
+
+    // Keep refs updated with latest callbacks
+    useEffect(() => {
+        listRef.current = list;
+        refreshUnreadCountRef.current = refreshUnreadCount;
+        normalizeRef.current = normalize;
+        prependRef.current = prepend;
+    });
+
+    /**
      * Setup WebSocket connection and listeners
+     * Only runs once on mount
      */
     useEffect(() => {
-        // Initial data load
-        list({ page: 1, limit: 20 }).catch(() => {});
-        refreshUnreadCount().catch(() => {});
+        // Initial data load using ref to avoid dependency issues
+        listRef.current({ page: 1, limit: 20 }).catch(() => {});
+        refreshUnreadCountRef.current().catch(() => {});
 
         // Connect to WebSocket
         notificationsSocket.connect();
@@ -363,8 +395,8 @@ export function NotificationsProvider({
         // Listen for new notifications
         const offNew = notificationsSocket.on("notification", (payload) => {
             try {
-                const n = normalize(payload);
-                prepend(n);
+                const n = normalizeRef.current(payload);
+                prependRef.current(n);
 
                 // Acknowledge receipt
                 if (n.id) {
@@ -406,7 +438,7 @@ export function NotificationsProvider({
             "notification:retry",
             (payload) => {
                 try {
-                    const n = normalize(payload);
+                    const n = normalizeRef.current(payload);
                     // Re-acknowledge
                     if (n.id) {
                         notificationsSocket.ack(n.id);
@@ -427,11 +459,11 @@ export function NotificationsProvider({
             offRetry();
             notificationsSocket.disconnect();
         };
-    }, [list, refreshUnreadCount, normalize, prepend]); // All dependencies are now stable
+    }, []); // Empty deps - only run once on mount
 
     const value = useMemo<NotificationsContextValue>(
         () => ({
-            notifications,
+            notifications: sortedNotifications, // Use memoized sorted array
             unreadCount,
             loading,
             error,
@@ -449,7 +481,7 @@ export function NotificationsProvider({
             prepend,
         }),
         [
-            notifications,
+            sortedNotifications, // Use memoized value
             unreadCount,
             loading,
             error,

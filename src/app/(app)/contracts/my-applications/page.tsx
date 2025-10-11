@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import { Eye, Calendar, FileText } from "lucide-react";
@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/select";
 import { ApplicationsService } from "@/lib/services/contracts";
 import { PermissionName as P } from "@/lib/constants/permission-names";
-import type { Application, ApplicationStatus } from "@/lib/types/contracts";
+import type { ApplicationStatus, ApplicationListResponse } from "@/lib/types/contracts";
 import { useNotificationsCtx } from "@/lib/contexts/notifications-context";
 import {
     handleContractNotification,
@@ -34,43 +34,28 @@ import {
 } from "@/lib/utils/contract-notifications";
 import { NotificationType } from "@/lib/types/notifications";
 import { StatusBadge } from "@/components/common";
+import { usePaginatedApi } from "@/lib/hooks/useApi";
 
 export default function MyApplicationsPage() {
     const router = useRouter();
     const { notifications } = useNotificationsCtx();
-    const [applications, setApplications] = useState<Application[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string>();
     const [statusFilter, setStatusFilter] = useState<ApplicationStatus | "all">(
         "all"
     );
 
-    const loadMyApplications = useCallback(async () => {
-        try {
-            setIsLoading(true);
-            setError(undefined);
-            const response = await ApplicationsService.getMyApplications({
-                status: statusFilter === "all" ? undefined : statusFilter,
-            });
+    // Fetch applications with SWR
+    const {
+        data: response,
+        error,
+        isLoading,
+        mutate: revalidate,
+    } = usePaginatedApi<ApplicationListResponse>(
+        "/contracts/my-applications",
+        statusFilter === "all" ? {} : { status: statusFilter }
+    );
 
-            // Backend returns applications array directly
-            const allApplications: Application[] = response.data;
-
-            setApplications(allApplications);
-        } catch (err) {
-            setError(
-                err instanceof Error
-                    ? err.message
-                    : "Failed to load applications"
-            );
-        } finally {
-            setIsLoading(false);
-        }
-    }, [statusFilter]);
-
-    useEffect(() => {
-        loadMyApplications();
-    }, [loadMyApplications]);
+    // Extract applications from response
+    const applications = response?.data || [];
 
     // Listen for application status change notifications
     useEffect(() => {
@@ -91,10 +76,10 @@ export default function MyApplicationsPage() {
             latestNotification.type === NotificationType.APPLICATION_WITHDRAWN
         ) {
             handleContractNotification(latestNotification, {
-                onApplicationListUpdate: loadMyApplications,
+                onApplicationListUpdate: () => revalidate(),
             });
         }
-    }, [notifications, loadMyApplications]);
+    }, [notifications, revalidate]);
 
     async function handleWithdraw(applicationId: string, contractId: string) {
         try {
@@ -106,14 +91,14 @@ export default function MyApplicationsPage() {
                 "Application Withdrawn",
                 "Your application has been withdrawn successfully"
             );
-            await loadMyApplications();
+            // Revalidate the cache to refresh the list
+            await revalidate();
         } catch (err) {
             const message =
                 err instanceof Error
                     ? err.message
                     : "Failed to withdraw application";
             showContractActionError("Withdraw Application", message);
-            setError(message);
         }
     }
 
@@ -121,10 +106,10 @@ export default function MyApplicationsPage() {
         router.push(`/contracts/${contractId}`);
     }
 
-    const filteredApplications =
-        statusFilter === "all"
-            ? applications
-            : applications.filter((app) => app.status === statusFilter);
+    // Since we're filtering by status in the API call, no need for client-side filtering
+    const filteredApplications = applications;
+
+    const errorMessage = error instanceof Error ? error.message : error ? "Failed to load applications" : undefined;
 
     return (
         <ProtectedRoute anyOf={[P.CONTRACT_APPLY]}>
@@ -144,9 +129,9 @@ export default function MyApplicationsPage() {
                     </Button>
                 </div>
 
-                {error && (
+                {errorMessage && (
                     <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-destructive">
-                        {error}
+                        {errorMessage}
                     </div>
                 )}
 

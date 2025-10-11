@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { VendorService, type VendorWithUser } from "@/lib/services/vendor";
 import { UserStatus } from "@/lib/types/auth";
+import { useApi } from "@/lib/hooks/useApi";
 import { Button } from "@/components/ui/button";
 import {
     Card,
@@ -52,8 +53,13 @@ export function VendorDetailsWithApproval({
     const router = useRouter();
     const { hasPermission } = useAuth();
 
-    const [vendor, setVendor] = useState<VendorWithUser | null>(null);
-    const [loading, setLoading] = useState(true);
+    // Fetch vendor details with SWR
+    const {
+        data: vendor,
+        error,
+        isLoading: loading,
+    } = useApi<VendorWithUser>(`/vendors/${vendorId}`);
+
     const [actionLoading, setActionLoading] = useState(false);
     const [showApproveDialog, setShowApproveDialog] = useState(false);
     const [showRejectDialog, setShowRejectDialog] = useState(false);
@@ -61,22 +67,11 @@ export function VendorDetailsWithApproval({
 
     const canApprove = hasPermission("vendor:approve");
 
-    const loadVendorDetails = useCallback(async () => {
-        try {
-            setLoading(true);
-            const vendorData = await VendorService.getVendor(vendorId);
-            setVendor(vendorData);
-        } catch (error) {
-            toast.error("Failed to load vendor details");
-            console.error("Error loading vendor details:", error);
-        } finally {
-            setLoading(false);
-        }
-    }, [vendorId]);
-
-    useEffect(() => {
-        loadVendorDetails();
-    }, [loadVendorDetails]);
+    // Show error toast if loading failed
+    if (error && !loading) {
+        toast.error("Failed to load vendor details");
+        console.error("Error loading vendor details:", error);
+    }
 
     async function handleApprove() {
         try {

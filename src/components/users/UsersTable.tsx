@@ -36,7 +36,7 @@ export function UsersTable() {
         try {
             const [allRoles, rbacUsers] = await Promise.all([
                 RBACService.getAllRoles(),
-                RBACService.getUsersWithRoles(),
+                RBACService.getUsers(),
             ]);
             setRoles(allRoles.data);
             setUsers(rbacUsers.data);

@@ -13,6 +13,8 @@ import { Can } from "@/components/auth/Can";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 import { formatCurrency } from "@/lib/utils/formatters";
 import { format } from "date-fns";
+import { toast } from "sonner";
+import { sanitizeUserContent } from "@/lib/utils/sanitize";
 import {
     CalendarIcon,
     DollarSignIcon,
@@ -78,6 +80,13 @@ export function ContractDetail({
         setIsLoading(true);
         try {
             await action();
+        } catch (error) {
+            console.error("[ContractDetail] Action failed:", error);
+            toast.error(
+                error instanceof Error && error.message
+                    ? error.message
+                    : "Failed to perform action. Please try again."
+            );
         } finally {
             setIsLoading(false);
         }
@@ -250,9 +259,12 @@ export function ContractDetail({
                         )}
                     </div>
 
-                    <p className="text-muted-foreground text-lg">
-                        {contract.description}
-                    </p>
+                    <p
+                        className="text-muted-foreground text-lg"
+                        dangerouslySetInnerHTML={{
+                            __html: sanitizeUserContent(contract.description),
+                        }}
+                    />
                 </div>
 
                 <Separator />

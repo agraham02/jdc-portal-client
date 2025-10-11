@@ -6,8 +6,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuth } from "@/lib/contexts/auth-context";
 import { AuthService } from "@/lib/services/auth";
-import { VendorService, type VendorWithUser } from "@/lib/services/vendor";
+import { type VendorWithUser } from "@/lib/services/vendor";
 import { type EmployeeWithUser } from "@/lib/services/employee";
+import { useConditionalApi } from "@/lib/hooks/useApi";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -69,40 +70,39 @@ export default function ProfilePage() {
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [submittingProfile, setSubmittingProfile] = useState(false);
     const [submittingPassword, setSubmittingPassword] = useState(false);
-    const [vendorData, setVendorData] = useState<VendorWithUser | null>(null);
-    const [employeeData, setEmployeeData] = useState<EmployeeWithUser | null>(
-        null
+
+    // Fetch vendor data with SWR - only when user is a Vendor
+    const {
+        data: vendorData,
+        isLoading: loadingVendor,
+        error: vendorError,
+    } = useConditionalApi<VendorWithUser>(
+        "/vendors/me",
+        user?.accountType === "Vendor"
     );
-    const [loadingEntity, setLoadingEntity] = useState(false);
 
-    // Fetch vendor/employee data based on account type
+    // Fetch employee data with SWR - only when user is an Employee
+    // TODO: Update endpoint when backend supports /employees/me
+    const {
+        data: employeeData,
+        isLoading: loadingEmployee,
+        error: employeeError,
+    } = useConditionalApi<EmployeeWithUser>(
+        "/employees/me",
+        user?.accountType === "Employee"
+    );
+
+    const loadingEntity = loadingVendor || loadingEmployee;
+
+    // Log errors for debugging (not shown to user to avoid confusion if entity doesn't exist)
     useEffect(() => {
-        let cancelled = false;
-        async function loadEntityData() {
-            if (!user) return;
-
-            setLoadingEntity(true);
-            try {
-                if (user.accountType === "Vendor") {
-                    const vendor = await VendorService.getMyProfile();
-                    if (!cancelled) setVendorData(vendor);
-                } else if (user.accountType === "Employee") {
-                    // TODO: Add EmployeeService.getMyProfile() when backend supports it
-                    // For now, employee-specific data won't be shown
-                    setEmployeeData(null);
-                }
-            } catch (e) {
-                // User might not have vendor/employee record yet
-                console.error("Failed to load entity data:", e);
-            } finally {
-                if (!cancelled) setLoadingEntity(false);
-            }
+        if (vendorError) {
+            console.error("Failed to load vendor data:", vendorError);
         }
-        loadEntityData();
-        return () => {
-            cancelled = true;
-        };
-    }, [user]);
+        if (employeeError) {
+            console.error("Failed to load employee data:", employeeError);
+        }
+    }, [vendorError, employeeError]);
 
     const defaultValues = useMemo<ProfileFormData>(
         () => ({

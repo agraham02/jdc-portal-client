@@ -13,6 +13,7 @@ import {
     RoleListResponse,
 } from "@/lib/types/rbac";
 import { PaginatedResponse } from "@/lib/types/api";
+import { buildApiPath } from "@/lib/utils/queryParams";
 
 export class RBACService {
     // Permission Management
@@ -26,16 +27,8 @@ export class RBACService {
         pageSize?: number;
         search?: string;
     }): Promise<RoleListResponse> {
-        const queryParams = new URLSearchParams();
-        if (params?.page) queryParams.append("page", params.page.toString());
-        if (params?.pageSize)
-            queryParams.append("pageSize", params.pageSize.toString());
-        if (params?.search) queryParams.append("search", params.search);
-
-        const query = queryParams.toString();
-        return api.get<RoleListResponse>(
-            `/admin/roles${query ? `?${query}` : ""}`
-        );
+        const path = buildApiPath("/admin/roles", params);
+        return api.get<RoleListResponse>(path);
     }
 
     static async getRoleById(roleId: string): Promise<RBACRole> {
@@ -61,15 +54,8 @@ export class RBACService {
         roleId: string,
         params?: { page?: number; pageSize?: number }
     ): Promise<RoleUsersResponse> {
-        const queryParams = new URLSearchParams();
-        if (params?.page) queryParams.append("page", params.page.toString());
-        if (params?.pageSize)
-            queryParams.append("pageSize", params.pageSize.toString());
-
-        const query = queryParams.toString();
-        return api.get<RoleUsersResponse>(
-            `/admin/roles/${roleId}/users${query ? `?${query}` : ""}`
-        );
+        const path = buildApiPath(`/admin/roles/${roleId}/users`, params);
+        return api.get<RoleUsersResponse>(path);
     }
 
     // User Management - Updated to match new API structure
@@ -80,19 +66,8 @@ export class RBACService {
         status?: string;
         accountType?: string;
     }): Promise<PaginatedResponse<RBACUser>> {
-        const queryParams = new URLSearchParams();
-        if (params?.page) queryParams.append("page", params.page.toString());
-        if (params?.pageSize)
-            queryParams.append("pageSize", params.pageSize.toString());
-        if (params?.search) queryParams.append("search", params.search);
-        if (params?.status) queryParams.append("status", params.status);
-        if (params?.accountType)
-            queryParams.append("accountType", params.accountType);
-
-        const query = queryParams.toString();
-        return api.get<PaginatedResponse<RBACUser>>(
-            `/admin/users${query ? `?${query}` : ""}`
-        );
+        const path = buildApiPath("/admin/users", params);
+        return api.get<PaginatedResponse<RBACUser>>(path);
     }
 
     // User Role Assignment
@@ -135,15 +110,6 @@ export class RBACService {
         return api.get<UserPermissionsResponse>(
             `/admin/users/${userId}/permissions`
         );
-    }
-
-    // Helper methods for frontend convenience
-    static async getUsersWithRoles(params?: {
-        page?: number;
-        pageSize?: number;
-    }): Promise<PaginatedResponse<RBACUser>> {
-        // Use the new dedicated users endpoint instead of aggregating from roles
-        return this.getUsers(params);
     }
 
     // Validation helpers

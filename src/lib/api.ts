@@ -29,8 +29,10 @@ class ApiClient {
             process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
         // Use URL constructor to robustly append /api
         const url = new URL(rawBase);
-        // Ensure pathname ends with /api
-        url.pathname = url.pathname.replace(/\/?$/, "/api");
+        // Only append /api if it doesn't already exist in the path
+        if (!url.pathname.endsWith("/api") && !url.pathname.endsWith("/api/")) {
+            url.pathname = url.pathname.replace(/\/?$/, "/api");
+        }
         this.baseUrl = url.toString().replace(/\/$/, "");
 
         this.deviceFingerprint = this.ensureFingerprint();
@@ -176,7 +178,10 @@ class ApiClient {
         // Provide a timeout via AbortController
         const ac = new AbortController();
         const timeoutMs = options?.timeoutMs ?? this.defaultTimeoutMs;
-        const timer = setTimeout(() => ac.abort(), timeoutMs);
+        let timer: NodeJS.Timeout | null = setTimeout(
+            () => ac.abort(),
+            timeoutMs
+        );
 
         let res: Response;
         try {
@@ -203,7 +208,8 @@ class ApiClient {
                         signal: options?.signal ?? ac.signal,
                     });
                 } catch (e2) {
-                    clearTimeout(timer);
+                    if (timer) clearTimeout(timer);
+                    timer = null;
                     const stdErr: StandardError = {
                         code: "NetworkError",
                         message: (e2 as Error)?.message || "Network error",
@@ -215,7 +221,8 @@ class ApiClient {
                     throw Object.assign(err, stdErr);
                 }
             } else {
-                clearTimeout(timer);
+                if (timer) clearTimeout(timer);
+                timer = null;
                 const stdErr: StandardError = {
                     code:
                         (e as Error)?.name === "AbortError"
@@ -234,7 +241,10 @@ class ApiClient {
                 throw Object.assign(err, stdErr);
             }
         } finally {
-            clearTimeout(timer);
+            if (timer) {
+                clearTimeout(timer);
+                timer = null;
+            }
         }
 
         if (res.status === 401 && !options?.skipAuthRetry) {
@@ -242,12 +252,18 @@ class ApiClient {
             try {
                 const { accessToken } = await AuthService.refreshToken();
                 session.setAccessToken(accessToken);
-            } catch {
+            } catch (refreshError) {
+                // Log the refresh error for debugging
+                console.error(
+                    "[ApiClient] Token refresh failed:",
+                    refreshError
+                );
+
                 // Ensure we clear session on hard 401
                 session.clear();
                 const stdErr: StandardError = {
                     code: "Unauthorized",
-                    message: "Unauthorized",
+                    message: "Session expired. Please log in again.",
                     status: 401,
                     path,
                 };

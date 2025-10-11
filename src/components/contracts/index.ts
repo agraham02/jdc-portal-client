@@ -7,6 +7,11 @@ export { FileList } from "./FileList";
 export { ConfirmDialog } from "./ConfirmDialog";
 export { Pagination } from "./Pagination";
 
+// Contract Detail Sub-components
+export { ContractHeader } from "./ContractHeader";
+export { ContractDetailsGrid } from "./ContractDetailsGrid";
+export { ContractActions } from "./ContractActions";
+
 // Core Components
 export { ContractCard } from "./ContractCard";
 export { ContractList } from "./ContractList";

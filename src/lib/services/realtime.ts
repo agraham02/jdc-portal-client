@@ -65,6 +65,7 @@ export class NotificationsSocketClient {
     }> = {};
     private stateListeners = new Set<(state: ConnectionState) => void>();
     private isIntentionalDisconnect = false;
+    private isReconnecting = false; // Track if reconnection is already in progress
 
     /**
      * Get current connection state
@@ -177,6 +178,7 @@ export class NotificationsSocketClient {
         s.on("connect", () => {
             debugLog("[NotificationsSocket] Connected");
             this.attempt = 0;
+            this.isReconnecting = false; // Reset reconnection flag
             this.setState("connected");
             this.startHealthCheck();
         });
@@ -283,10 +285,19 @@ export class NotificationsSocketClient {
      * Attempt to reconnect with a fresh token
      */
     private reconnect() {
+        // Prevent concurrent reconnection attempts
+        if (this.isReconnecting) {
+            debugWarn("[NotificationsSocket] Reconnection already in progress");
+            return;
+        }
+        
+        this.isReconnecting = true;
+        
         // Get fresh token
         const token = session.getAccessToken();
         if (!token) {
             debugWarn("[NotificationsSocket] No token for reconnect");
+            this.isReconnecting = false;
             // Retry after a delay
             if (this.attempt < this.maxAttempts) {
                 this.scheduleReconnect();
@@ -304,6 +315,11 @@ export class NotificationsSocketClient {
             // Socket was destroyed, create a new one
             this.connect();
         }
+        
+        // Reset flag after a short delay to allow connection attempt
+        setTimeout(() => {
+            this.isReconnecting = false;
+        }, 1000);
     }
 
     /**
