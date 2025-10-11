@@ -1,6 +1,6 @@
 // Client-side mirror of backend PermissionName enum.
 // Keep values exactly in sync with server: src/common/enums/permissions.enum.ts
-export const PermissionName = {
+export const PermissionName = Object.freeze({
     // User management
     USER_CREATE: "user:create",
     USER_READ: "user:read",
@@ -79,7 +79,7 @@ export const PermissionName = {
     NOTIFICATIONS_ACK: "notifications:ack",
     NOTIFICATIONS_MANAGE: "notifications:manage",
     NOTIFICATIONS_BROADCAST: "notifications:broadcast",
-} as const;
+} as const);
 
 export type PermissionName =
     (typeof PermissionName)[keyof typeof PermissionName];

@@ -57,22 +57,38 @@ export class VendorService {
     /**
      * Approve vendor account
      */
-    static async approveUser(vendorId: string): Promise<void> {
+    static async approveVendor(vendorId: string): Promise<void> {
         return apiClient.patch(`/vendors/approve/${vendorId}`);
     }
 
     /**
      * Reject vendor account
      */
-    static async rejectUser(vendorId: string, reason: string): Promise<void> {
+    static async rejectVendor(vendorId: string, reason: string): Promise<void> {
         return apiClient.patch(`/vendors/reject/${vendorId}`, { reason });
     }
 
     /**
      * Deactivate vendor account
      */
-    static async deactivateUser(vendorId: string): Promise<void> {
+    static async deactivateVendor(vendorId: string): Promise<void> {
         return apiClient.patch(`/vendors/deactivate/${vendorId}`);
+    }
+
+    // Backward compatibility aliases (deprecated)
+    /** @deprecated Use approveVendor instead */
+    static async approveUser(vendorId: string): Promise<void> {
+        return this.approveVendor(vendorId);
+    }
+
+    /** @deprecated Use rejectVendor instead */
+    static async rejectUser(vendorId: string, reason: string): Promise<void> {
+        return this.rejectVendor(vendorId, reason);
+    }
+
+    /** @deprecated Use deactivateVendor instead */
+    static async deactivateUser(vendorId: string): Promise<void> {
+        return this.deactivateVendor(vendorId);
     }
 
     /**

@@ -1,4 +1,5 @@
-// Simple access token holder with localStorage persistence (not for refresh token)
+// Simple access token holder with sessionStorage (clears on tab close)
+// Refresh token is stored in httpOnly cookie by the backend
 
 const ACCESS_TOKEN_KEY = "jdc_access_token";
 
@@ -6,19 +7,34 @@ let memoryToken: string | null = null;
 
 function getAccessToken(): string | null {
     if (typeof window === "undefined") return memoryToken;
-    return memoryToken ?? window.localStorage.getItem(ACCESS_TOKEN_KEY);
+    // Try memory first for performance, fall back to sessionStorage
+    if (memoryToken) return memoryToken;
+
+    const stored = window.sessionStorage.getItem(ACCESS_TOKEN_KEY);
+    if (stored) {
+        memoryToken = stored; // Cache in memory
+    }
+    return stored;
 }
 
 function setAccessToken(token: string | null) {
     memoryToken = token;
     if (typeof window !== "undefined") {
-        if (token) window.localStorage.setItem(ACCESS_TOKEN_KEY, token);
-        else window.localStorage.removeItem(ACCESS_TOKEN_KEY);
+        if (token) {
+            // Use sessionStorage instead of localStorage for better security
+            // sessionStorage clears when the tab/window is closed
+            window.sessionStorage.setItem(ACCESS_TOKEN_KEY, token);
+        } else {
+            window.sessionStorage.removeItem(ACCESS_TOKEN_KEY);
+        }
     }
 }
 
 function clear() {
-    setAccessToken(null);
+    memoryToken = null;
+    if (typeof window !== "undefined") {
+        window.sessionStorage.removeItem(ACCESS_TOKEN_KEY);
+    }
 }
 
 export const session = {

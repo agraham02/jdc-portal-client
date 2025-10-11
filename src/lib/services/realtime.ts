@@ -59,6 +59,7 @@ export class NotificationsSocketClient {
     private readonly maxAttempts = 15; // ~10 minutes with backoff
     private reconnectTimeout: NodeJS.Timeout | null = null;
     private healthCheckInterval: NodeJS.Timeout | null = null;
+    private reconnectingTimer: NodeJS.Timeout | null = null; // Track isReconnecting reset timer
     private state: ConnectionState = "disconnected";
     private listeners: Partial<{
         [K in keyof NotificationSocketEvents]: Set<Listener<unknown>>;
@@ -150,7 +151,9 @@ export class NotificationsSocketClient {
     disconnect() {
         this.isIntentionalDisconnect = true;
         this.attempt = 0;
+        this.isReconnecting = false;
 
+        // Clean up all timers to prevent memory leaks
         if (this.reconnectTimeout) {
             clearTimeout(this.reconnectTimeout);
             this.reconnectTimeout = null;
@@ -159,6 +162,11 @@ export class NotificationsSocketClient {
         if (this.healthCheckInterval) {
             clearInterval(this.healthCheckInterval);
             this.healthCheckInterval = null;
+        }
+
+        if (this.reconnectingTimer) {
+            clearTimeout(this.reconnectingTimer);
+            this.reconnectingTimer = null;
         }
 
         this.socket?.disconnect();
@@ -290,9 +298,9 @@ export class NotificationsSocketClient {
             debugWarn("[NotificationsSocket] Reconnection already in progress");
             return;
         }
-        
+
         this.isReconnecting = true;
-        
+
         // Get fresh token
         const token = session.getAccessToken();
         if (!token) {
@@ -315,10 +323,16 @@ export class NotificationsSocketClient {
             // Socket was destroyed, create a new one
             this.connect();
         }
-        
+
+        // Clean up existing timer before creating new one
+        if (this.reconnectingTimer) {
+            clearTimeout(this.reconnectingTimer);
+        }
+
         // Reset flag after a short delay to allow connection attempt
-        setTimeout(() => {
+        this.reconnectingTimer = setTimeout(() => {
             this.isReconnecting = false;
+            this.reconnectingTimer = null;
         }, 1000);
     }
 

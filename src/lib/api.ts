@@ -3,6 +3,7 @@ import { session } from "./session";
 import { AuthService } from "./services/auth";
 import { emitApiError } from "./api-events";
 import type { StandardError } from "./types/errors";
+import { isBackendError } from "./types/errors";
 
 type HttpMethod = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
 
@@ -24,16 +25,17 @@ class ApiClient {
     private readonly quietAuthPaths = ["/auth/me", "/users/permissions"];
 
     constructor() {
-        // Ensure default base URL includes "/api" to match server routes
+        // Trust the .env file to provide the correct API URL
+        // If it's incorrect, the user must update their .env file
         const rawBase =
-            process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
-        // Use URL constructor to robustly append /api
-        const url = new URL(rawBase);
-        // Only append /api if it doesn't already exist in the path
-        if (!url.pathname.endsWith("/api") && !url.pathname.endsWith("/api/")) {
-            url.pathname = url.pathname.replace(/\/?$/, "/api");
+            process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+        // Remove trailing slashes for consistency
+        this.baseUrl = rawBase.replace(/\/+$/, "");
+
+        // Log the base URL in development for debugging
+        if (process.env.NODE_ENV === "development") {
+            console.log("[ApiClient] Base URL:", this.baseUrl);
         }
-        this.baseUrl = url.toString().replace(/\/$/, "");
 
         this.deviceFingerprint = this.ensureFingerprint();
         this.defaultTimeoutMs = Number(
@@ -92,13 +94,16 @@ class ApiClient {
         try {
             body = await res.clone().json();
         } catch {}
+
         const status = res.status;
-        const b =
-            body && typeof body === "object"
-                ? (body as Record<string, unknown>)
-                : undefined;
+
+        // Use type guard for safer error parsing
+        const backendError = isBackendError(body) ? body : undefined;
+
+        // Extract error code from backend or derive from HTTP status
         const code =
-            (b && typeof b["error"] === "string" && (b["error"] as string)) ||
+            backendError?.error ||
+            backendError?.code ||
             (status === 401
                 ? "Unauthorized"
                 : status === 403
@@ -112,21 +117,23 @@ class ApiClient {
                 : status >= 500
                 ? "ServerError"
                 : "HttpError");
+
+        // Extract message from backend response or use default
         const message =
-            (b &&
-                typeof b["message"] === "string" &&
-                (b["message"] as string)) ||
-            (b && Array.isArray(b["message"])
-                ? (b["message"] as unknown[]).join(", ")
+            backendError?.message ||
+            (backendError && Array.isArray(backendError.message)
+                ? (backendError.message as unknown[]).join(", ")
                 : undefined) ||
             `${code} (${status})`;
+
+        // Extract request ID from headers or response body
         const requestId =
-            (res.headers.get("x-request-id") ||
-                (b && (b["requestId"] as string))) ??
+            res.headers.get("x-request-id") ||
+            backendError?.requestId ||
             undefined;
-        // Merge server-provided details with selected response headers for better UX (e.g., 429 retry-after)
-        const serverDetails =
-            b && (b["details"] as Record<string, unknown> | undefined);
+
+        // Merge server-provided details with response headers (e.g., 429 retry-after)
+        const serverDetails = backendError?.details;
         const retryAfterHeader = res.headers.get("retry-after");
         const retryAfterSeconds = retryAfterHeader
             ? Number(retryAfterHeader)
@@ -137,16 +144,14 @@ class ApiClient {
                 ? { retryAfterSeconds }
                 : {}),
         };
-        const fieldErrorsRaw = b?.["fieldErrors"] as unknown;
-        const fieldErrors = Array.isArray(fieldErrorsRaw)
-            ? (fieldErrorsRaw as {
-                  field: string;
-                  message: string;
-                  code?: string;
-              }[])
-            : undefined;
-        const path = (b?.["path"] as string) || fallbackPath;
-        const methodFromBody = (b?.["method"] as string) || method;
+
+        // Extract field errors if present
+        const fieldErrors = backendError?.fieldErrors;
+
+        // Extract path and method from response or use fallbacks
+        const path = backendError?.path || fallbackPath;
+        const methodFromBody = backendError?.method || method;
+
         return {
             code,
             message,

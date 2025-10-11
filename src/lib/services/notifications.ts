@@ -1,5 +1,5 @@
-import { apiClient } from "@/lib/api";
-import { buildApiPath } from "@/lib/utils/queryParams";
+import { BaseService } from "./base";
+import type { QueryParams } from "@/lib/utils/queryParams";
 import type {
     NotificationResponseDto,
     NotificationListResponseDto,
@@ -12,144 +12,175 @@ import type {
 } from "@/lib/types/notifications";
 
 /**
- * User-facing notifications API
+ * Unified Notifications Service
+ * Handles both user-facing and admin notification operations
+ * Extends BaseService for consistent HTTP patterns
  */
-export const NotificationsApi = {
+export class NotificationsService extends BaseService {
+    private static readonly BASE_PATH = "/notifications";
+
+    // ==================== User-facing Methods ====================
+
     /**
      * Get user notifications with pagination and filtering
      */
-    async list(
+    static async list(
         params: NotificationQuery = {}
     ): Promise<NotificationListResponseDto> {
-        const path = buildApiPath("/notifications", params);
-        return apiClient.get<NotificationListResponseDto>(path);
-    },
+        return this.get<NotificationListResponseDto>(
+            this.BASE_PATH,
+            params as QueryParams
+        );
+    }
 
     /**
      * Get unread notification count with breakdown by type
      */
-    async unreadCount(): Promise<UnreadCountResponseDto> {
-        return apiClient.get<UnreadCountResponseDto>(
-            "/notifications/unread-count"
+    static async unreadCount(): Promise<UnreadCountResponseDto> {
+        return this.get<UnreadCountResponseDto>(
+            `${this.BASE_PATH}/unread-count`
         );
-    },
+    }
 
     /**
      * Mark a notification as read
      */
-    async markRead(
+    static async markRead(
         id: string
     ): Promise<{ message: string; notification: NotificationResponseDto }> {
-        return apiClient.patch<{
+        return this.patch<{
             message: string;
             notification: NotificationResponseDto;
-        }>(`/notifications/${id}/read`);
-    },
+        }>(`${this.BASE_PATH}/${id}/read`, {});
+    }
 
     /**
      * Mark all notifications as read
      */
-    async markAllRead(): Promise<{ message: string; modifiedCount: number }> {
-        return apiClient.patch<{ message: string; modifiedCount: number }>(
-            "/notifications/mark-all-read"
+    static async markAllRead(): Promise<{
+        message: string;
+        modifiedCount: number;
+    }> {
+        return this.patch<{ message: string; modifiedCount: number }>(
+            `${this.BASE_PATH}/mark-all-read`,
+            {}
         );
-    },
+    }
 
     /**
      * Delete a notification (soft delete)
      */
-    async remove(id: string): Promise<{ message: string }> {
-        return apiClient.delete<{ message: string }>(`/notifications/${id}`);
-    },
+    static async remove(id: string): Promise<{ message: string }> {
+        return this.delete<{ message: string }>(`${this.BASE_PATH}/${id}`);
+    }
 
     /**
      * Get user notification preferences
      */
-    async getPreferences(): Promise<{ data: UserPreferences }> {
-        return apiClient.get<{ data: UserPreferences }>(
-            "/notifications/preferences"
+    static async getPreferences(): Promise<{ data: UserPreferences }> {
+        return this.get<{ data: UserPreferences }>(
+            `${this.BASE_PATH}/preferences`
         );
-    },
+    }
 
     /**
      * Update user notification preferences
      */
-    async updatePreferences(
+    static async updatePreferences(
         preferences: UpdatePreferencesDto
     ): Promise<{ data: UserPreferences }> {
-        return apiClient.patch<{ data: UserPreferences }>(
-            "/notifications/preferences",
+        return this.patch<{ data: UserPreferences }>(
+            `${this.BASE_PATH}/preferences`,
             preferences
         );
-    },
-};
+    }
 
-/**
- * Admin-only notifications API
- * Requires appropriate permissions (NOTIFICATIONS_MANAGE, NOTIFICATIONS_BROADCAST)
- */
-export const AdminNotificationsApi = {
+    // ==================== Admin-only Methods ====================
+
     /**
      * Create a notification for a specific user (Admin only)
+     * Requires NOTIFICATIONS_MANAGE permission
      */
-    async create(
+    static async create(
         dto: CreateNotificationDto
     ): Promise<{ message: string; data: NotificationResponseDto }> {
-        return apiClient.post<{
+        return this.post<{
             message: string;
             data: NotificationResponseDto;
-        }>("/notifications", dto);
-    },
+        }>(this.BASE_PATH, dto);
+    }
 
     /**
      * Broadcast system announcement to multiple users
      * Can target specific roles or all users
+     * Requires NOTIFICATIONS_BROADCAST permission
      */
-    async broadcast(dto: BroadcastNotificationDto): Promise<{
+    static async broadcast(dto: BroadcastNotificationDto): Promise<{
         message: string;
         data: { notificationsSent: number; targetRoles?: string[] };
     }> {
-        return apiClient.post<{
+        return this.post<{
             message: string;
             data: { notificationsSent: number; targetRoles?: string[] };
-        }>("/notifications/broadcast", dto);
-    },
+        }>(`${this.BASE_PATH}/broadcast`, dto);
+    }
 
     /**
      * Get all notifications across all users (Admin only)
      * Supports filtering by userId, type, severity, etc.
+     * Requires NOTIFICATIONS_MANAGE permission
      */
-    async listAll(
+    static async listAll(
         params: NotificationQuery = {}
     ): Promise<NotificationListResponseDto> {
-        const path = buildApiPath("/notifications/admin/all", params);
-        return apiClient.get<NotificationListResponseDto>(path);
-    },
+        return this.get<NotificationListResponseDto>(
+            `${this.BASE_PATH}/admin/all`,
+            params as QueryParams
+        );
+    }
 
     /**
      * Get a specific notification by ID (Admin only)
+     * Requires NOTIFICATIONS_MANAGE permission
      */
-    async getById(id: string): Promise<{ data: NotificationResponseDto }> {
-        return apiClient.get<{ data: NotificationResponseDto }>(
-            `/notifications/admin/${id}`
+    static async getById(
+        id: string
+    ): Promise<{ data: NotificationResponseDto }> {
+        return this.get<{ data: NotificationResponseDto }>(
+            `${this.BASE_PATH}/admin/${id}`
         );
-    },
+    }
 
     /**
      * Clean up old read notifications (Admin only)
      * Helps maintain database performance
+     * Requires NOTIFICATIONS_MANAGE permission
      */
-    async cleanup(params?: {
+    static async cleanup(params?: {
         olderThanDays?: number;
         onlyRead?: boolean;
     }): Promise<{ message: string; data: { deletedCount: number } }> {
-        const path = buildApiPath(
-            "/notifications/admin/cleanup",
-            params as unknown as NotificationQuery | undefined
+        const path = this.buildPath(
+            `${this.BASE_PATH}/admin/cleanup`,
+            params as QueryParams | undefined
         );
-        return apiClient.post<{
+        return this.post<{
             message: string;
             data: { deletedCount: number };
         }>(path, {});
-    },
-};
+    }
+}
+
+// ==================== Backward Compatibility ====================
+
+/**
+ * @deprecated Use NotificationsService instead
+ * Maintained for backward compatibility
+ */
+export const NotificationsApi = NotificationsService;
+
+/**
+ * @deprecated Use NotificationsService instead
+ * Maintained for backward compatibility
+ */
+export const AdminNotificationsApi = NotificationsService;

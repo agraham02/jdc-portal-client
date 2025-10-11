@@ -5,17 +5,11 @@
 
 import useSWR, { type SWRConfiguration } from "swr";
 import { apiClient } from "@/lib/api";
-
-/**
- * Default SWR configuration
- */
-const defaultConfig: SWRConfiguration = {
-    revalidateOnFocus: false, // Don't refetch when window regains focus
-    revalidateOnReconnect: true, // Refetch when reconnecting
-    dedupingInterval: 2000, // Dedupe requests within 2 seconds
-    errorRetryCount: 3, // Retry failed requests 3 times
-    errorRetryInterval: 1000, // Wait 1 second between retries
-};
+import {
+    swrConfig,
+    immutableSwrConfig,
+    pollingSwrConfig,
+} from "@/lib/config/swr";
 
 /**
  * Generic SWR fetcher using apiClient
@@ -34,7 +28,7 @@ export function useApi<T>(url: string | null, config?: SWRConfiguration) {
     const { data, error, isLoading, isValidating, mutate } = useSWR<T>(
         url, // null disables the request
         fetcher,
-        { ...defaultConfig, ...config }
+        { ...swrConfig, ...config }
     );
 
     return {
@@ -98,6 +92,7 @@ export function usePollingApi<T>(
     config?: SWRConfiguration
 ) {
     return useApi<T>(url, {
+        ...pollingSwrConfig,
         ...config,
         refreshInterval: intervalMs,
     });
@@ -112,9 +107,7 @@ export function usePollingApi<T>(
  */
 export function useImmutableApi<T>(url: string, config?: SWRConfiguration) {
     return useApi<T>(url, {
+        ...immutableSwrConfig,
         ...config,
-        revalidateIfStale: false,
-        revalidateOnFocus: false,
-        revalidateOnReconnect: false,
     });
 }
