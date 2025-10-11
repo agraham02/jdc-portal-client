@@ -123,17 +123,17 @@ export function VendorsTable() {
 
     const tableConfig: GenericTableConfig<Vendor> = useMemo(() => {
         const handleApprove = async (vendor: Vendor) => {
-            await VendorService.approveUser(vendor._id);
+            await VendorService.approveVendor(vendor._id);
             await loadVendors(); // Refresh the list
         };
 
         const handleReject = async (vendor: Vendor) => {
-            await VendorService.rejectUser(vendor._id, "Rejected by admin");
+            await VendorService.rejectVendor(vendor._id, "Rejected by admin");
             await loadVendors(); // Refresh the list
         };
 
         const handleDeactivate = async (vendor: Vendor) => {
-            await VendorService.deactivateUser(vendor._id);
+            await VendorService.deactivateVendor(vendor._id);
             await loadVendors(); // Refresh the list
         };
 

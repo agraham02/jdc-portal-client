@@ -13,7 +13,7 @@ import { Can } from "@/components/auth/Can";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 import { formatCurrency } from "@/lib/utils/formatters";
 import { format } from "date-fns";
-import { toast } from "sonner";
+import { apiToast } from "@/lib/utils/toast-helpers";
 import { sanitizeUserContent } from "@/lib/utils/sanitize";
 import {
     CalendarIcon,
@@ -82,11 +82,7 @@ export function ContractDetail({
             await action();
         } catch (error) {
             console.error("[ContractDetail] Action failed:", error);
-            toast.error(
-                error instanceof Error && error.message
-                    ? error.message
-                    : "Failed to perform action. Please try again."
-            );
+            apiToast.error("Failed to perform action", error);
         } finally {
             setIsLoading(false);
         }

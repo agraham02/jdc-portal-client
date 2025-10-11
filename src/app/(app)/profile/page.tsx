@@ -16,7 +16,7 @@ import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PasswordInput } from "@/components/ui/password-input";
-import { toast } from "sonner";
+import { apiToast } from "@/lib/utils/toast-helpers";
 import { format } from "date-fns";
 import { Upload, User as UserIcon, Lock, Info } from "lucide-react";
 import { PhoneInput } from "@/components/ui/phone-input";
@@ -152,13 +152,11 @@ export default function ProfilePage() {
             return;
         }
         if (!ALLOWED_AVATAR_TYPES.has(file.type)) {
-            toast.warning("Invalid file type", {
-                description: "Use JPEG, PNG, GIF, or WebP.",
-            });
+            apiToast.error("Invalid file type", "Use JPEG, PNG, GIF, or WebP.");
             return;
         }
         if (file.size > MAX_AVATAR_SIZE) {
-            toast.warning("File too large", { description: "Max 2MB." });
+            apiToast.error("File too large", "Max 2MB.");
             return;
         }
         setAvatarFile(file);
@@ -181,13 +179,12 @@ export default function ProfilePage() {
             //     await FileService.uploadProfileImage(avatarFile);
             // }
 
-            toast.success("Profile updated successfully");
+            apiToast.success("Profile updated successfully");
             await refresh();
             setAvatarFile(null);
             setAvatarPreview(null);
         } catch (e: unknown) {
-            const msg = e instanceof Error ? e.message : "Update failed";
-            toast.error(msg);
+            apiToast.error("Failed to update profile", e);
         } finally {
             setSubmittingProfile(false);
         }
@@ -197,12 +194,10 @@ export default function ProfilePage() {
         setSubmittingPassword(true);
         try {
             await AuthService.changePassword(data);
-            toast.success("Password changed successfully");
+            apiToast.success("Password changed successfully");
             resetPassword();
         } catch (e: unknown) {
-            const msg =
-                e instanceof Error ? e.message : "Password change failed";
-            toast.error(msg);
+            apiToast.error("Failed to change password", e);
         } finally {
             setSubmittingPassword(false);
         }

@@ -8,4 +8,5 @@ export * from "./EntityDetail";
 export * from "./ErrorBoundary";
 export * from "./FileUpload";
 export * from "./LoadingSkeletons";
+export * from "./RouteErrorBoundary";
 export * from "./TextPreview";

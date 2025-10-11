@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { toast } from "sonner";
+import { apiToast } from "@/lib/utils/toast-helpers";
 import {
     ArrowLeft,
     CheckCircle,
@@ -58,6 +58,7 @@ export function VendorDetailsWithApproval({
         data: vendor,
         error,
         isLoading: loading,
+        mutate: revalidateVendor,
     } = useApi<VendorWithUser>(`/vendors/${vendorId}`);
 
     const [actionLoading, setActionLoading] = useState(false);
@@ -69,35 +70,70 @@ export function VendorDetailsWithApproval({
 
     // Show error toast if loading failed
     if (error && !loading) {
-        toast.error("Failed to load vendor details");
-        console.error("Error loading vendor details:", error);
+        apiToast.error("Failed to load vendor details", error);
     }
 
     async function handleApprove() {
+        if (!vendor) return;
+
         try {
             setActionLoading(true);
-            await VendorService.approveUser(vendorId);
-            toast.success("Vendor account has been activated successfully");
+
+            // Optimistic update: immediately show the vendor as active
+            await revalidateVendor(
+                {
+                    ...vendor,
+                    userId: { ...vendor.userId, status: UserStatus.ACTIVE },
+                },
+                false // Don't revalidate immediately
+            );
+
+            // Perform the actual API call
+            await VendorService.approveVendor(vendorId);
+
+            // Revalidate to get fresh data from the server
+            await revalidateVendor();
+
+            apiToast.success("Vendor account has been activated successfully");
             setShowApproveDialog(false);
             router.push("/vendors");
         } catch (error) {
-            toast.error("Failed to approve vendor");
-            console.error("Error approving vendor:", error);
+            // Rollback optimistic update on error
+            await revalidateVendor();
+            apiToast.error("Failed to approve vendor", error);
         } finally {
             setActionLoading(false);
         }
     }
 
     async function handleReject() {
+        if (!vendor) return;
+
         try {
             setActionLoading(true);
-            await VendorService.rejectUser(vendorId, rejectReason);
-            toast.success("Vendor account has been rejected");
+
+            // Optimistic update: immediately show the vendor as rejected
+            await revalidateVendor(
+                {
+                    ...vendor,
+                    userId: { ...vendor.userId, status: UserStatus.REJECTED },
+                },
+                false // Don't revalidate immediately
+            );
+
+            // Perform the actual API call
+            await VendorService.rejectVendor(vendorId, rejectReason);
+
+            // Revalidate to get fresh data from the server
+            await revalidateVendor();
+
+            apiToast.success("Vendor account has been rejected");
             setShowRejectDialog(false);
             router.push("/vendors");
         } catch (error) {
-            toast.error("Failed to reject vendor");
-            console.error("Error rejecting vendor:", error);
+            // Rollback optimistic update on error
+            await revalidateVendor();
+            apiToast.error("Failed to reject vendor", error);
         } finally {
             setActionLoading(false);
         }

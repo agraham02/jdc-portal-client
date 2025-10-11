@@ -4,6 +4,7 @@ import { useCallback, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { ContractErrorBoundary } from "@/components/common/RouteErrorBoundary";
 import { Button } from "@/components/ui/button";
 import {
     ContractDetail,
@@ -383,51 +384,53 @@ export default function ContractDetailsPage() {
 
     return (
         <ProtectedRoute anyOf={[P.CONTRACT_READ, P.CONTRACT_READ_ALL]}>
-            <main className="container mx-auto space-y-6 py-6">
-                <Button
-                    variant="ghost"
-                    onClick={() => router.push("/contracts")}
-                >
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back to Contracts
-                </Button>
+            <ContractErrorBoundary>
+                <main className="container mx-auto space-y-6 py-6">
+                    <Button
+                        variant="ghost"
+                        onClick={() => router.push("/contracts")}
+                    >
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Back to Contracts
+                    </Button>
 
-                {error && (
-                    <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-destructive">
-                        {error}
-                    </div>
-                )}
+                    {error && (
+                        <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-destructive">
+                            {error}
+                        </div>
+                    )}
 
-                <ContractDetail
-                    contract={contract}
-                    onPublish={handlePublish}
-                    onClose={handleClose}
-                    onAward={handleAward}
-                    onDelete={handleDelete}
-                    onApply={handleApply}
-                />
-
-                <ApplicationList
-                    contract={contract}
-                    applications={applications}
-                    onAccept={handleAcceptApplication}
-                    onReject={handleRejectApplication}
-                    onViewDetails={(id) => {
-                        // TODO: Implement application detail modal or page
-                        console.log("View application:", id);
-                    }}
-                />
-
-                {canReadNotes && (
-                    <InternalNotes
-                        contractId={params.id}
-                        notes={notes}
-                        onCreate={handleCreateNote}
-                        onUpdate={handleUpdateNote}
-                        onDelete={handleDeleteNote}
+                    <ContractDetail
+                        contract={contract}
+                        onPublish={handlePublish}
+                        onClose={handleClose}
+                        onAward={handleAward}
+                        onDelete={handleDelete}
+                        onApply={handleApply}
                     />
-                )}
-            </main>
+
+                    <ApplicationList
+                        contract={contract}
+                        applications={applications}
+                        onAccept={handleAcceptApplication}
+                        onReject={handleRejectApplication}
+                        onViewDetails={(id) => {
+                            // TODO: Implement application detail modal or page
+                            console.log("View application:", id);
+                        }}
+                    />
+
+                    {canReadNotes && (
+                        <InternalNotes
+                            contractId={params.id}
+                            notes={notes}
+                            onCreate={handleCreateNote}
+                            onUpdate={handleUpdateNote}
+                            onDelete={handleDeleteNote}
+                        />
+                    )}
+                </main>
+            </ContractErrorBoundary>
         </ProtectedRoute>
     );
 }
