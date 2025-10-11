@@ -79,7 +79,7 @@ export const vendorRegistrationSchema = z
             .array(z.string())
             .min(1, "At least one service must be specified"),
         contactEmail: z.string().email("Invalid contact email"),
-        contactPhone: z.string().min(1, "Contact phone is required"),
+        contactPhone: z.string().min(1, "Contact phone is required").optional(),
         physicalAddress: addressSchema,
         mailingAddress: addressSchema,
         firstName: z.string().optional(),
@@ -132,3 +132,26 @@ export const changePasswordSchema = z
         path: ["newPassword"],
     });
 export type ChangePasswordFormData = z.infer<typeof changePasswordSchema>;
+
+// Account activation schema (for new employees)
+export const accountActivationSchema = z
+    .object({
+        token: z.string(),
+        firstName: z.string().min(1, "First name is required"),
+        lastName: z.string().min(1, "Last name is required"),
+        contactEmail: z
+            .string()
+            .email("Invalid contact email")
+            .optional()
+            .or(z.literal("")),
+        contactPhone: z.string().optional(),
+        physicalAddress: addressSchema.optional(),
+        mailingAddress: addressSchema.optional(),
+        newPassword: passwordComplexity,
+        confirmPassword: z.string(),
+    })
+    .refine((data) => data.newPassword === data.confirmPassword, {
+        message: "Passwords don't match",
+        path: ["confirmPassword"],
+    });
+export type AccountActivationFormData = z.infer<typeof accountActivationSchema>;

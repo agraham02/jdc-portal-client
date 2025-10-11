@@ -2,7 +2,7 @@
 
 import { motion } from "motion/react";
 import Link from "next/link";
-import { ProtectedRoute } from "@/components/routing/ProtectedRoute";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 import { HrDocumentsTable } from "@/components/documents/HrDocumentsTable";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
-import { Can } from "@/components/authz/Can";
+import { Can } from "@/components/auth/Can";
 import {
     FolderOpen,
     Upload,
@@ -25,7 +25,7 @@ import {
 
 export default function HRLibraryPage() {
     return (
-        <ProtectedRoute anyOf={[P.FILE_READ, P.FILE_READ_ALL]}>
+        <ProtectedRoute anyOf={[P.HR_DOCUMENT_READ]}>
             <main className="space-y-6 p-6 max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="flex items-center gap-4">

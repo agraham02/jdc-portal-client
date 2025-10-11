@@ -1,44 +1,57 @@
 import { apiClient } from "@/lib/api";
 import { Employee, User, UserStatus } from "../types/auth";
+import { PaginatedResponse } from "../types/api";
+import { buildApiPath } from "@/lib/utils/queryParams";
 
 export type EmployeeWithUser = Omit<Employee, "userId"> & {
     userId: User & { status: UserStatus };
 };
 
-export type EmployeeResponseWithUser = {
-    data: EmployeeWithUser[];
-    total: number;
-    page?: number;
-    limit?: number;
-};
+export type EmployeeListResponse = PaginatedResponse<EmployeeWithUser>;
 
-export type CreateEmployeeRequest = Partial<Employee> & {
+export interface CreateEmployeeDto {
     userId: string;
-};
+    employeeId?: string;
+    jobTitle?: string;
+    department?: string;
+    hireDate?: string; // ISO date string
+    managerId?: string;
+}
 
-export type UpdateEmployeeRequest = Partial<Employee>;
+export interface UpdateEmployeeDto {
+    employeeId?: string;
+    jobTitle?: string;
+    department?: string;
+    hireDate?: string; // ISO date string
+    managerId?: string;
+}
 
 export class EmployeeService {
     /**
-     * Get all employees with pagination
+     * Get all employees with pagination and filtering
      */
-    static async getEmployees(
-        page = 1,
-        limit = 10
-    ): Promise<EmployeeResponseWithUser> {
-        const params = new URLSearchParams({
-            page: page.toString(),
-            limit: limit.toString(),
+    static async getEmployees(params?: {
+        page?: number;
+        pageSize?: number;
+        search?: string;
+        department?: string;
+        status?: UserStatus;
+    }): Promise<EmployeeListResponse> {
+        const path = buildApiPath("/employees", {
+            page: params?.page,
+            pageSize: params?.pageSize,
+            search: params?.search,
+            department: params?.department,
+            status: params?.status,
         });
-
-        return apiClient.get<EmployeeResponseWithUser>(`/employees?${params}`);
+        return apiClient.get<EmployeeListResponse>(path);
     }
 
     /**
      * Get pending employees
      */
-    static async getPendingEmployees(): Promise<EmployeeResponseWithUser> {
-        return apiClient.get<EmployeeResponseWithUser>("/employees/pending");
+    static async getPendingEmployees(): Promise<EmployeeListResponse> {
+        return apiClient.get<EmployeeListResponse>("/employees/pending");
     }
 
     /**
@@ -52,9 +65,12 @@ export class EmployeeService {
      * Create a new employee
      */
     static async createEmployee(
-        employeeData: CreateEmployeeRequest
-    ): Promise<{ message: string }> {
-        return apiClient.post<{ message: string }>("/employees", employeeData);
+        employeeData: CreateEmployeeDto
+    ): Promise<{ message: string; employee: EmployeeWithUser }> {
+        return apiClient.post<{ message: string; employee: EmployeeWithUser }>(
+            "/employees",
+            employeeData
+        );
     }
 
     /**
@@ -62,21 +78,11 @@ export class EmployeeService {
      */
     static async updateEmployee(
         id: string,
-        employeeData: UpdateEmployeeRequest
-    ): Promise<{ message: string }> {
-        return apiClient.patch<{ message: string }>(
+        employeeData: UpdateEmployeeDto
+    ): Promise<{ message: string; employee: EmployeeWithUser }> {
+        return apiClient.patch<{ message: string; employee: EmployeeWithUser }>(
             `/employees/${id}`,
             employeeData
-        );
-    }
-
-    /**
-     * Approve a pending employee
-     */
-    static async approveEmployee(id: string): Promise<{ message: string }> {
-        return apiClient.patch<{ message: string }>(
-            `/employees/${id}/approve`,
-            {}
         );
     }
 

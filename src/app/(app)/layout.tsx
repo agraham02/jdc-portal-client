@@ -1,19 +1,18 @@
 "use client";
 
 import { ReactNode } from "react";
-// import { AuthDebugPanel } from "@/components/auth/AuthDebugPanel";
 import {
     SidebarInset,
     SidebarProvider,
     SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/app-sidebar";
+import { AppSidebar } from "@/components/navigation/app-sidebar";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
 import { Building2 } from "lucide-react";
-import { ProtectedRoute } from "@/components/routing/ProtectedRoute";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { useAuth } from "@/lib/contexts/auth-context";
 import { BellDropdown } from "@/components/notifications/BellDropdown";
+import { ThemeToggle } from "@/components/navigation/ThemeToggle";
 
 export default function AppLayout({ children }: { children: ReactNode }) {
     const { logout } = useAuth();
@@ -33,12 +32,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                         </div>
                         <div className="ml-auto flex items-center gap-2">
                             <BellDropdown />
-                            <Button variant="ghost" size="sm" asChild>
-                                <Link href="/notifications">Notifications</Link>
-                            </Button>
-                            <Button variant="outline" size="sm" asChild>
-                                <Link href="/profile">Profile</Link>
-                            </Button>
+                            <ThemeToggle />
                             <Button
                                 variant="destructive"
                                 size="sm"

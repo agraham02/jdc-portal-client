@@ -4,7 +4,6 @@ import { User } from "../types/auth";
 import {
     LoginFormData,
     EmployeeRegistrationFormData,
-    VendorRegistrationFormData,
 } from "../validations/auth";
 import type { ProfileUpdateFormData } from "../validations/profile";
 import type {
@@ -12,112 +11,102 @@ import type {
     ResetPasswordFormData,
     ChangePasswordFormData,
 } from "../validations/auth";
-
-const login = async (credentials: LoginFormData): Promise<{ user: User }> => {
-    // The refreshToken is handled by the backend via httpOnly cookies
-    const { accessToken } = await apiClient.post<{
-        accessToken: string;
-        expiresIn: string;
-    }>("/auth/login", credentials);
-    session.setAccessToken(accessToken);
-
-    const user = await getProfile();
-
-    return { user };
-};
-
-const registerEmployee = async (
-    data: EmployeeRegistrationFormData
-): Promise<{ message: string }> => {
-    // Remove confirmPassword before sending to backend
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { confirmPassword, ...registrationData } = data;
-    return apiClient.post<{ message: string }>(
-        "/auth/register/employee",
-        registrationData
-    );
-};
-
-const registerVendor = async (
-    data: VendorRegistrationFormData
-): Promise<{ message: string }> => {
-    // Remove confirmPassword before sending to backend
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { confirmPassword, ...registrationData } = data;
-    return apiClient.post<{ message: string }>(
-        "/auth/register/vendor",
-        registrationData
-    );
-};
-
-const logout = async (): Promise<{ message: string }> => {
-    // Tell the backend to invalidate the refresh token
-    // Don't clear session here - let AuthContext handle it
-    const response = await apiClient.post<{ message: string }>(
-        "/auth/logout",
-        {}
-    );
-    return response;
-};
-
-const getProfile = (): Promise<User> => {
-    return apiClient.get("/auth/me");
-};
-
-const refreshToken = async (): Promise<{
-    accessToken: string;
-    expiresIn?: string;
-}> => {
-    // Avoid nested 401 refresh loops when calling /auth/refresh
-    return apiClient.post("/auth/refresh", {}, { skipAuthRetry: true });
-};
-
-// Email verification: The backend currently has no explicit endpoints in the auth controller.
-// We provide thin wrappers that can be wired once available. For now, they will attempt
-// conventional endpoints and throw a clear error if not present.
-const verifyEmail = async (token: string): Promise<{ message: string }> => {
-    // Try a conventional path; backend may add this later.
-    return apiClient.post<{ message: string }>(
-        "/auth/verify-email",
-        { token },
-        { skipAuthRetry: true }
-    );
-};
-
-const resendVerification = async (
-    email: string
-): Promise<{ message: string; nextAllowedAt?: string }> => {
-    // Rate-limited on server; 429 returns retry-after we surface via apiClient details
-    return apiClient.post<{ message: string; nextAllowedAt?: string }>(
-        "/auth/verify-email/resend",
-        { email },
-        { skipAuthRetry: true }
-    );
-};
+import type {
+    LoginDto,
+    UpdatePasswordDto,
+    RequestPasswordResetDto,
+    ConfirmPasswordResetDto,
+    UpdateProfileDto,
+} from "../types/auth";
 
 export const AuthService = {
-    login,
-    registerEmployee,
-    registerVendor,
-    logout,
-    getProfile,
-    updateProfile(data: Partial<ProfileUpdateFormData>) {
-        return apiClient.patch<{ message: string }>("/auth/me/profile", data);
+    async login(credentials: LoginFormData): Promise<{ user: User }> {
+        const loginDto: LoginDto = {
+            email: credentials.email,
+            password: credentials.password,
+        };
+
+        // The refreshToken is handled by the backend via httpOnly cookies
+        const { accessToken } = await apiClient.post<{
+            accessToken: string;
+            expiresIn: string;
+        }>("/auth/login", loginDto);
+        session.setAccessToken(accessToken);
+
+        const user = await AuthService.getProfile();
+        return { user };
     },
-    refreshToken,
-    verifyEmail,
-    resendVerification,
+    async registerEmployee(
+        data: EmployeeRegistrationFormData
+    ): Promise<{ message: string }> {
+        // Remove confirmPassword before sending to backend
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { confirmPassword, ...registrationData } = data;
+
+        return apiClient.post<{ message: string }>(
+            "/auth/register/employee",
+            registrationData
+        );
+    },
+    logout() {
+        return apiClient.post<{ message: string }>("/auth/logout", {});
+    },
+    getProfile: (): Promise<User> => {
+        return apiClient.get("/auth/me");
+    },
+    getUserPermissions: (): Promise<{ permissions: string[] }> => {
+        return apiClient.get("/auth/me/permissions");
+    },
+    getPendingAccounts() {
+        return apiClient.get<{ users: User[] }>("/auth/pending");
+    },
+    approveUser(userId: string): Promise<{ message: string }> {
+        return apiClient.patch<{ message: string }>(
+            `/auth/${encodeURIComponent(userId)}/approve`,
+            {}
+        );
+    },
+    rejectUser(userId: string, reason?: string): Promise<{ message: string }> {
+        return apiClient.patch<{ message: string }>(
+            `/auth/${encodeURIComponent(userId)}/reject`,
+            { reason }
+        );
+    },
+    requestAccountDeletion() {
+        return apiClient.delete<{ message: string }>("/auth/me", {});
+    },
+    updateProfile(data: Partial<ProfileUpdateFormData>) {
+        const updateDto: UpdateProfileDto = {
+            firstName: data.firstName,
+            lastName: data.lastName,
+            contactPhone: data.contactPhone,
+        };
+        return apiClient.patch<{ message: string }>("/auth/me", updateDto);
+    },
+    refreshToken() {
+        return apiClient.post<{
+            accessToken: string;
+            expiresIn: string;
+        }>("/auth/refresh", {}, { skipAuthRetry: true });
+    },
     requestPasswordReset(data: ForgotPasswordFormData) {
+        const requestDto: RequestPasswordResetDto = {
+            email: data.email,
+        };
         return apiClient.post<{ message: string; token?: string }>(
             "/auth/password-reset/request",
-            data,
+            requestDto,
             { skipAuthRetry: true }
         );
     },
     confirmPasswordReset(token: string, data: ResetPasswordFormData) {
+        const confirmDto: ConfirmPasswordResetDto = {
+            token,
+            newPassword: data.newPassword,
+        };
         return apiClient.post<{ message: string }>(
             "/auth/password-reset/confirm",
-            { token, newPassword: data.newPassword },
+            confirmDto,
             { skipAuthRetry: true }
         );
     },
@@ -125,9 +114,13 @@ export const AuthService = {
         // remove confirmPassword before sending
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { confirmPassword, ...payload } = data;
+        const updateDto: UpdatePasswordDto = {
+            oldPassword: payload.oldPassword,
+            newPassword: payload.newPassword,
+        };
         return apiClient.patch<{ message: string }>(
             "/auth/update-password",
-            payload
+            updateDto
         );
     },
     // Admin user actions
@@ -146,6 +139,53 @@ export const AuthService = {
     unlockUser(userId: string) {
         return apiClient.patch<{ message: string }>(
             `/auth/${encodeURIComponent(userId)}/unlock`,
+            {}
+        );
+    },
+    // Email verification
+    verifyEmail(token: string) {
+        return apiClient.post<{ message: string }>(
+            "/auth/verify-email",
+            { token },
+            { skipAuthRetry: true }
+        );
+    },
+    resendVerification(email: string) {
+        return apiClient.post<{ message: string }>(
+            "/auth/resend-verification",
+            { email },
+            { skipAuthRetry: true }
+        );
+    },
+    // Account activation
+    validateActivationToken(token: string) {
+        return apiClient.get<{
+            valid: boolean;
+            email?: string;
+            firstName?: string;
+            lastName?: string;
+        }>(
+            `/auth/validate-activation-token?token=${encodeURIComponent(
+                token
+            )}`,
+            { skipAuthRetry: true }
+        );
+    },
+    completeActivation(
+        data: import("../validations/auth").AccountActivationFormData
+    ) {
+        // Remove confirmPassword before sending
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { confirmPassword, ...activationData } = data;
+        return apiClient.post<{ message: string }>(
+            "/auth/activate-account",
+            activationData,
+            { skipAuthRetry: true }
+        );
+    },
+    resendActivation(userId: string) {
+        return apiClient.post<{ message: string }>(
+            `/auth/resend-activation/${encodeURIComponent(userId)}`,
             {}
         );
     },

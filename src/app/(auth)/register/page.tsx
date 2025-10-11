@@ -14,7 +14,7 @@ import {
 
 export default function RegisterPage() {
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+        <div className="min-h-screen flex items-center justify-center p-4">
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -22,10 +22,10 @@ export default function RegisterPage() {
                 className="w-full max-w-4xl"
             >
                 <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                    <h1 className="text-3xl font-bold mb-2">
                         Create Your Account
                     </h1>
-                    <p className="text-gray-600">
+                    <p className="">
                         Choose your account type to get started. Your account
                         will need approval before you can sign in.
                     </p>
@@ -41,10 +41,8 @@ export default function RegisterPage() {
                         <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer group">
                             <Link href="/register/vendor">
                                 <CardHeader className="text-center pb-4">
-                                    <div className="mx-auto mb-4 w-16 h-16 bg-green-100 rounded-full flex items-center justify-center group-hover:bg-green-200 transition-colors">
-                                        <Building2 className="w-8 h-8 text-green-600" />
-                                    </div>
-                                    <CardTitle className="text-xl text-gray-900">
+                                    <Building2 className="w-8 h-8 mx-auto" />
+                                    <CardTitle className="text-xl">
                                         Vendor Registration
                                     </CardTitle>
                                     <CardDescription>
@@ -53,7 +51,7 @@ export default function RegisterPage() {
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
-                                    <ul className="text-sm text-gray-600 space-y-2">
+                                    <ul className="text-sm text-gray-500 space-y-2">
                                         <li className="flex items-center">
                                             <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-2"></div>
                                             Submit service proposals
@@ -61,14 +59,6 @@ export default function RegisterPage() {
                                         <li className="flex items-center">
                                             <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-2"></div>
                                             Manage contracts
-                                        </li>
-                                        <li className="flex items-center">
-                                            <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-2"></div>
-                                            Business communications
-                                        </li>
-                                        <li className="flex items-center">
-                                            <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-2"></div>
-                                            Vendor portal access
                                         </li>
                                     </ul>
 
@@ -90,10 +80,6 @@ export default function RegisterPage() {
                 >
                     <div className="space-y-2">
                         <p className="text-sm text-gray-600">
-                            Employees cannot self-register. Please contact an
-                            administrator to create your account.
-                        </p>
-                        <p className="text-sm text-gray-600">
                             Already have an account?{" "}
                             <Link
                                 href="/login"
@@ -101,6 +87,10 @@ export default function RegisterPage() {
                             >
                                 Sign in
                             </Link>
+                        </p>
+                        <p className="text-sm text-gray-600">
+                            Employees cannot self-register. Please contact an
+                            administrator to have an account created for you.
                         </p>
                     </div>
                 </motion.div>

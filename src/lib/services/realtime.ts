@@ -2,101 +2,386 @@
 
 import { io, Socket } from "socket.io-client";
 import { session } from "@/lib/session";
+import type { Notification } from "@/lib/types/notifications";
 
+const socketDebug = process.env.NEXT_PUBLIC_DEBUG_SOCKET === "true";
+
+const debugLog = (...args: Parameters<typeof console.log>) => {
+    if (socketDebug) {
+        console.log(...args);
+    }
+};
+
+const debugWarn = (...args: Parameters<typeof console.warn>) => {
+    if (socketDebug) {
+        console.warn(...args);
+    }
+};
+
+const debugInfo = (...args: Parameters<typeof console.debug>) => {
+    if (socketDebug) {
+        console.debug(...args);
+    }
+};
+
+/**
+ * WebSocket event types from the backend
+ * Backend events: notification, notification:retry, notification:ack:ok, pong
+ */
 export type NotificationSocketEvents = {
-    notification: (payload: unknown) => void;
-    "notification:retry": (payload: { id?: string } | unknown) => void;
+    notification: (payload: Notification) => void;
+    "notification:retry": (payload: Notification) => void;
     "notification:ack:ok": (payload: { notificationId: string }) => void;
     pong: (payload: { ok: boolean; ts: number; echo?: unknown }) => void;
 };
 
 type Listener<T> = (data: T) => void;
 
+export type ConnectionState =
+    | "disconnected"
+    | "connecting"
+    | "connected"
+    | "reconnecting"
+    | "failed";
+
+/**
+ * Enhanced WebSocket client for real-time notifications
+ * Features:
+ * - Automatic reconnection with exponential backoff and jitter
+ * - Token refresh on 401/expired
+ * - Connection state tracking
+ * - Typed event listeners
+ * - Graceful degradation
+ */
 export class NotificationsSocketClient {
     private socket: Socket | null = null;
     private attempt = 0;
-    private readonly maxAttempts = 12; // ~ few minutes with backoff
+    private readonly maxAttempts = 15; // ~10 minutes with backoff
+    private reconnectTimeout: NodeJS.Timeout | null = null;
+    private healthCheckInterval: NodeJS.Timeout | null = null;
+    private reconnectingTimer: NodeJS.Timeout | null = null; // Track isReconnecting reset timer
+    private state: ConnectionState = "disconnected";
     private listeners: Partial<{
         [K in keyof NotificationSocketEvents]: Set<Listener<unknown>>;
     }> = {};
+    private stateListeners = new Set<(state: ConnectionState) => void>();
+    private isIntentionalDisconnect = false;
+    private isReconnecting = false; // Track if reconnection is already in progress
 
+    /**
+     * Get current connection state
+     */
+    getState(): ConnectionState {
+        return this.state;
+    }
+
+    /**
+     * Check if currently connected
+     */
+    isConnected(): boolean {
+        return this.socket?.connected ?? false;
+    }
+
+    /**
+     * Listen for connection state changes
+     */
+    onStateChange(listener: (state: ConnectionState) => void): () => void {
+        this.stateListeners.add(listener);
+        return () => this.stateListeners.delete(listener);
+    }
+
+    private setState(newState: ConnectionState) {
+        if (this.state === newState) return;
+        this.state = newState;
+        for (const listener of this.stateListeners) {
+            listener(newState);
+        }
+    }
+
+    /**
+     * Connect to the WebSocket server
+     */
     connect() {
-        if (this.socket && this.socket.connected) return;
-        const url =
+        if (this.socket?.connected) {
+            return;
+        }
+
+        // Clear any pending reconnect
+        if (this.reconnectTimeout) {
+            clearTimeout(this.reconnectTimeout);
+            this.reconnectTimeout = null;
+        }
+
+        const token = session.getAccessToken();
+        if (!token) {
+            debugWarn(
+                "[NotificationsSocket] No access token available, skipping connection"
+            );
+            this.setState("failed");
+            return;
+        }
+
+        // Derive WebSocket URL from env or API URL
+        const apiBase =
+            process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+        const derived = apiBase.replace(/\/?api\/?$/, "");
+        const baseUrl =
             process.env.NEXT_PUBLIC_WS_URL ||
-            process.env.NEXT_PUBLIC_API_URL ||
+            derived ||
             "http://localhost:4000";
-        const token = session.getAccessToken();
-        this.socket = io(url + "/notifications", {
-            transports: ["websocket"],
+
+        this.setState("connecting");
+        this.isIntentionalDisconnect = false;
+
+        this.socket = io(`${baseUrl}/notifications`, {
+            transports: ["websocket", "polling"], // Fallback to polling if WebSocket fails
             autoConnect: true,
-            reconnection: false, // we'll implement our own with jitter
-            auth: token ? { token: `Bearer ${token}` } : undefined,
+            reconnection: false, // We handle reconnection manually
+            auth: { token: `Bearer ${token}` },
             withCredentials: true,
+            timeout: 10000, // 10 second connection timeout
         });
 
-        const s = this.socket;
-        s.on("connect", () => {
-            this.attempt = 0;
-        });
-        s.on("disconnect", () => {
-            this.scheduleReconnect();
-        });
-        s.on("connect_error", () => {
-            this.scheduleReconnect();
-        });
-
-        // Wire generic forwarding to registered listeners
-        s.on("notification", (p: unknown) => this.emitLocal("notification", p));
-        s.on("notification:retry", (p: unknown) =>
-            this.emitLocal("notification:retry", p)
-        );
-        s.on("notification:ack:ok", (p: { notificationId: string }) =>
-            this.emitLocal("notification:ack:ok", p)
-        );
-        s.on("pong", (p: { ok: boolean; ts: number; echo?: unknown }) =>
-            this.emitLocal("pong", p)
-        );
+        this.setupEventHandlers();
     }
 
-    private scheduleReconnect() {
-        if (this.attempt >= this.maxAttempts) return;
-        const base = 500; // ms
-        const max = 30_000; // 30s
-        const jitter = Math.random() * 1000;
-        const delay = Math.min(base * 2 ** this.attempt + jitter, max);
-        this.attempt++;
-        setTimeout(() => this.reconnect(), delay);
-    }
-
-    private reconnect() {
-        // Refresh token if available
-        const token = session.getAccessToken();
-        const s = this.socket;
-        if (!s) return this.connect();
-        s.auth = token ? { token: `Bearer ${token}` } : {};
-        s.connect();
-    }
-
+    /**
+     * Disconnect from the server (intentional)
+     */
     disconnect() {
+        this.isIntentionalDisconnect = true;
+        this.attempt = 0;
+        this.isReconnecting = false;
+
+        // Clean up all timers to prevent memory leaks
+        if (this.reconnectTimeout) {
+            clearTimeout(this.reconnectTimeout);
+            this.reconnectTimeout = null;
+        }
+
+        if (this.healthCheckInterval) {
+            clearInterval(this.healthCheckInterval);
+            this.healthCheckInterval = null;
+        }
+
+        if (this.reconnectingTimer) {
+            clearTimeout(this.reconnectingTimer);
+            this.reconnectingTimer = null;
+        }
+
         this.socket?.disconnect();
         this.socket = null;
+        this.setState("disconnected");
     }
 
+    /**
+     * Setup all Socket.IO event handlers
+     */
+    private setupEventHandlers() {
+        if (!this.socket) return;
+
+        const s = this.socket;
+
+        // Connection successful
+        s.on("connect", () => {
+            debugLog("[NotificationsSocket] Connected");
+            this.attempt = 0;
+            this.isReconnecting = false; // Reset reconnection flag
+            this.setState("connected");
+            this.startHealthCheck();
+        });
+
+        // Connection error (before connect event)
+        s.on("connect_error", (error) => {
+            console.error(
+                "[NotificationsSocket] Connection error:",
+                error.message
+            );
+
+            // Handle JWT expiration
+            if (
+                error.message.includes("jwt") ||
+                error.message.includes("Unauthorized")
+            ) {
+                debugWarn("[NotificationsSocket] Token expired or invalid");
+                // The auth context will handle refresh, we just need to reconnect after
+            }
+
+            this.handleDisconnect("connect_error");
+        });
+
+        // Disconnected
+        s.on("disconnect", (reason) => {
+            debugLog("[NotificationsSocket] Disconnected:", reason);
+            this.stopHealthCheck();
+
+            // Only reconnect if not intentional
+            if (!this.isIntentionalDisconnect) {
+                this.handleDisconnect(reason);
+            } else {
+                this.setState("disconnected");
+            }
+        });
+
+        // Wire up notification events to local listeners
+        s.on("notification", (payload: unknown) => {
+            this.emitLocal("notification", payload);
+        });
+
+        s.on("notification:retry", (payload: unknown) => {
+            debugWarn("[NotificationsSocket] Retry event received");
+            this.emitLocal("notification:retry", payload);
+        });
+
+        s.on("notification:ack:ok", (payload: { notificationId: string }) => {
+            this.emitLocal("notification:ack:ok", payload);
+        });
+
+        s.on("pong", (payload: { ok: boolean; ts: number; echo?: unknown }) => {
+            const latency = Date.now() - payload.ts;
+            debugInfo(`[NotificationsSocket] Pong received (${latency}ms)`);
+            this.emitLocal("pong", payload);
+        });
+    }
+
+    /**
+     * Handle disconnection and schedule reconnect with exponential backoff
+     */
+    private handleDisconnect(reason: string) {
+        // Don't reconnect if we've reached max attempts
+        if (this.attempt >= this.maxAttempts) {
+            console.error(
+                "[NotificationsSocket] Max reconnection attempts reached"
+            );
+            this.setState("failed");
+            return;
+        }
+
+        // Server kicked us - might be rate limit or other issue
+        if (reason === "io server disconnect") {
+            debugWarn("[NotificationsSocket] Server forcibly disconnected");
+        }
+
+        this.setState("reconnecting");
+        this.scheduleReconnect();
+    }
+
+    /**
+     * Schedule a reconnection attempt with exponential backoff and jitter
+     */
+    private scheduleReconnect() {
+        const base = 1000; // Start at 1 second
+        const max = 60000; // Max 60 seconds
+        const jitter = Math.random() * 1000; // Up to 1 second jitter
+        const delay = Math.min(base * 2 ** this.attempt + jitter, max);
+
+        this.attempt++;
+
+        debugLog(
+            `[NotificationsSocket] Reconnecting in ${Math.round(
+                delay / 1000
+            )}s (attempt ${this.attempt}/${this.maxAttempts})`
+        );
+
+        this.reconnectTimeout = setTimeout(() => {
+            this.reconnectTimeout = null;
+            this.reconnect();
+        }, delay);
+    }
+
+    /**
+     * Attempt to reconnect with a fresh token
+     */
+    private reconnect() {
+        // Prevent concurrent reconnection attempts
+        if (this.isReconnecting) {
+            debugWarn("[NotificationsSocket] Reconnection already in progress");
+            return;
+        }
+
+        this.isReconnecting = true;
+
+        // Get fresh token
+        const token = session.getAccessToken();
+        if (!token) {
+            debugWarn("[NotificationsSocket] No token for reconnect");
+            this.isReconnecting = false;
+            // Retry after a delay
+            if (this.attempt < this.maxAttempts) {
+                this.scheduleReconnect();
+            } else {
+                this.setState("failed");
+            }
+            return;
+        }
+
+        // Update auth and reconnect
+        if (this.socket) {
+            this.socket.auth = { token: `Bearer ${token}` };
+            this.socket.connect();
+        } else {
+            // Socket was destroyed, create a new one
+            this.connect();
+        }
+
+        // Clean up existing timer before creating new one
+        if (this.reconnectingTimer) {
+            clearTimeout(this.reconnectingTimer);
+        }
+
+        // Reset flag after a short delay to allow connection attempt
+        this.reconnectingTimer = setTimeout(() => {
+            this.isReconnecting = false;
+            this.reconnectingTimer = null;
+        }, 1000);
+    }
+
+    /**
+     * Start periodic health checks (ping/pong)
+     */
+    private startHealthCheck() {
+        if (this.healthCheckInterval) return;
+
+        this.healthCheckInterval = setInterval(() => {
+            if (this.socket?.connected) {
+                this.ping({ ts: Date.now() });
+            }
+        }, 30000); // Every 30 seconds
+    }
+
+    /**
+     * Stop health checks
+     */
+    private stopHealthCheck() {
+        if (this.healthCheckInterval) {
+            clearInterval(this.healthCheckInterval);
+            this.healthCheckInterval = null;
+        }
+    }
+
+    /**
+     * Register an event listener
+     * Returns an unsubscribe function
+     */
     on<K extends keyof NotificationSocketEvents>(
         event: K,
         listener: Listener<Parameters<NotificationSocketEvents[K]>[0]>
-    ) {
+    ): () => void {
         const set = (this.listeners[event] ||= new Set());
         set.add(listener as Listener<unknown>);
-        // Socket.IO type defs are permissive; cast through unknown to avoid any
+
+        // Also register with socket if connected
         this.socket?.on(
             event as string,
             listener as unknown as (...args: unknown[]) => void
         );
+
         return () => this.off(event, listener);
     }
 
+    /**
+     * Unregister an event listener
+     */
     off<K extends keyof NotificationSocketEvents>(
         event: K,
         listener: Listener<Parameters<NotificationSocketEvents[K]>[0]>
@@ -108,19 +393,38 @@ export class NotificationsSocketClient {
         );
     }
 
+    /**
+     * Emit event to local listeners
+     */
     private emitLocal(event: keyof NotificationSocketEvents, payload: unknown) {
         const set = this.listeners[event];
         if (!set) return;
-        for (const l of set) l(payload);
+        for (const listener of set) {
+            listener(payload);
+        }
     }
 
+    /**
+     * Acknowledge notification receipt
+     */
     ack(notificationId: string) {
-        this.socket?.emit("notification:ack", { notificationId });
+        if (!this.socket?.connected) {
+            debugWarn("[NotificationsSocket] Cannot ack - not connected");
+            return;
+        }
+        this.socket.emit("notification:ack", { notificationId });
     }
 
+    /**
+     * Send ping for health check
+     */
     ping(data?: Record<string, unknown>) {
-        this.socket?.emit("ping", data ?? {});
+        if (!this.socket?.connected) return;
+        this.socket.emit("ping", data ?? { ts: Date.now() });
     }
 }
 
+/**
+ * Singleton instance for global use
+ */
 export const notificationsSocket = new NotificationsSocketClient();

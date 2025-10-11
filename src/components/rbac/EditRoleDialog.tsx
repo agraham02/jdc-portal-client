@@ -75,7 +75,7 @@ export function EditRoleDialog({ roleId, open, onClose, onUpdated }: Props) {
                 // fetch users with this role to guard deletion
                 try {
                     const usersResp = await RBACService.getRoleUsers(ensuredId);
-                    if (!cancelled) setRoleUserCount(usersResp.totalUsers);
+                    if (!cancelled) setRoleUserCount(usersResp.totalUsers ?? 0);
                 } catch {
                     if (!cancelled) setRoleUserCount(0);
                 }
@@ -122,7 +122,7 @@ export function EditRoleDialog({ roleId, open, onClose, onUpdated }: Props) {
             const payload: UpdateRoleRequest = {
                 name: name.trim(),
                 description: description.trim() || undefined,
-                permissionIds,
+                permissionIds: permissionIds,
             };
             await RBACService.updateRole(roleId, payload);
             onUpdated?.();

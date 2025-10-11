@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Can } from "@/components/authz/Can";
+import { Can } from "@/components/auth/Can";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 
 export default function DashboardPage() {

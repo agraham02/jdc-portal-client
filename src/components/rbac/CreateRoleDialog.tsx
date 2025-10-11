@@ -68,7 +68,7 @@ export function CreateRoleDialog({ open, onClose, onCreated }: Props) {
             const payload: CreateRoleRequest = {
                 name: name.trim(),
                 description: description.trim() || undefined,
-                permissionIds,
+                permissionIds: permissionIds,
             };
             await RBACService.createRole(payload);
             onCreated?.();
