@@ -45,4 +45,4 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 -   Dark mode styling is handled with the custom variant `dark:` -> see `@custom-variant dark` in `globals.css` and CSS variables under `:root` and `.dark`.
 -   App shell: `src/app/(app)/layout.tsx` with `AppSidebar` + `SidebarInset` and a sticky header.
 
-To add new UI components, compose from `ui/` primitives and keep styles token-based for consistency.
+To add new UI components, compose from `ui/` primitives and keep styles token-based for consistency
