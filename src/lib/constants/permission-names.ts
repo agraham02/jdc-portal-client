@@ -79,6 +79,15 @@ export const PermissionName = Object.freeze({
     NOTIFICATIONS_ACK: "notifications:ack",
     NOTIFICATIONS_MANAGE: "notifications:manage",
     NOTIFICATIONS_BROADCAST: "notifications:broadcast",
+
+    // Admin Control Panel
+    ADMIN_OBSERVABILITY_READ: "admin:observability:read",
+    ADMIN_STORAGE_READ: "admin:storage:read",
+    ADMIN_STORAGE_DELETE: "admin:storage:delete",
+    ADMIN_DATABASE_READ: "admin:database:read",
+    ADMIN_DATABASE_MANAGE: "admin:database:manage",
+    ADMIN_MAIL_TEST: "admin:mail:test",
+    ADMIN_DEBUG: "admin:debug",
 } as const);
 
 export type PermissionName =

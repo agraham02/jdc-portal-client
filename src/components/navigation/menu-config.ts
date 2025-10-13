@@ -1,9 +1,14 @@
 import {
+    Activity,
     Bell,
+    Bug,
     Building2,
+    Database,
     FileText,
+    HardDrive,
     Home,
     LayoutDashboard,
+    Mail,
     Settings,
     Shield,
     User,
@@ -20,7 +25,12 @@ export const menu = {
     ] satisfies MenuItem[],
 
     procurement: [
-        { title: "Contracts", url: "/contracts", icon: FileText },
+        {
+            title: "Contracts",
+            url: "/contracts",
+            icon: FileText,
+            anyOf: [P.CONTRACT_READ, P.CONTRACT_READ_ALL],
+        },
         {
             title: "My Applications",
             url: "/contracts/my-applications",
@@ -72,12 +82,42 @@ export const menu = {
         },
     ] satisfies MenuItem[],
 
-    adminTools: [
+    adminControlPanel: [
         {
-            title: "Mail Test",
-            url: "/admin/tools/mail-test",
-            icon: Shield,
-            anyOf: [P.RBAC_ROLE_MANAGE, P.RBAC_USER_ASSIGN_ROLES],
+            title: "Overview",
+            url: "/admin/control-panel",
+            icon: LayoutDashboard,
+            anyOf: [P.SYSTEM_ADMIN],
+        },
+        {
+            title: "Observability",
+            url: "/admin/control-panel/observability",
+            icon: Activity,
+            anyOf: [P.ADMIN_OBSERVABILITY_READ],
+        },
+        {
+            title: "Storage Manager",
+            url: "/admin/control-panel/storage",
+            icon: HardDrive,
+            anyOf: [P.ADMIN_STORAGE_READ],
+        },
+        {
+            title: "Database Sandbox",
+            url: "/admin/control-panel/database",
+            icon: Database,
+            anyOf: [P.ADMIN_DATABASE_READ],
+        },
+        {
+            title: "Mail Testing",
+            url: "/admin/control-panel/mail",
+            icon: Mail,
+            anyOf: [P.ADMIN_MAIL_TEST],
+        },
+        {
+            title: "Debug Console",
+            url: "/admin/control-panel/debug",
+            icon: Bug,
+            anyOf: [P.ADMIN_DEBUG],
         },
     ] satisfies MenuItem[],
 

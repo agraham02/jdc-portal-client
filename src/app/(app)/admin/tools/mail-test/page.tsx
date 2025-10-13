@@ -44,7 +44,7 @@ export default function MailTestPage() {
     }
 
     return (
-        <ProtectedRoute anyOf={[P.RBAC_ROLE_MANAGE, P.RBAC_USER_ASSIGN_ROLES]}>
+        <ProtectedRoute anyOf={[P.ADMIN_MAIL_TEST]}>
             <div className="max-w-xl mx-auto">
                 <Card>
                     <CardHeader>
@@ -68,8 +68,15 @@ export default function MailTestPage() {
                             </Button>
                         </div>
                         <p className="text-xs text-muted-foreground mt-2">
-                            Requires permissions: role manage or user assign
-                            roles.
+                            Requires permission: admin:mail:test. For enhanced
+                            features, use the{" "}
+                            <a
+                                href="/admin/control-panel/mail"
+                                className="underline"
+                            >
+                                Control Panel Mail Testing
+                            </a>
+                            .
                         </p>
                     </CardContent>
                 </Card>

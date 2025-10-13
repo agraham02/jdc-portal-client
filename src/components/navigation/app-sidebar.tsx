@@ -10,13 +10,8 @@ import {
 import { NavSection } from "@/components/navigation/NavSection";
 import { menu } from "@/components/navigation/menu-config";
 import { ThemeToggle } from "@/components/navigation/ThemeToggle";
-import Link from "next/link";
-import { Button } from "../ui/button";
 
 export function AppSidebar() {
-    const DEBUG_ENABLED =
-        process.env.NODE_ENV !== "production" ||
-        process.env.NEXT_PUBLIC_DEBUG_AUTH === "true";
     return (
         <Sidebar>
             <SidebarHeader />
@@ -35,23 +30,14 @@ export function AppSidebar() {
 
                 <SidebarSeparator />
 
-                <NavSection label="Admin Tools" items={menu.adminTools} />
+                <NavSection
+                    label="Admin Control Panel"
+                    items={menu.adminControlPanel}
+                />
             </SidebarContent>
             <SidebarFooter>
                 <NavSection label="Account" items={menu.account} />
                 <ThemeToggle />
-                {DEBUG_ENABLED && (
-                    <div className="mt-2 mx-auto text-xs">
-                        <Button asChild>
-                            <Link
-                                href="/debug"
-                                className="text-blue-600 hover:underline"
-                            >
-                                Debug
-                            </Link>
-                        </Button>
-                    </div>
-                )}
             </SidebarFooter>
         </Sidebar>
     );
