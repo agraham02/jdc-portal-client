@@ -52,15 +52,15 @@ interface UseErrorStateReturn {
 
 /**
  * Standard error state hook for consistent error handling
- * 
+ *
  * @param options - Configuration options
  * @returns Error state and helpers
- * 
+ *
  * @example
  * ```typescript
  * function MyComponent() {
  *   const { error, setError, clearError, hasError } = useErrorState();
- *   
+ *
  *   async function loadData() {
  *     try {
  *       const data = await fetchData();
@@ -69,22 +69,27 @@ interface UseErrorStateReturn {
  *       setError(err);
  *     }
  *   }
- *   
+ *
  *   if (hasError) {
  *     return <ErrorState error={error} onRetry={() => {
  *       clearError();
  *       loadData();
  *     }} />;
  *   }
- *   
+ *
  *   return <div>{data}</div>;
  * }
  * ```
  */
 export function useErrorState(
-    options: UseErrorStateOptions = {}
+    options?: UseErrorStateOptions
 ): UseErrorStateReturn {
     const [error, setErrorState] = useState<StandardError | null>(null);
+
+    // Destructure once to avoid changing object identity each render
+    const onError = options?.onError;
+    const onClear = options?.onClear;
+    const autoClearMs = options?.autoClearMs;
 
     const setError = useCallback(
         (err: unknown) => {
@@ -115,23 +120,23 @@ export function useErrorState(
             }
 
             setErrorState(standardError);
-            options.onError?.(standardError);
+            onError?.(standardError);
 
             // Auto-clear if specified
-            if (options.autoClearMs) {
+            if (autoClearMs) {
                 setTimeout(() => {
                     setErrorState(null);
-                    options.onClear?.();
-                }, options.autoClearMs);
+                    onClear?.();
+                }, autoClearMs);
             }
         },
-        [options]
+        [onError, onClear, autoClearMs]
     );
 
     const clearError = useCallback(() => {
         setErrorState(null);
-        options.onClear?.();
-    }, [options]);
+        onClear?.();
+    }, [onClear]);
 
     const hasError = error !== null;
 

@@ -72,6 +72,15 @@ export const menu = {
         },
     ] satisfies MenuItem[],
 
+    adminTools: [
+        {
+            title: "Mail Test",
+            url: "/admin/tools/mail-test",
+            icon: Shield,
+            anyOf: [P.RBAC_ROLE_MANAGE, P.RBAC_USER_ASSIGN_ROLES],
+        },
+    ] satisfies MenuItem[],
+
     account: [
         { title: "Profile", url: "/profile", icon: User },
         { title: "Settings", url: "/settings", icon: Settings },

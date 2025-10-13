@@ -35,6 +35,7 @@ export function AppSidebar() {
 
                 <SidebarSeparator />
 
+                <NavSection label="Admin Tools" items={menu.adminTools} />
             </SidebarContent>
             <SidebarFooter>
                 <NavSection label="Account" items={menu.account} />
