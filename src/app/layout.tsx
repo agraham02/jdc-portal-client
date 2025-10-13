@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/sonner";
 import ApiErrorListener from "@/components/ApiErrorListener";
 import { ThemeScript } from "@/components/navigation/ThemeScript";
 import { NotificationsProvider } from "@/lib/contexts/notifications-context";
+import { SWRProvider } from "@/lib/contexts/swr-config";
 
 const geistSans = Geist({
     variable: "--font-geist-sans",
@@ -37,15 +38,17 @@ export default function RootLayout({
             <body
                 className={`${geistSans.variable} ${geistMono.variable} antialiased`}
             >
-                <AuthorizationProvider>
-                    <AuthProvider>
-                        <NotificationsProvider>
-                            <ApiErrorListener />
-                            {children}
-                        </NotificationsProvider>
-                    </AuthProvider>
-                </AuthorizationProvider>
-                <Toaster />
+                <SWRProvider>
+                    <AuthorizationProvider>
+                        <AuthProvider>
+                            <NotificationsProvider>
+                                <ApiErrorListener />
+                                {children}
+                            </NotificationsProvider>
+                        </AuthProvider>
+                    </AuthorizationProvider>
+                </SWRProvider>
+                <Toaster richColors />
             </body>
         </html>
     );

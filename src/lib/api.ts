@@ -3,6 +3,7 @@ import { session } from "./session";
 import { AuthService } from "./services/auth";
 import { emitApiError } from "./api-events";
 import type { StandardError } from "./types/errors";
+import { isBackendError } from "./types/errors";
 
 type HttpMethod = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
 
@@ -12,16 +13,34 @@ type RequestOptions = {
     skipAuthRetry?: boolean;
     // Optional controller to cancel requests
     signal?: AbortSignal;
+    // Optional timeout override (ms) for this request
+    timeoutMs?: number;
 };
 
 class ApiClient {
     private baseUrl: string;
     private deviceFingerprint: string;
+    private readonly defaultTimeoutMs: number;
+    // Paths where 401 errors are expected and should not be logged
+    private readonly quietAuthPaths = ["/auth/me", "/users/permissions"];
 
     constructor() {
-        this.baseUrl =
-            process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+        // Trust the .env file to provide the correct API URL
+        // If it's incorrect, the user must update their .env file
+        const rawBase =
+            process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+        // Remove trailing slashes for consistency
+        this.baseUrl = rawBase.replace(/\/+$/, "");
+
+        // Log the base URL in development for debugging
+        if (process.env.NODE_ENV === "development") {
+            console.log("[ApiClient] Base URL:", this.baseUrl);
+        }
+
         this.deviceFingerprint = this.ensureFingerprint();
+        this.defaultTimeoutMs = Number(
+            process.env.NEXT_PUBLIC_API_TIMEOUT_MS || 20000
+        );
     }
 
     private ensureFingerprint(): string {
@@ -55,6 +74,17 @@ class ApiClient {
         return headers;
     }
 
+    /**
+     * Check if an error is expected and should not be logged
+     */
+    private isExpectedError(error: StandardError, path: string): boolean {
+        // Don't log 401s for auth-checking endpoints
+        if (error.status === 401) {
+            return this.quietAuthPaths.some((p) => path.includes(p));
+        }
+        return false;
+    }
+
     private parseStandardError = async (
         res: Response,
         fallbackPath: string,
@@ -64,13 +94,16 @@ class ApiClient {
         try {
             body = await res.clone().json();
         } catch {}
+
         const status = res.status;
-        const b =
-            body && typeof body === "object"
-                ? (body as Record<string, unknown>)
-                : undefined;
+
+        // Use type guard for safer error parsing
+        const backendError = isBackendError(body) ? body : undefined;
+
+        // Extract error code from backend or derive from HTTP status
         const code =
-            (b && typeof b["error"] === "string" && (b["error"] as string)) ||
+            backendError?.error ||
+            backendError?.code ||
             (status === 401
                 ? "Unauthorized"
                 : status === 403
@@ -84,21 +117,23 @@ class ApiClient {
                 : status >= 500
                 ? "ServerError"
                 : "HttpError");
+
+        // Extract message from backend response or use default
         const message =
-            (b &&
-                typeof b["message"] === "string" &&
-                (b["message"] as string)) ||
-            (b && Array.isArray(b["message"])
-                ? (b["message"] as unknown[]).join(", ")
+            backendError?.message ||
+            (backendError && Array.isArray(backendError.message)
+                ? (backendError.message as unknown[]).join(", ")
                 : undefined) ||
             `${code} (${status})`;
+
+        // Extract request ID from headers or response body
         const requestId =
-            (res.headers.get("x-request-id") ||
-                (b && (b["requestId"] as string))) ??
+            res.headers.get("x-request-id") ||
+            backendError?.requestId ||
             undefined;
-        // Merge server-provided details with selected response headers for better UX (e.g., 429 retry-after)
-        const serverDetails =
-            b && (b["details"] as Record<string, unknown> | undefined);
+
+        // Merge server-provided details with response headers (e.g., 429 retry-after)
+        const serverDetails = backendError?.details;
         const retryAfterHeader = res.headers.get("retry-after");
         const retryAfterSeconds = retryAfterHeader
             ? Number(retryAfterHeader)
@@ -109,16 +144,14 @@ class ApiClient {
                 ? { retryAfterSeconds }
                 : {}),
         };
-        const fieldErrorsRaw = b?.["fieldErrors"] as unknown;
-        const fieldErrors = Array.isArray(fieldErrorsRaw)
-            ? (fieldErrorsRaw as {
-                  field: string;
-                  message: string;
-                  code?: string;
-              }[])
-            : undefined;
-        const path = (b?.["path"] as string) || fallbackPath;
-        const methodFromBody = (b?.["method"] as string) || method;
+
+        // Extract field errors if present
+        const fieldErrors = backendError?.fieldErrors;
+
+        // Extract path and method from response or use fallbacks
+        const path = backendError?.path || fallbackPath;
+        const methodFromBody = backendError?.method || method;
+
         return {
             code,
             message,
@@ -147,30 +180,95 @@ class ApiClient {
             delete headers["Content-Type"];
         }
 
-        const res = await fetch(url, {
-            method,
-            headers,
-            credentials: "include",
-            body:
-                body instanceof FormData
-                    ? body
-                    : body != null
-                    ? JSON.stringify(body)
-                    : undefined,
-            signal: options?.signal,
-        });
+        // Provide a timeout via AbortController
+        const ac = new AbortController();
+        const timeoutMs = options?.timeoutMs ?? this.defaultTimeoutMs;
+        let timer: NodeJS.Timeout | null = setTimeout(
+            () => ac.abort(),
+            timeoutMs
+        );
+
+        let res: Response;
+        try {
+            res = await fetch(url, {
+                method,
+                headers,
+                credentials: "include",
+                body:
+                    body instanceof FormData
+                        ? body
+                        : body != null
+                        ? JSON.stringify(body)
+                        : undefined,
+                signal: options?.signal ?? ac.signal,
+            });
+        } catch (e) {
+            // On network error or abort, attempt a single retry for idempotent methods
+            if (method === "GET") {
+                try {
+                    res = await fetch(url, {
+                        method,
+                        headers,
+                        credentials: "include",
+                        signal: options?.signal ?? ac.signal,
+                    });
+                } catch (e2) {
+                    if (timer) clearTimeout(timer);
+                    timer = null;
+                    const stdErr: StandardError = {
+                        code: "NetworkError",
+                        message: (e2 as Error)?.message || "Network error",
+                        path,
+                        method,
+                    };
+                    emitApiError({ ...stdErr, status: 0 });
+                    const err = new Error(stdErr.message);
+                    throw Object.assign(err, stdErr);
+                }
+            } else {
+                if (timer) clearTimeout(timer);
+                timer = null;
+                const stdErr: StandardError = {
+                    code:
+                        (e as Error)?.name === "AbortError"
+                            ? "Timeout"
+                            : "NetworkError",
+                    message:
+                        (e as Error)?.message ||
+                        ((e as Error)?.name === "AbortError"
+                            ? "Request timed out"
+                            : "Network error"),
+                    path,
+                    method,
+                };
+                emitApiError({ ...stdErr, status: 0 });
+                const err = new Error(stdErr.message);
+                throw Object.assign(err, stdErr);
+            }
+        } finally {
+            if (timer) {
+                clearTimeout(timer);
+                timer = null;
+            }
+        }
 
         if (res.status === 401 && !options?.skipAuthRetry) {
             // Try one refresh then retry the original request
             try {
                 const { accessToken } = await AuthService.refreshToken();
                 session.setAccessToken(accessToken);
-            } catch {
+            } catch (refreshError) {
+                // Log the refresh error for debugging
+                console.error(
+                    "[ApiClient] Token refresh failed:",
+                    refreshError
+                );
+
                 // Ensure we clear session on hard 401
                 session.clear();
                 const stdErr: StandardError = {
                     code: "Unauthorized",
-                    message: "Unauthorized",
+                    message: "Session expired. Please log in again.",
                     status: 401,
                     path,
                 };
@@ -184,11 +282,31 @@ class ApiClient {
             });
         }
 
+        // Respect server rate-limit backoff once if provided
+        if (res.status === 429 && !options?.skipAuthRetry) {
+            const retryAfterHeader = res.headers.get("retry-after");
+            const waitMs = retryAfterHeader
+                ? Number(retryAfterHeader) * 1000
+                : 0;
+            if (waitMs > 0 && waitMs <= 10000) {
+                await new Promise((r) => setTimeout(r, waitMs));
+                return this.request<T>(method, path, body, {
+                    ...options,
+                    skipAuthRetry: true,
+                });
+            }
+        }
+
         if (!res.ok) {
             const std = await this.parseStandardError(res, path, method);
             const err = new Error(std.message);
             Object.assign(err as unknown as object, std);
-            emitApiError({ ...std, status: std.status ?? res.status });
+
+            // Only emit API error event if NOT an expected error
+            if (!this.isExpectedError(std, path)) {
+                emitApiError({ ...std, status: std.status ?? res.status });
+            }
+
             throw err;
         }
 
@@ -224,6 +342,90 @@ class ApiClient {
     }
     delete<T>(path: string, options?: RequestOptions) {
         return this.request<T>("DELETE", path, undefined, options);
+    }
+
+    // Binary download helper (Blob)
+    async getBlob(path: string, options?: RequestOptions): Promise<Blob> {
+        const url = `${this.baseUrl}${path}`;
+        const headers = this.buildHeaders({ ...(options?.headers || {}) });
+
+        const ac = new AbortController();
+        const timeoutMs = options?.timeoutMs ?? this.defaultTimeoutMs;
+        const timer = setTimeout(() => ac.abort(), timeoutMs);
+        let res: Response;
+        try {
+            res = await fetch(url, {
+                method: "GET",
+                headers,
+                credentials: "include",
+                signal: options?.signal ?? ac.signal,
+            });
+        } catch (e) {
+            clearTimeout(timer);
+            const stdErr: StandardError = {
+                code:
+                    (e as Error)?.name === "AbortError"
+                        ? "Timeout"
+                        : "NetworkError",
+                message:
+                    (e as Error)?.message ||
+                    ((e as Error)?.name === "AbortError"
+                        ? "Request timed out"
+                        : "Network error"),
+                path,
+                method: "GET",
+            };
+            emitApiError({ ...stdErr, status: 0 });
+            const err = new Error(stdErr.message);
+            throw Object.assign(err, stdErr);
+        } finally {
+            clearTimeout(timer);
+        }
+
+        if (res.status === 401 && !options?.skipAuthRetry) {
+            try {
+                const { accessToken } = await AuthService.refreshToken();
+                session.setAccessToken(accessToken);
+            } catch {
+                session.clear();
+                const stdErr: StandardError = {
+                    code: "Unauthorized",
+                    message: "Unauthorized",
+                    status: 401,
+                    path,
+                    method: "GET",
+                };
+                emitApiError({ ...stdErr, status: 401 });
+                const error = new Error(stdErr.message);
+                throw Object.assign(error, stdErr);
+            }
+            return this.getBlob(path, { ...options, skipAuthRetry: true });
+        }
+
+        if (res.status === 429 && !options?.skipAuthRetry) {
+            const retryAfterHeader = res.headers.get("retry-after");
+            const waitMs = retryAfterHeader
+                ? Number(retryAfterHeader) * 1000
+                : 0;
+            if (waitMs > 0 && waitMs <= 10000) {
+                await new Promise((r) => setTimeout(r, waitMs));
+                return this.getBlob(path, { ...options, skipAuthRetry: true });
+            }
+        }
+
+        if (!res.ok) {
+            const std = await this.parseStandardError(res, path, "GET");
+            const err = new Error(std.message);
+            Object.assign(err as unknown as object, std);
+
+            // Only emit API error event if NOT an expected error
+            if (!this.isExpectedError(std, path)) {
+                emitApiError({ ...std, status: std.status ?? res.status });
+            }
+
+            throw err;
+        }
+        return res.blob();
     }
 }
 

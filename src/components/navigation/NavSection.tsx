@@ -11,7 +11,7 @@ import {
     SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import type { MenuItem } from "./types";
-import { Can } from "@/components/authz/Can";
+import { Can } from "@/components/auth/Can";
 
 function isActive(pathname: string, url: string) {
     if (url === "/") return pathname === "/";

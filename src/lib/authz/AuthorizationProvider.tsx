@@ -40,15 +40,22 @@ export function AuthorizationProvider({
                 "/auth/me/permissions"
             );
             setPermissions(new Set(resp.permissions || []));
-        } catch {
+        } catch (error) {
+            console.warn("Failed to fetch user permissions:", error);
             // Fallback: some backends might embed effectivePermissions in /auth/me
             try {
                 const me = await apiClient.get<{
                     effectivePermissions?: string[];
                 }>("/auth/me");
                 setPermissions(new Set(me.effectivePermissions || []));
-            } catch {
+            } catch (fallbackError) {
+                // If both endpoints fail, clear permissions
+                // This could happen if user is not authenticated or has network issues
                 setPermissions(new Set());
+                console.warn(
+                    "Failed to fetch user permissions:",
+                    fallbackError
+                );
             }
         }
     }, []);

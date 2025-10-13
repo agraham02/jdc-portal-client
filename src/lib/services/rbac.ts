@@ -5,12 +5,15 @@ import {
     UserRolesResponse,
     UserPermissionsResponse,
     RoleUsersResponse,
-    CreateRoleRequest,
-    UpdateRoleRequest,
-    AssignRoleRequest,
-    BulkUpdateUserRolesRequest,
+    CreateRoleDto,
+    UpdateRoleDto,
+    AssignRoleDto,
+    BulkAssignRolesDto,
     RBACUser,
+    RoleListResponse,
 } from "@/lib/types/rbac";
+import { PaginatedResponse } from "@/lib/types/api";
+import { buildApiPath } from "@/lib/utils/queryParams";
 
 export class RBACService {
     // Permission Management
@@ -19,21 +22,26 @@ export class RBACService {
     }
 
     // Role Management
-    static async getAllRoles(): Promise<RBACRole[]> {
-        return api.get<RBACRole[]>("/admin/roles");
+    static async getAllRoles(params?: {
+        page?: number;
+        limit?: number;
+        search?: string;
+    }): Promise<RoleListResponse> {
+        const path = buildApiPath("/admin/roles", params);
+        return api.get<RoleListResponse>(path);
     }
 
     static async getRoleById(roleId: string): Promise<RBACRole> {
         return api.get<RBACRole>(`/admin/roles/${roleId}`);
     }
 
-    static async createRole(roleData: CreateRoleRequest): Promise<RBACRole> {
+    static async createRole(roleData: CreateRoleDto): Promise<RBACRole> {
         return api.post<RBACRole>("/admin/roles", roleData);
     }
 
     static async updateRole(
         roleId: string,
-        roleData: UpdateRoleRequest
+        roleData: UpdateRoleDto
     ): Promise<RBACRole> {
         return api.patch<RBACRole>(`/admin/roles/${roleId}`, roleData);
     }
@@ -42,8 +50,24 @@ export class RBACService {
         return api.delete<{ message: string }>(`/admin/roles/${roleId}`);
     }
 
-    static async getRoleUsers(roleId: string): Promise<RoleUsersResponse> {
-        return api.get<RoleUsersResponse>(`/admin/roles/${roleId}/users`);
+    static async getRoleUsers(
+        roleId: string,
+        params?: { page?: number; limit?: number }
+    ): Promise<RoleUsersResponse> {
+        const path = buildApiPath(`/admin/roles/${roleId}/users`, params);
+        return api.get<RoleUsersResponse>(path);
+    }
+
+    // User Management - Updated to match new API structure
+    static async getUsers(params?: {
+        page?: number;
+        limit?: number;
+        search?: string;
+        status?: string;
+        accountType?: string;
+    }): Promise<PaginatedResponse<RBACUser>> {
+        const path = buildApiPath("/admin/users", params);
+        return api.get<PaginatedResponse<RBACUser>>(path);
     }
 
     // User Role Assignment
@@ -53,7 +77,7 @@ export class RBACService {
 
     static async assignRoleToUser(
         userId: string,
-        roleData: AssignRoleRequest
+        roleData: AssignRoleDto
     ): Promise<UserRolesResponse> {
         return api.post<UserRolesResponse>(
             `/admin/users/${userId}/roles`,
@@ -72,7 +96,7 @@ export class RBACService {
 
     static async bulkUpdateUserRoles(
         userId: string,
-        roleData: BulkUpdateUserRolesRequest
+        roleData: BulkAssignRolesDto
     ): Promise<UserRolesResponse> {
         return api.patch<UserRolesResponse>(
             `/admin/users/${userId}/roles`,
@@ -86,65 +110,6 @@ export class RBACService {
         return api.get<UserPermissionsResponse>(
             `/admin/users/${userId}/permissions`
         );
-    }
-
-    // Helper methods for frontend convenience
-    static async getUsersWithRoles(): Promise<RBACUser[]> {
-        // Discover users through role assignments - more realistic than a general user endpoint
-        // This method aggregates users from all roles to build a comprehensive list
-        try {
-            const roles = await this.getAllRoles();
-            const userMap = new Map<string, RBACUser>();
-
-            // Collect users from each role
-            await Promise.all(
-                roles.map(async (role) => {
-                    try {
-                        const roleUsersResponse = await this.getRoleUsers(
-                            role._id
-                        );
-                        roleUsersResponse.users.forEach((user) => {
-                            if (!userMap.has(user._id)) {
-                                // Add role count information for RBAC context
-                                userMap.set(user._id, {
-                                    ...user,
-                                    totalRoles: 1,
-                                });
-                            } else {
-                                // Increment role count for users with multiple roles
-                                const existingUser = userMap.get(user._id)!;
-                                userMap.set(user._id, {
-                                    ...existingUser,
-                                    totalRoles:
-                                        (existingUser.totalRoles || 0) + 1,
-                                });
-                            }
-                        });
-                    } catch (error) {
-                        // Collect error details for reporting
-                        const errors = [];
-                        errors.push({
-                            roleName: role.name,
-                            error:
-                                error instanceof Error
-                                    ? error.message
-                                    : "Unknown error",
-                        });
-                        console.warn(
-                            `Failed to fetch users for role ${role.name}:`,
-                            error
-                        );
-                    }
-                })
-            );
-
-            return Array.from(userMap.values()).sort((a, b) =>
-                (a.fullName || a.email).localeCompare(b.fullName || b.email)
-            );
-        } catch (error) {
-            console.error("Failed to fetch users with roles:", error);
-            throw new Error("Failed to load users. Please try again.");
-        }
     }
 
     // Validation helpers

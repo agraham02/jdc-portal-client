@@ -1,6 +1,6 @@
 "use client";
 
-import { ProtectedRoute } from "@/components/routing/ProtectedRoute";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -39,7 +39,12 @@ export default function NotificationsBroadcastsPage() {
                     ...filters,
                     type: undefined,
                 });
-                setHistory(res.data);
+                // Transform NotificationResponseDto[] to Notification[]
+                const notifications = res.data.map((dto) => ({
+                    ...dto,
+                    id: dto._id,
+                }));
+                setHistory(notifications);
             } catch {
                 toast.error("Failed to load broadcast history");
             } finally {
@@ -70,7 +75,12 @@ export default function NotificationsBroadcastsPage() {
                 page: 1,
                 limit: 25,
             });
-            setHistory(list.data);
+            // Transform NotificationResponseDto[] to Notification[]
+            const notifications = list.data.map((dto) => ({
+                ...dto,
+                id: dto._id,
+            }));
+            setHistory(notifications);
         } catch {
             toast.error("Broadcast failed");
         } finally {

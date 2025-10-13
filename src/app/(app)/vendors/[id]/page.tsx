@@ -1,16 +1,18 @@
-import { ProtectedRoute } from "@/components/routing/ProtectedRoute";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { VendorErrorBoundary } from "@/components/common/RouteErrorBoundary";
 import { PermissionName as P } from "@/lib/constants/permission-names";
+import { VendorDetailsWithApproval } from "@/components/vendors/VendorDetailsWithApproval";
 
 interface Params {
     id: string;
 }
+
 export default function Page({ params }: { params: Params }) {
     return (
         <ProtectedRoute anyOf={[P.VENDOR_READ, P.VENDOR_READ_ALL]}>
-            <main>
-                <h1>Vendor Details</h1>
-                <p>ID: {params.id}</p>
-            </main>
+            <VendorErrorBoundary>
+                <VendorDetailsWithApproval vendorId={params.id} />
+            </VendorErrorBoundary>
         </ProtectedRoute>
     );
 }
