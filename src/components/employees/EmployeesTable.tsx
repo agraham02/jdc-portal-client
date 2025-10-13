@@ -12,6 +12,12 @@ import {
 } from "@/lib/services/employee";
 import { useAuthz } from "@/lib/authz/useAuthz";
 import { PermissionName as P } from "@/lib/constants/permission-names";
+import { useErrorState } from "@/lib/hooks/useErrorState";
+import { apiToast } from "@/lib/utils/toast-helpers";
+import {
+    errorMessages,
+    successMessages,
+} from "@/lib/utils/error-messages";
 import { UserStatus } from "@/lib/types/auth";
 import { useRouter } from "next/navigation";
 import { StatusBadge } from "../common";
@@ -26,7 +32,7 @@ export function EmployeesTable() {
     const [loading, setLoading] = useState(true);
     const [employees, setEmployees] = useState<EmployeeWithUser[]>([]);
     const [totalEmployees, setTotalEmployees] = useState(0);
-    const [error, setError] = useState<string | null>(null);
+    const { error, setError, clearError } = useErrorState();
 
     const filterDefinitions = useMemo<
         GenericTableConfig<EmployeeWithUser>["filters"]
@@ -95,11 +101,11 @@ export function EmployeesTable() {
         if (!canRead) return;
 
         setLoading(true);
-        setError(null);
+        clearError();
         try {
             const response = await EmployeeService.getEmployees({
                 page,
-                pageSize,
+                limit: pageSize,
                 search: searchFilter || undefined,
                 status: statusFilter,
                 department: departmentFilter,
@@ -109,13 +115,11 @@ export function EmployeesTable() {
             if (response.page && response.page !== page) {
                 setPage(response.page);
             }
-            if (response.pageSize && response.pageSize !== pageSize) {
-                setPageSize(response.pageSize);
+            if (response.limit && response.limit !== pageSize) {
+                setPageSize(response.limit);
             }
-        } catch (e) {
-            setError(
-                e instanceof Error ? e.message : "Failed to load employees"
-            );
+        } catch (err) {
+            setError(err);
         } finally {
             setLoading(false);
         }
@@ -128,6 +132,8 @@ export function EmployeesTable() {
         departmentFilter,
         setPage,
         setPageSize,
+        clearError,
+        setError,
     ]);
 
     useEffect(() => {
@@ -141,8 +147,13 @@ export function EmployeesTable() {
 
     const tableConfig: GenericTableConfig<EmployeeWithUser> = useMemo(() => {
         const handleDeactivate = async (employee: EmployeeWithUser) => {
-            await EmployeeService.deleteEmployee(employee.userId._id);
-            await loadEmployees(); // Refresh the list
+            try {
+                await EmployeeService.deleteEmployee(employee.userId._id);
+                apiToast.success(successMessages.employees.deleted);
+                await loadEmployees(); // Refresh the list
+            } catch (error) {
+                apiToast.error(errorMessages.employees.delete, error);
+            }
         };
 
         return {

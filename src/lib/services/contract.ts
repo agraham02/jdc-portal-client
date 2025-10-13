@@ -25,8 +25,8 @@ export const contractService = {
     ): Promise<ContractListResponse> {
         const queryParams = new URLSearchParams();
         if (params?.page) queryParams.append("page", params.page.toString());
-        if (params?.pageSize)
-            queryParams.append("pageSize", params.pageSize.toString());
+        if (params?.limit)
+            queryParams.append("limit", params.limit.toString());
         if (params?.status) queryParams.append("status", params.status);
         if (params?.search) queryParams.append("search", params.search);
         if (params?.sortBy) queryParams.append("sortBy", params.sortBy);
@@ -45,8 +45,8 @@ export const contractService = {
     ): Promise<ContractListResponse> {
         const queryParams = new URLSearchParams();
         if (params?.page) queryParams.append("page", params.page.toString());
-        if (params?.pageSize)
-            queryParams.append("pageSize", params.pageSize.toString());
+        if (params?.limit)
+            queryParams.append("limit", params.limit.toString());
         if (params?.search) queryParams.append("search", params.search);
 
         const query = queryParams.toString();
@@ -61,8 +61,8 @@ export const contractService = {
     ): Promise<ContractListResponse> {
         const queryParams = new URLSearchParams();
         if (params?.page) queryParams.append("page", params.page.toString());
-        if (params?.pageSize)
-            queryParams.append("pageSize", params.pageSize.toString());
+        if (params?.limit)
+            queryParams.append("limit", params.limit.toString());
         if (params?.search) queryParams.append("search", params.search);
 
         const query = queryParams.toString();
@@ -77,8 +77,8 @@ export const contractService = {
     ): Promise<ContractApplicationsResponse> {
         const queryParams = new URLSearchParams();
         if (params?.page) queryParams.append("page", params.page.toString());
-        if (params?.pageSize)
-            queryParams.append("pageSize", params.pageSize.toString());
+        if (params?.limit)
+            queryParams.append("limit", params.limit.toString());
         if (params?.search) queryParams.append("search", params.search);
 
         const query = queryParams.toString();
@@ -157,8 +157,8 @@ export const contractService = {
     ): Promise<ContractApplicationsResponse> {
         const queryParams = new URLSearchParams();
         if (params?.page) queryParams.append("page", params.page.toString());
-        if (params?.pageSize)
-            queryParams.append("pageSize", params.pageSize.toString());
+        if (params?.limit)
+            queryParams.append("limit", params.limit.toString());
 
         const query = queryParams.toString();
         return await apiClient.get<ContractApplicationsResponse>(

@@ -20,14 +20,14 @@ import { NotificationType } from "@/lib/types/notifications";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { ContractListSkeleton } from "@/components/common/LoadingSkeletons";
 import { NoContractsFound, ErrorState } from "@/components/common/EmptyStates";
-import { handleNetworkError } from "@/lib/utils/network-error-handler";
+import { useErrorState } from "@/lib/hooks/useErrorState";
 
 export default function ContractsPage() {
     const router = useRouter();
     const { notifications } = useNotificationsCtx();
+    const { error, setError, clearError } = useErrorState();
     const [contracts, setContracts] = useState<Contract[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string>();
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
     const [searchQuery, setSearchQuery] = useState("");
@@ -38,7 +38,7 @@ export default function ContractsPage() {
     const loadContracts = useCallback(async () => {
         try {
             setIsLoading(true);
-            setError(undefined);
+            clearError();
             const response = await ContractsService.listContracts({
                 page,
                 limit: pageSize,
@@ -47,12 +47,11 @@ export default function ContractsPage() {
             });
             setContracts(response.data);
         } catch (err) {
-            const errorMessage = handleNetworkError(err, "load contracts");
-            setError(errorMessage);
+            setError(err);
         } finally {
             setIsLoading(false);
         }
-    }, [page, pageSize, searchQuery, statusFilter]);
+    }, [page, pageSize, searchQuery, statusFilter, clearError, setError]);
 
     useEffect(() => {
         loadContracts();
@@ -124,7 +123,7 @@ export default function ContractsPage() {
 
                     {error ? (
                         <ErrorState
-                            description={error}
+                            error={error}
                             onRetry={loadContracts}
                         />
                     ) : isLoading ? (

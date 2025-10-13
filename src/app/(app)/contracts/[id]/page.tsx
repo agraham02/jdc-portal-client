@@ -28,10 +28,14 @@ import { useAuthz } from "@/lib/authz/useAuthz";
 import {
     handleContractNotification,
     isContractNotification,
-    showContractActionSuccess,
-    showContractActionError,
 } from "@/lib/utils/contract-notifications";
 import { useApi, useConditionalApi } from "@/lib/hooks/useApi";
+import { useErrorState } from "@/lib/hooks/useErrorState";
+import { apiToast } from "@/lib/utils/toast-helpers";
+import {
+    errorMessages,
+    successMessages,
+} from "@/lib/utils/error-messages";
 
 export default function ContractDetailsPage() {
     const params = useParams<{ id: string }>();
@@ -69,6 +73,9 @@ export default function ContractDetailsPage() {
     const notes = notesResponse?.data || [];
     const isLoading = loadingContract || loadingApplications || loadingNotes;
 
+    // Use new error handling for action errors
+    const { error: actionError, setError: setActionError } = useErrorState();
+
     // Helper to revalidate all data
     const loadContractData = useCallback(async () => {
         await Promise.all([
@@ -77,34 +84,6 @@ export default function ContractDetailsPage() {
             revalidateNotes(),
         ]);
     }, [revalidateContract, revalidateApplications, revalidateNotes]);
-
-    // Determine error message with user-friendly descriptions
-    const error = contractError
-        ? (() => {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const errorObj = contractError as any;
-              const status = errorObj?.status;
-              const message =
-                  errorObj?.message ||
-                  (contractError instanceof Error
-                      ? contractError.message
-                      : String(contractError));
-
-              if (status === 404) {
-                  return "Contract not found. It may have been deleted.";
-              } else if (status === 403) {
-                  return "You don't have permission to view this contract.";
-              } else if (status === 500 || (status >= 500 && status < 600)) {
-                  return "Server error while loading contract. The backend may be having issues. Please try again later or contact support.";
-              } else if (status === 401) {
-                  return "Authentication required. Please log in again.";
-              } else if (message && typeof message === "string") {
-                  return message;
-              } else {
-                  return "Failed to load contract. Please try again.";
-              }
-          })()
-        : undefined;
 
     useEffect(() => {
         loadContractData();
@@ -140,17 +119,11 @@ export default function ContractDetailsPage() {
         if (!contract) return;
         try {
             await ContractsService.openContract(contract._id);
-            showContractActionSuccess(
-                "Contract Published",
-                "Contract is now open for applications"
-            );
+            apiToast.success(successMessages.contracts.published);
             await loadContractData();
-        } catch (err) {
-            const message =
-                err instanceof Error
-                    ? err.message
-                    : "Failed to publish contract";
-            showContractActionError("Publish Contract", message);
+        } catch (error) {
+            apiToast.error(errorMessages.contracts.publish, error);
+            setActionError(error);
         }
     }
 
@@ -158,15 +131,11 @@ export default function ContractDetailsPage() {
         if (!contract) return;
         try {
             await ContractsService.closeContract(contract._id);
-            showContractActionSuccess(
-                "Contract Closed",
-                "Contract is no longer accepting applications"
-            );
+            apiToast.success(successMessages.contracts.closed);
             await loadContractData();
-        } catch (err) {
-            const message =
-                err instanceof Error ? err.message : "Failed to close contract";
-            showContractActionError("Close Contract", message);
+        } catch (error) {
+            apiToast.error(errorMessages.contracts.close, error);
+            setActionError(error);
         }
     }
 
@@ -176,15 +145,11 @@ export default function ContractDetailsPage() {
             await ContractsService.awardContract(contract._id, {
                 applicationId,
             });
-            showContractActionSuccess(
-                "Contract Awarded",
-                "The contract has been awarded successfully"
-            );
+            apiToast.success(successMessages.contracts.awarded);
             await loadContractData();
-        } catch (err) {
-            const message =
-                err instanceof Error ? err.message : "Failed to award contract";
-            showContractActionError("Award Contract", message);
+        } catch (error) {
+            apiToast.error(errorMessages.contracts.award, error);
+            setActionError(error);
         }
     }
 
@@ -192,17 +157,11 @@ export default function ContractDetailsPage() {
         if (!contract) return;
         try {
             await ContractsService.deleteContract(contract._id);
-            showContractActionSuccess(
-                "Contract Deleted",
-                "The contract has been deleted"
-            );
+            apiToast.success(successMessages.contracts.deleted);
             router.push("/contracts");
-        } catch (err) {
-            const message =
-                err instanceof Error
-                    ? err.message
-                    : "Failed to delete contract";
-            showContractActionError("Delete Contract", message);
+        } catch (error) {
+            apiToast.error(errorMessages.contracts.delete, error);
+            setActionError(error);
         }
     }
 
@@ -218,18 +177,12 @@ export default function ContractDetailsPage() {
                 { proposalDetails, bidValue },
                 documents
             );
-            showContractActionSuccess(
-                "Application Submitted",
-                "Your application has been submitted successfully"
-            );
+            apiToast.success(successMessages.applications.submitted);
             await loadContractData();
-        } catch (err) {
-            const message =
-                err instanceof Error
-                    ? err.message
-                    : "Failed to submit application";
-            showContractActionError("Submit Application", message);
-            throw err; // Re-throw so dialog can handle it
+        } catch (error) {
+            apiToast.error(errorMessages.applications.submit, error);
+            setActionError(error);
+            throw error; // Re-throw so dialog can handle it
         }
     }
 
@@ -240,17 +193,11 @@ export default function ContractDetailsPage() {
                 applicationId,
                 { status: ApplicationStatus.ACCEPTED }
             );
-            showContractActionSuccess(
-                "Application Accepted",
-                "The application has been accepted"
-            );
+            apiToast.success(successMessages.applications.statusUpdated);
             await loadContractData();
-        } catch (err) {
-            const message =
-                err instanceof Error
-                    ? err.message
-                    : "Failed to accept application";
-            showContractActionError("Accept Application", message);
+        } catch (error) {
+            apiToast.error(errorMessages.applications.updateStatus, error);
+            setActionError(error);
         }
     }
 
@@ -261,17 +208,11 @@ export default function ContractDetailsPage() {
                 applicationId,
                 { status: ApplicationStatus.REJECTED }
             );
-            showContractActionSuccess(
-                "Application Rejected",
-                "The application has been rejected"
-            );
+            apiToast.success(successMessages.applications.statusUpdated);
             await loadContractData();
-        } catch (err) {
-            const message =
-                err instanceof Error
-                    ? err.message
-                    : "Failed to reject application";
-            showContractActionError("Reject Application", message);
+        } catch (error) {
+            apiToast.error(errorMessages.applications.updateStatus, error);
+            setActionError(error);
         }
     }
 
@@ -281,47 +222,22 @@ export default function ContractDetailsPage() {
                 content,
                 applicationId,
             });
-            showContractActionSuccess(
-                "Note Created",
-                "Internal note has been added"
-            );
+            apiToast.success("Note created successfully");
             await loadContractData();
-        } catch (err) {
-            const message =
-                err instanceof Error ? err.message : "Failed to create note";
-            showContractActionError("Create Note", message);
-        }
-    }
-
-    async function handleUpdateNote(noteId: string, content: string) {
-        try {
-            await InternalNotesService.updateNote(params.id, noteId, {
-                content,
-            });
-            showContractActionSuccess(
-                "Note Updated",
-                "Internal note has been updated"
-            );
-            await loadContractData();
-        } catch (err) {
-            const message =
-                err instanceof Error ? err.message : "Failed to update note";
-            showContractActionError("Update Note", message);
+        } catch (error) {
+            apiToast.error("Failed to create note", error);
+            setActionError(error);
         }
     }
 
     async function handleDeleteNote(noteId: string) {
         try {
             await InternalNotesService.deleteNote(params.id, noteId);
-            showContractActionSuccess(
-                "Note Deleted",
-                "Internal note has been removed"
-            );
+            apiToast.success("Note deleted successfully");
             await loadContractData();
-        } catch (err) {
-            const message =
-                err instanceof Error ? err.message : "Failed to delete note";
-            showContractActionError("Delete Note", message);
+        } catch (error) {
+            apiToast.error("Failed to delete note", error);
+            setActionError(error);
         }
     }
 
@@ -338,7 +254,7 @@ export default function ContractDetailsPage() {
         );
     }
 
-    if (error || !contract) {
+    if (contractError || !contract) {
         return (
             <ProtectedRoute anyOf={[P.CONTRACT_READ, P.CONTRACT_READ_ALL]}>
                 <main className="container mx-auto space-y-6 py-6">
@@ -356,7 +272,9 @@ export default function ContractDetailsPage() {
                                     Unable to Load Contract
                                 </h3>
                                 <p className="text-sm text-destructive/90">
-                                    {error || "Contract not found"}
+                                    {contractError instanceof Error
+                                        ? contractError.message
+                                        : "Contract not found"}
                                 </p>
                                 {params.id && (
                                     <p className="mt-2 text-xs text-muted-foreground">
@@ -394,9 +312,9 @@ export default function ContractDetailsPage() {
                         Back to Contracts
                     </Button>
 
-                    {error && (
+                    {actionError && (
                         <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-destructive">
-                            {error}
+                            {actionError.message}
                         </div>
                     )}
 
@@ -425,7 +343,6 @@ export default function ContractDetailsPage() {
                             contractId={params.id}
                             notes={notes}
                             onCreate={handleCreateNote}
-                            onUpdate={handleUpdateNote}
                             onDelete={handleDeleteNote}
                         />
                     )}

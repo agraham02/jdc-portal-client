@@ -34,13 +34,13 @@ export class VendorService {
      */
     static async getVendors(params?: {
         page?: number;
-        pageSize?: number;
+        limit?: number;
         search?: string;
         status?: UserStatus;
     }): Promise<VendorListResponse> {
         const path = buildApiPath("/vendors", {
             page: params?.page,
-            pageSize: params?.pageSize,
+            limit: params?.limit,
             search: params?.search,
             status: params?.status,
         });
@@ -56,23 +56,26 @@ export class VendorService {
 
     /**
      * Approve vendor account
+     * Uses standardized /vendors/:id/approve endpoint
      */
     static async approveVendor(vendorId: string): Promise<void> {
-        return apiClient.patch(`/vendors/approve/${vendorId}`);
+        return apiClient.patch(`/vendors/${vendorId}/approve`);
     }
 
     /**
      * Reject vendor account
+     * Uses standardized /vendors/:id/reject endpoint
      */
     static async rejectVendor(vendorId: string, reason: string): Promise<void> {
-        return apiClient.patch(`/vendors/reject/${vendorId}`, { reason });
+        return apiClient.patch(`/vendors/${vendorId}/reject`, { reason });
     }
 
     /**
      * Deactivate vendor account
+     * Uses standardized /vendors/:id/deactivate endpoint
      */
     static async deactivateVendor(vendorId: string): Promise<void> {
-        return apiClient.patch(`/vendors/deactivate/${vendorId}`);
+        return apiClient.patch(`/vendors/${vendorId}/deactivate`);
     }
 
     // Backward compatibility aliases (deprecated)

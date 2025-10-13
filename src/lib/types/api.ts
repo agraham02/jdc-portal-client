@@ -4,7 +4,7 @@ export interface PaginatedResponse<T> {
     data: T[];
     total: number;
     page: number;
-    pageSize: number;
+    limit: number;
     totalPages: number;
 }
 
@@ -20,7 +20,7 @@ export interface SuccessResponse {
 // Query parameters for paginated endpoints
 export interface PaginationParams {
     page?: number;
-    pageSize?: number;
+    limit?: number;
 }
 
 // Common filtering parameters

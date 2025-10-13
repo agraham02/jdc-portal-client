@@ -15,6 +15,7 @@ import { formatCurrency } from "@/lib/utils/formatters";
 import { format } from "date-fns";
 import { apiToast } from "@/lib/utils/toast-helpers";
 import { sanitizeUserContent } from "@/lib/utils/sanitize";
+import { useErrorState } from "@/lib/hooks/useErrorState";
 import {
     CalendarIcon,
     DollarSignIcon,
@@ -71,6 +72,7 @@ export function ContractDetail({
     });
     const [isLoading, setIsLoading] = useState(false);
     const [showApplyDialog, setShowApplyDialog] = useState(false);
+    const { setError, clearError } = useErrorState();
 
     const isDraft = contract.status === ContractStatus.DRAFT;
     const isOpen = contract.status === ContractStatus.OPEN;
@@ -78,11 +80,13 @@ export function ContractDetail({
 
     async function handleAction(action: () => Promise<void>) {
         setIsLoading(true);
+        clearError();
         try {
             await action();
-        } catch (error) {
-            console.error("[ContractDetail] Action failed:", error);
-            apiToast.error("Failed to perform action", error);
+        } catch (err) {
+            console.error("[ContractDetail] Action failed:", err);
+            setError(err);
+            apiToast.error("Failed to perform action", err);
         } finally {
             setIsLoading(false);
         }
@@ -115,8 +119,14 @@ export function ContractDetail({
         bidValue?: number
     ) {
         if (onApply) {
-            await onApply(proposalDetails, documents, bidValue);
-            setShowApplyDialog(false);
+            try {
+                clearError();
+                await onApply(proposalDetails, documents, bidValue);
+                setShowApplyDialog(false);
+            } catch (err) {
+                setError(err);
+                throw err; // Re-throw for dialog to handle
+            }
         }
     }
 

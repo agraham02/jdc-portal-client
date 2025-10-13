@@ -24,7 +24,7 @@ export class RBACService {
     // Role Management
     static async getAllRoles(params?: {
         page?: number;
-        pageSize?: number;
+        limit?: number;
         search?: string;
     }): Promise<RoleListResponse> {
         const path = buildApiPath("/admin/roles", params);
@@ -52,7 +52,7 @@ export class RBACService {
 
     static async getRoleUsers(
         roleId: string,
-        params?: { page?: number; pageSize?: number }
+        params?: { page?: number; limit?: number }
     ): Promise<RoleUsersResponse> {
         const path = buildApiPath(`/admin/roles/${roleId}/users`, params);
         return api.get<RoleUsersResponse>(path);
@@ -61,7 +61,7 @@ export class RBACService {
     // User Management - Updated to match new API structure
     static async getUsers(params?: {
         page?: number;
-        pageSize?: number;
+        limit?: number;
         search?: string;
         status?: string;
         accountType?: string;

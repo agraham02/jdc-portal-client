@@ -30,7 +30,8 @@ import {
     AlertCircle,
     CheckCircle2,
 } from "lucide-react";
-import { toast } from "sonner";
+import { useErrorState } from "@/lib/hooks/useErrorState";
+import { apiToast } from "@/lib/utils/toast-helpers";
 
 interface ApplyDialogProps {
     open: boolean;
@@ -63,6 +64,7 @@ export function ApplyDialog({
         Map<string, UploadingFileMetadata[]>
     >(new Map());
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
+    const { setError, clearError } = useErrorState();
 
     const {
         register,
@@ -92,6 +94,7 @@ export function ApplyDialog({
         });
         // Clear validation errors when user starts uploading
         setValidationErrors([]);
+        clearError();
     }
 
     async function onSubmitForm(data: FormData) {
@@ -110,6 +113,7 @@ export function ApplyDialog({
             return;
         }
 
+        clearError();
         try {
             const bidValue = data.bidValue
                 ? parseFloat(data.bidValue)
@@ -128,11 +132,9 @@ export function ApplyDialog({
             reset();
             setDocumentUploads(new Map());
             setValidationErrors([]);
-        } catch (error) {
-            toast.error(
-                "Failed to submit application. Please try again." +
-                    (error instanceof Error ? `: ${error.message}` : "")
-            );
+        } catch (err) {
+            setError(err);
+            apiToast.error("Failed to submit application", err);
             // Error handled by parent
         }
     }
@@ -141,6 +143,7 @@ export function ApplyDialog({
         reset();
         setDocumentUploads(new Map());
         setValidationErrors([]);
+        clearError();
         onOpenChange(false);
     }
 

@@ -16,7 +16,6 @@ import type {
     UpdateApplicationStatusDto,
     AwardContractDto,
     CreateInternalNoteDto,
-    UpdateInternalNoteDto,
     ContractFilterParams,
     ApplicationFilterParams,
     InternalNoteFilterParams,
@@ -386,20 +385,6 @@ export class InternalNotesService {
     ): Promise<InternalNoteResponse> {
         return apiClient.post<InternalNoteResponse>(
             `/contracts/${contractId}/notes`,
-            data
-        );
-    }
-
-    /**
-     * Update an internal note (author only)
-     */
-    static async updateNote(
-        contractId: string,
-        noteId: string,
-        data: UpdateInternalNoteDto
-    ): Promise<InternalNoteResponse> {
-        return apiClient.patch<InternalNoteResponse>(
-            `/contracts/${contractId}/notes/${noteId}`,
             data
         );
     }

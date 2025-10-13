@@ -13,6 +13,9 @@ import { PermissionName as P } from "@/lib/constants/permission-names";
 import TextPreview from "@/components/common/TextPreview";
 import { useRouter } from "next/navigation";
 import { StatusBadge } from "../common";
+import { useErrorState } from "@/lib/hooks/useErrorState";
+import { apiToast } from "@/lib/utils/toast-helpers";
+import { errorMessages, successMessages } from "@/lib/utils/error-messages";
 
 function getPopulatedUser(vendor: Vendor): User | null {
     const user = vendor.userId;
@@ -34,10 +37,10 @@ export function VendorsTable() {
     const canUpdate = hasAny([P.VENDOR_UPDATE]);
     const canDelete = hasAny([P.VENDOR_DELETE]);
 
+    const { error, setError, clearError } = useErrorState();
     const [loading, setLoading] = useState(true);
     const [vendors, setVendors] = useState<Vendor[]>([]);
     const [totalVendors, setTotalVendors] = useState(0);
-    const [error, setError] = useState<string | null>(null);
 
     const filterDefinitions = useMemo<GenericTableConfig<Vendor>["filters"]>(
         () => [
@@ -86,11 +89,11 @@ export function VendorsTable() {
         if (!canRead) return;
 
         setLoading(true);
-        setError(null);
+        clearError();
         try {
             const response = await VendorService.getVendors({
                 page,
-                pageSize,
+                limit: pageSize,
                 search: searchFilter || undefined,
                 status: statusFilter,
             });
@@ -99,11 +102,11 @@ export function VendorsTable() {
             if (response.page && response.page !== page) {
                 setPage(response.page);
             }
-            if (response.pageSize && response.pageSize !== pageSize) {
-                setPageSize(response.pageSize);
+            if (response.limit && response.limit !== pageSize) {
+                setPageSize(response.limit);
             }
-        } catch (e) {
-            setError(e instanceof Error ? e.message : "Failed to load vendors");
+        } catch (err) {
+            setError(err);
         } finally {
             setLoading(false);
         }
@@ -115,6 +118,8 @@ export function VendorsTable() {
         statusFilter,
         setPage,
         setPageSize,
+        clearError,
+        setError,
     ]);
 
     useEffect(() => {
@@ -123,18 +128,36 @@ export function VendorsTable() {
 
     const tableConfig: GenericTableConfig<Vendor> = useMemo(() => {
         const handleApprove = async (vendor: Vendor) => {
-            await VendorService.approveVendor(vendor._id);
-            await loadVendors(); // Refresh the list
+            try {
+                await VendorService.approveVendor(vendor._id);
+                apiToast.success(successMessages.vendors.approved);
+                await loadVendors();
+            } catch (error) {
+                apiToast.error(errorMessages.vendors.approve, error);
+            }
         };
 
         const handleReject = async (vendor: Vendor) => {
-            await VendorService.rejectVendor(vendor._id, "Rejected by admin");
-            await loadVendors(); // Refresh the list
+            try {
+                await VendorService.rejectVendor(
+                    vendor._id,
+                    "Rejected by admin"
+                );
+                apiToast.success(successMessages.vendors.rejected);
+                await loadVendors();
+            } catch (error) {
+                apiToast.error(errorMessages.vendors.reject, error);
+            }
         };
 
         const handleDeactivate = async (vendor: Vendor) => {
-            await VendorService.deactivateVendor(vendor._id);
-            await loadVendors(); // Refresh the list
+            try {
+                await VendorService.deactivateVendor(vendor._id);
+                apiToast.success(successMessages.vendors.deactivated);
+                await loadVendors();
+            } catch (error) {
+                apiToast.error(errorMessages.vendors.deactivate, error);
+            }
         };
 
         return {

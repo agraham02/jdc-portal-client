@@ -9,6 +9,7 @@ import {
     SetStateAction,
 } from "react";
 import { Button } from "@/components/ui/button";
+import type { StandardError } from "@/lib/types/errors";
 import {
     DropdownMenu,
     DropdownMenuTrigger,
@@ -114,7 +115,7 @@ export interface GenericTableConfig<T extends BaseEntity> {
 export interface GenericTableProps<T extends BaseEntity> {
     data: T[];
     loading: boolean;
-    error: string | null;
+    error: StandardError | string | null;
     config: GenericTableConfig<T>;
     onRefresh?: () => void;
     className?: string;
@@ -408,7 +409,9 @@ export function GenericTable<T extends BaseEntity>({
                 <div
                     className={config.errorClassName || "text-sm text-red-600"}
                 >
-                    {error}
+                    {typeof error === "string"
+                        ? error
+                        : error.message || "An error occurred"}
                     {onRefresh && (
                         <Button
                             variant="ghost"

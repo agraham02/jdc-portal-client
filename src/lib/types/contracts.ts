@@ -62,6 +62,7 @@ export interface Application {
     vendorId: string;
     vendor?: Vendor;
     proposalDetails: string;
+    bidValue?: number;
     status: ApplicationStatus;
     documents: FileDocument[];
     applicationDate: string; // ISO date string - when application was submitted

@@ -32,14 +32,14 @@ export class EmployeeService {
      */
     static async getEmployees(params?: {
         page?: number;
-        pageSize?: number;
+        limit?: number;
         search?: string;
         department?: string;
         status?: UserStatus;
     }): Promise<EmployeeListResponse> {
         const path = buildApiPath("/employees", {
             page: params?.page,
-            pageSize: params?.pageSize,
+            limit: params?.limit,
             search: params?.search,
             department: params?.department,
             status: params?.status,
