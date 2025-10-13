@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { apiClient } from "@/lib/api";
-import { toast } from "sonner";
+import { apiToast } from "@/lib/utils/toast-helpers";
 
 export default function MailTestPage() {
     const [to, setTo] = useState("");
@@ -21,7 +21,7 @@ export default function MailTestPage() {
 
     async function onSend() {
         if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
-            toast.error("Please enter a valid email address");
+            apiToast.error("Please enter a valid email address");
             return;
         }
         setLoading(true);
@@ -29,10 +29,15 @@ export default function MailTestPage() {
             const res = await apiClient.get<{ message: string }>(
                 `/admin/mail/test?to=${encodeURIComponent(to)}`
             );
-            toast.success(res?.message || "Test email requested");
-        } catch (e: any) {
+            apiToast.success(res?.message || "Test email requested");
+        } catch (e: unknown) {
+            console.error("[MailTest] Error:", e);
+            if (!(e instanceof Error)) {
+                apiToast.error("An unknown error occurred");
+                return;
+            }
             const msg = e?.message || "Failed to send test email";
-            toast.error(msg);
+            apiToast.error(msg);
         } finally {
             setLoading(false);
         }
