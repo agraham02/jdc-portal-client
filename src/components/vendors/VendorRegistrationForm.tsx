@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, FormProvider } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
-    Form,
     FormControl,
     FormField,
     FormItem,
@@ -40,8 +39,10 @@ export default function VendorRegistrationForm() {
     const [serverError, setServerError] = useState<string | null>(null);
     const [requestId, setRequestId] = useState<string | undefined>();
 
-    const form = useForm<VendorRegistrationFormData>({
+    const methods = useForm<VendorRegistrationFormData>({
         resolver: zodResolver(vendorRegistrationSchema),
+        mode: "onTouched", // Validate after user interacts with field
+        shouldUnregister: false, // Keep field values when inputs unmount (multi-step form)
         defaultValues: {
             email: "",
             password: "",
@@ -71,37 +72,46 @@ export default function VendorRegistrationForm() {
         },
     });
 
-    const { handleSubmit, control, reset, setError, trigger, setValue } = form;
+    const { handleSubmit, control, reset, setError, trigger, setValue } =
+        methods;
 
     // Fields to validate per-step
-    const stepFields: string[][] = [
-        ["email", "password", "confirmPassword"],
-        ["companyName", "contactName", "contactEmail", "contactPhone"],
+    const stepFields: Array<Array<keyof VendorRegistrationFormData | string>> =
         [
-            "website",
-            "servicesOffered",
-            "physicalAddress.line1",
-            "physicalAddress.city",
-            "physicalAddress.state",
-            "physicalAddress.zip",
-        ],
-    ];
+            ["email", "password", "confirmPassword"],
+            ["companyName", "contactName", "contactEmail", "contactPhone"],
+            [
+                "website",
+                "servicesOffered",
+                "physicalAddress.line1",
+                "physicalAddress.city",
+                "physicalAddress.state",
+                "physicalAddress.zip",
+            ],
+        ];
+
+    const handleNext = async () => {
+        // Validate only the current step's fields
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- react-hook-form trigger accepts field paths as any
+        const isValid = await trigger(stepFields[step] as any);
+
+        if (isValid) {
+            setStep((prev) => prev + 1);
+        }
+    };
+
+    const handleBack = () => {
+        if (step > 0) {
+            setStep((prev) => prev - 1);
+        }
+    };
 
     const onSubmit = async (formData: VendorRegistrationFormData) => {
-        // Final submit only on last step
-        if (step < totalSteps - 1) {
-            // Validate current step fields before moving forward
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- react-hook-form trigger accepts field paths as any
-            const ok = await trigger(stepFields[step] as any);
-            if (ok) setStep((s) => s + 1);
-            return;
-        }
-
         setIsSubmitting(true);
         setServerError(null);
         setRequestId(undefined);
+
         try {
-            // Ensure servicesOffered is sent as array (it already is from controller)
             await VendorService.createVendor(formData);
             toast.success("Registration submitted — awaiting approval");
             reset();
@@ -116,6 +126,7 @@ export default function VendorRegistrationForm() {
                 fieldErrors?: any[];
             };
             setRequestId(anyErr?.requestId as string | undefined);
+
             // Map backend field errors to form fields
             if (Array.isArray(anyErr?.fieldErrors)) {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Backend field error structure is dynamic
@@ -129,6 +140,7 @@ export default function VendorRegistrationForm() {
                     }
                 }
             }
+
             // Fallback message
             const maybeMsg =
                 (anyErr?.message as string | undefined) ||
@@ -139,10 +151,6 @@ export default function VendorRegistrationForm() {
         } finally {
             setIsSubmitting(false);
         }
-    };
-
-    const handleBack = () => {
-        if (step > 0) setStep((prev) => prev - 1);
     };
 
     return (
@@ -256,294 +264,265 @@ export default function VendorRegistrationForm() {
                     </div>
                 )}
                 <CardContent>
-                    {step === 0 && (
-                        <Form {...form}>
-                            <form
-                                onSubmit={handleSubmit(onSubmit)}
-                                className="grid gap-y-8"
-                            >
-                                <FormField
-                                    key="Email"
-                                    control={control}
-                                    name="email"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Email</FormLabel>
-                                            <FormControl>
-                                                <Input
-                                                    {...field}
-                                                    placeholder="email@example.com"
-                                                    autoComplete="off"
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-
-                                <FormField
-                                    key="password"
-                                    control={control}
-                                    name="password"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Password</FormLabel>
-                                            <FormControl>
-                                                <PasswordInput
-                                                    {...field}
-                                                    placeholder="Create a secure password"
-                                                    showPasswordHint
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-
-                                <FormField
-                                    key="confirmPassword"
-                                    control={control}
-                                    name="confirmPassword"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>
-                                                Confirm Password
-                                            </FormLabel>
-                                            <FormControl>
-                                                <PasswordInput
-                                                    {...field}
-                                                    placeholder="Re-enter your password"
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-
-                                <div className="flex justify-between">
-                                    <Button
-                                        type="button"
-                                        className="font-medium"
-                                        size="sm"
-                                        onClick={handleBack}
-                                        disabled={step === 0}
-                                    >
-                                        Back
-                                    </Button>
-                                    <Button
-                                        type="submit"
-                                        size="sm"
-                                        className="font-medium"
-                                    >
-                                        Next
-                                    </Button>
-                                </div>
-                            </form>
-                        </Form>
-                    )}
-
-                    {step === 1 && (
-                        <Form {...form}>
-                            <form
-                                onSubmit={handleSubmit(onSubmit)}
-                                className="grid gap-y-4"
-                            >
-                                <FormField
-                                    key="companyName"
-                                    control={control}
-                                    name="companyName"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Company Name</FormLabel>
-                                            <FormControl>
-                                                <Input
-                                                    {...field}
-                                                    placeholder=""
-                                                    autoComplete="off"
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-
-                                <FormField
-                                    key="contactName"
-                                    control={control}
-                                    name="contactName"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Contact Name</FormLabel>
-                                            <FormControl>
-                                                <Input
-                                                    {...field}
-                                                    placeholder=""
-                                                    autoComplete="off"
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-
-                                <FormField
-                                    key="contactEmail"
-                                    control={control}
-                                    name="contactEmail"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Contact Email</FormLabel>
-                                            <FormControl>
-                                                <Input
-                                                    {...field}
-                                                    placeholder=""
-                                                    autoComplete="off"
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-
-                                <FormField
-                                    key="contactPhone"
-                                    control={control}
-                                    name="contactPhone"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>
-                                                Contact Phone Number
-                                            </FormLabel>
-                                            <FormControl>
-                                                {/* PhoneInput is a controlled component; wire it to RHF field */}
-                                                {/* eslint-disable @typescript-eslint/no-explicit-any */}
-                                                <PhoneInput
-                                                    value={field.value as any}
-                                                    onChange={(val) =>
-                                                        // react-phone-number-input sometimes
-                                                        // returns undefined for empty values; coerce to empty string
-                                                        field.onChange(
-                                                            val || ""
-                                                        )
-                                                    }
-                                                    placeholder=""
-                                                />
-                                                {/* eslint-enable @typescript-eslint/no-explicit-any */}
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-
-                                <div className="flex justify-between">
-                                    <Button
-                                        type="button"
-                                        className="font-medium"
-                                        size="sm"
-                                        onClick={handleBack}
-                                    >
-                                        Back
-                                    </Button>
-                                    <Button
-                                        type="submit"
-                                        size="sm"
-                                        className="font-medium"
-                                    >
-                                        Next
-                                    </Button>
-                                </div>
-                            </form>
-                        </Form>
-                    )}
-
-                    {step === 2 && (
-                        <Form {...form}>
-                            <form
-                                onSubmit={handleSubmit(onSubmit)}
-                                className="grid gap-y-4"
-                            >
-                                <FormField
-                                    key="website"
-                                    control={control}
-                                    name="website"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Website</FormLabel>
-                                            <FormControl>
-                                                <Input
-                                                    {...field}
-                                                    placeholder="https://example.com"
-                                                    autoComplete="off"
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-
-                                {/* Services offered as tag input */}
-                                <FormField
-                                    key="servicesOffered"
-                                    control={control}
-                                    name="servicesOffered"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>
-                                                Services Offered
-                                            </FormLabel>
-                                            <FormControl>
-                                                <ServicesInput
-                                                    id="servicesOffered"
-                                                    label=""
-                                                    value={field.value || []}
-                                                    onChange={field.onChange}
-                                                    placeholder="Type and press Enter to add"
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-
-                                <div className="grid gap-4">
-                                    <AddressForm
-                                        prefix="physicalAddress"
-                                        title="Physical Address"
-                                        required
-                                    />
-                                    <AddressForm
-                                        prefix="mailingAddress"
-                                        title="Mailing Address"
-                                    />
-                                </div>
-
-                                {serverError && (
-                                    <div
-                                        role="alert"
-                                        aria-live="polite"
-                                        className="text-sm text-destructive bg-destructive/10 p-3 rounded"
-                                    >
-                                        {serverError}
-                                        {requestId && (
-                                            <div className="mt-1 text-xs text-muted-foreground">
-                                                Request ID:{" "}
-                                                <code className="px-2 py-1 bg-muted/30 rounded select-all">
-                                                    {requestId}
-                                                </code>
-                                            </div>
+                    <FormProvider {...methods}>
+                        <form
+                            onSubmit={handleSubmit(onSubmit)}
+                            className="space-y-6"
+                        >
+                            {/* Step 0: Account Credentials */}
+                            {step === 0 && (
+                                <div className="grid gap-y-8">
+                                    <FormField
+                                        control={control}
+                                        name="email"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Email</FormLabel>
+                                                <FormControl>
+                                                    <Input
+                                                        {...field}
+                                                        placeholder="email@example.com"
+                                                        autoComplete="off"
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
                                         )}
-                                    </div>
-                                )}
+                                    />
 
-                                <div className="flex justify-between">
+                                    <FormField
+                                        control={control}
+                                        name="password"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Password</FormLabel>
+                                                <FormControl>
+                                                    <PasswordInput
+                                                        {...field}
+                                                        placeholder="Create a secure password"
+                                                        showPasswordHint
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    <FormField
+                                        control={control}
+                                        name="confirmPassword"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>
+                                                    Confirm Password
+                                                </FormLabel>
+                                                <FormControl>
+                                                    <PasswordInput
+                                                        {...field}
+                                                        placeholder="Re-enter your password"
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+                            )}
+
+                            {/* Step 1: Contact Information */}
+                            {step === 1 && (
+                                <div className="grid gap-y-4">
+                                    <FormField
+                                        control={control}
+                                        name="companyName"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>
+                                                    Company Name
+                                                </FormLabel>
+                                                <FormControl>
+                                                    <Input
+                                                        {...field}
+                                                        placeholder="Acme Corp"
+                                                        autoComplete="off"
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    <FormField
+                                        control={control}
+                                        name="contactName"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>
+                                                    Contact Name
+                                                </FormLabel>
+                                                <FormControl>
+                                                    <Input
+                                                        {...field}
+                                                        placeholder="John Doe"
+                                                        autoComplete="off"
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    <FormField
+                                        control={control}
+                                        name="contactEmail"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>
+                                                    Contact Email
+                                                </FormLabel>
+                                                <FormControl>
+                                                    <Input
+                                                        {...field}
+                                                        placeholder="contact@company.com"
+                                                        autoComplete="off"
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    <FormField
+                                        control={control}
+                                        name="contactPhone"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>
+                                                    Contact Phone Number
+                                                </FormLabel>
+                                                <FormControl>
+                                                    {/* eslint-disable @typescript-eslint/no-explicit-any */}
+                                                    <PhoneInput
+                                                        value={
+                                                            field.value as any
+                                                        }
+                                                        onChange={(val) =>
+                                                            field.onChange(
+                                                                val || ""
+                                                            )
+                                                        }
+                                                        placeholder="+1 (555) 000-0000"
+                                                    />
+                                                    {/* eslint-enable @typescript-eslint/no-explicit-any */}
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+                            )}
+
+                            {/* Step 2: Business Details */}
+                            {step === 2 && (
+                                <div className="grid gap-y-4">
+                                    <FormField
+                                        control={control}
+                                        name="website"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Website</FormLabel>
+                                                <FormControl>
+                                                    <Input
+                                                        {...field}
+                                                        placeholder="https://example.com"
+                                                        autoComplete="off"
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    <FormField
+                                        control={control}
+                                        name="servicesOffered"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>
+                                                    Services Offered
+                                                </FormLabel>
+                                                <FormControl>
+                                                    <ServicesInput
+                                                        id="servicesOffered"
+                                                        label=""
+                                                        value={
+                                                            field.value || []
+                                                        }
+                                                        onChange={
+                                                            field.onChange
+                                                        }
+                                                        placeholder="Type and press Enter to add"
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    <div className="grid gap-4">
+                                        <AddressForm
+                                            prefix="physicalAddress"
+                                            title="Physical Address"
+                                            required
+                                        />
+                                        <AddressForm
+                                            prefix="mailingAddress"
+                                            title="Mailing Address"
+                                        />
+                                    </div>
+
+                                    {serverError && (
+                                        <div
+                                            role="alert"
+                                            aria-live="polite"
+                                            className="text-sm text-destructive bg-destructive/10 p-3 rounded"
+                                        >
+                                            {serverError}
+                                            {requestId && (
+                                                <div className="mt-1 text-xs text-muted-foreground">
+                                                    Request ID:{" "}
+                                                    <code className="px-2 py-1 bg-muted/30 rounded select-all">
+                                                        {requestId}
+                                                    </code>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Navigation Buttons */}
+                            <div className="flex justify-between pt-4">
+                                <Button
+                                    type="button"
+                                    className="font-medium"
+                                    size="sm"
+                                    onClick={handleBack}
+                                    disabled={step === 0}
+                                >
+                                    Back
+                                </Button>
+
+                                {step < totalSteps - 1 ? (
                                     <Button
                                         type="button"
-                                        className="font-medium"
                                         size="sm"
-                                        onClick={handleBack}
+                                        className="font-medium"
+                                        onClick={handleNext}
                                     >
-                                        Back
+                                        Next
                                     </Button>
+                                ) : (
                                     <Button
                                         type="submit"
                                         size="sm"
@@ -554,10 +533,10 @@ export default function VendorRegistrationForm() {
                                             ? "Submitting..."
                                             : "Submit"}
                                     </Button>
-                                </div>
-                            </form>
-                        </Form>
-                    )}
+                                )}
+                            </div>
+                        </form>
+                    </FormProvider>
                 </CardContent>
             </Card>
         </div>
