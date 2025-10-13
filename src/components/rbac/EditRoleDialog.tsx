@@ -122,7 +122,7 @@ export function EditRoleDialog({ roleId, open, onClose, onUpdated }: Props) {
             const payload: UpdateRoleRequest = {
                 name: name.trim(),
                 description: description.trim() || undefined,
-                permissionIds: permissionIds,
+                permissionIds,
             };
             await RBACService.updateRole(roleId, payload);
             onUpdated?.();
