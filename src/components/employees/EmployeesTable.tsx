@@ -14,10 +14,7 @@ import { useAuthz } from "@/lib/authz/useAuthz";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 import { useErrorState } from "@/lib/hooks/useErrorState";
 import { apiToast } from "@/lib/utils/toast-helpers";
-import {
-    errorMessages,
-    successMessages,
-} from "@/lib/utils/error-messages";
+import { errorMessages, successMessages } from "@/lib/utils/error-messages";
 import { UserStatus } from "@/lib/types/auth";
 import { useRouter } from "next/navigation";
 import { StatusBadge } from "../common";
@@ -202,7 +199,10 @@ export function EmployeesTable() {
                     key: "status",
                     label: "Status",
                     render: (employee) => (
-                        <StatusBadge type="user" status={employee.userId.status} />
+                        <StatusBadge
+                            type="user"
+                            status={employee.userId.status}
+                        />
                     ),
                 },
             ],

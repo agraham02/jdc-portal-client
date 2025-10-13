@@ -32,10 +32,7 @@ import {
 import { useApi, useConditionalApi } from "@/lib/hooks/useApi";
 import { useErrorState } from "@/lib/hooks/useErrorState";
 import { apiToast } from "@/lib/utils/toast-helpers";
-import {
-    errorMessages,
-    successMessages,
-} from "@/lib/utils/error-messages";
+import { errorMessages, successMessages } from "@/lib/utils/error-messages";
 
 export default function ContractDetailsPage() {
     const params = useParams<{ id: string }>();

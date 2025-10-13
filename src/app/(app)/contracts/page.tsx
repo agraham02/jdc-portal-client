@@ -122,10 +122,7 @@ export default function ContractsPage() {
                     </div>
 
                     {error ? (
-                        <ErrorState
-                            error={error}
-                            onRetry={loadContracts}
-                        />
+                        <ErrorState error={error} onRetry={loadContracts} />
                     ) : isLoading ? (
                         <ContractListSkeleton count={pageSize} />
                     ) : contracts.length === 0 ? (

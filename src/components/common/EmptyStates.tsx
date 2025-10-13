@@ -157,8 +157,7 @@ export function ErrorState({
         standardError?.fieldErrors && standardError.fieldErrors.length > 0;
     const hasRequestId = !!standardError?.requestId;
     const hasDetails =
-        standardError?.details &&
-        Object.keys(standardError.details).length > 0;
+        standardError?.details && Object.keys(standardError.details).length > 0;
 
     const copyRequestId = () => {
         if (standardError?.requestId) {
