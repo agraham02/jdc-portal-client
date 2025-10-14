@@ -28,6 +28,8 @@ import { AuthService } from "@/lib/services/auth";
 import { toast } from "sonner";
 import { AddressForm } from "@/components/common";
 
+// TODO: make activate account flow similar to vendor account creation (VendorRegistrationForm)
+
 function ActivateAccountInner() {
     const searchParams = useSearchParams();
     const router = useRouter();

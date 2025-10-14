@@ -7,6 +7,8 @@ import type { Address } from "@/lib/types/auth";
 import { useFormContext } from "react-hook-form";
 import { ReactNode } from "react";
 
+// TODO: update address form for better UI and UX
+
 interface BaseAddressFormProps {
     /** Field title/heading */
     label?: string;

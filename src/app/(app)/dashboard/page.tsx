@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Can } from "@/components/auth/Can";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 
+// TODO: improve dashboard
+// It is currently generic and outdated. It should show relevant info and quick links based on the account type / permissions
 export default function DashboardPage() {
     return (
         <main className="container mx-auto p-6 space-y-6">

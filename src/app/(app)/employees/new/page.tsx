@@ -2,6 +2,8 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 import EntityCreateForm from "@/components/common/EntityCreateForm";
 
+// TODO: have the user only enter the new employees email and optional higher info (manager, hire date, etc). The employee themselves will fill in the basic and personal info (address, contact, password). Then once they are created, only user with higher permissions will edit their employee specific data, but they can edit their personal infor in their profile
+
 export default function EmployeeCreatePage() {
     const sections = [
         {

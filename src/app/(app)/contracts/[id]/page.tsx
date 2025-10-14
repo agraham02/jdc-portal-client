@@ -330,7 +330,7 @@ export default function ContractDetailsPage() {
                         onAccept={handleAcceptApplication}
                         onReject={handleRejectApplication}
                         onViewDetails={(id) => {
-                            // TODO: Implement application detail modal or page
+                            // TODO: Implement application detail or page
                             console.log("View application:", id);
                         }}
                     />

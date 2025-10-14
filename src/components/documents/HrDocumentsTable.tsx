@@ -125,7 +125,6 @@ export function HrDocumentsTable() {
         "image/png",
         "image/jpeg",
     ];
-    // TODO: Increased max file size to 100MB. Ensure server-side validation matches this.
     const maxBytes = 100 * 1024 * 1024; // 100MB
 
     const onReplace = async (file: HRDocument, picked: File | null) => {

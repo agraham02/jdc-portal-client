@@ -31,6 +31,11 @@ import { FormMessage } from "@/components/ui/form";
 import { PhoneInput } from "../ui/phone-input";
 import { AddressForm, ServicesInput } from "../common";
 
+// FIXME: 3rd page has errors pop up when you first go to it
+// FIXME: make services dropdown selection more user friendly (goes away sometimes)
+
+// TODO: add option to make mailing address same as physical address
+
 export default function VendorRegistrationForm() {
     const [step, setStep] = useState<number>(0);
     const totalSteps = 3;

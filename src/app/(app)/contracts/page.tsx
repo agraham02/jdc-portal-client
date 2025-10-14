@@ -22,6 +22,7 @@ import { ContractListSkeleton } from "@/components/common/LoadingSkeletons";
 import { NoContractsFound, ErrorState } from "@/components/common/EmptyStates";
 import { useErrorState } from "@/lib/hooks/useErrorState";
 
+// TODO: hide create contract button based on permission
 export default function ContractsPage() {
     const router = useRouter();
     const { notifications } = useNotificationsCtx();

@@ -22,6 +22,12 @@ import { Upload, User as UserIcon, Lock, Info } from "lucide-react";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { AddressForm, ServicesInput, StatusBadge } from "@/components/common";
 
+// FIXME: profile page can be improved in many ways
+// 1. input fields are not preloaded with existing data
+// 2. remove avatar upload feature for now
+// 3. better organization of sections and spacing
+// 4. ensure employee/vendor sections only show when applicable and are prefilled with existing data, eligeble to be edited by user
+
 // Profile update schema
 const profileSchema = z.object({
     firstName: z.string().min(1, "First name is required"),
