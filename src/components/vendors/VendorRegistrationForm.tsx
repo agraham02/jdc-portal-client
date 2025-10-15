@@ -31,9 +31,6 @@ import { FormMessage } from "@/components/ui/form";
 import { PhoneInput } from "../ui/phone-input";
 import { AddressForm, ServicesInput } from "../common";
 
-// FIXME: 3rd page has errors pop up when you first go to it
-// FIXME: make services dropdown selection more user friendly (goes away sometimes)
-
 // TODO: add option to make mailing address same as physical address
 
 export default function VendorRegistrationForm() {
@@ -46,7 +43,8 @@ export default function VendorRegistrationForm() {
 
     const methods = useForm<VendorRegistrationFormData>({
         resolver: zodResolver(vendorRegistrationSchema),
-        mode: "onTouched", // Validate after user interacts with field
+        mode: "onChange", // Validate on change for better UX in multi-step forms
+        reValidateMode: "onChange", // Re-validate on change after first submit attempt
         shouldUnregister: false, // Keep field values when inputs unmount (multi-step form)
         defaultValues: {
             email: "",
@@ -98,7 +96,9 @@ export default function VendorRegistrationForm() {
     const handleNext = async () => {
         // Validate only the current step's fields
         // eslint-disable-next-line @typescript-eslint/no-explicit-any -- react-hook-form trigger accepts field paths as any
-        const isValid = await trigger(stepFields[step] as any);
+        const isValid = await trigger(stepFields[step] as any, { 
+            shouldFocus: true // Focus on first error field
+        });
 
         if (isValid) {
             setStep((prev) => prev + 1);

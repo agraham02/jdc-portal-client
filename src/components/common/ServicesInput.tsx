@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, KeyboardEvent } from "react";
+import { useState, useRef, KeyboardEvent, useEffect } from "react";
 import { X, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -69,12 +69,25 @@ export function ServicesInput({
     const [inputValue, setInputValue] = useState("");
     const [showSuggestions, setShowSuggestions] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
 
     const filteredSuggestions = suggestions.filter(
         (s) =>
             s.toLowerCase().includes(inputValue.toLowerCase()) &&
             !value.includes(s)
     );
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+                setShowSuggestions(false);
+            }
+        }
+
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
 
     const addService = (service: string) => {
         const trimmed = service.trim();
@@ -141,7 +154,7 @@ export function ServicesInput({
             )}
 
             {/* Input field */}
-            <div className="relative">
+            <div ref={containerRef} className="relative">
                 <div className="flex gap-2">
                     <Input
                         ref={inputRef}
@@ -154,7 +167,6 @@ export function ServicesInput({
                         }}
                         onKeyDown={handleKeyDown}
                         onFocus={() => setShowSuggestions(true)}
-                        onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                         placeholder={
                             value.length >= maxItems
                                 ? `Maximum ${maxItems} services`
@@ -187,7 +199,11 @@ export function ServicesInput({
                                 key={suggestion}
                                 type="button"
                                 className="w-full px-3 py-2 text-left text-sm hover:bg-accent transition-colors"
-                                onClick={() => addService(suggestion)}
+                                onMouseDown={(e) => {
+                                    // Prevent input blur so dropdown stays open during click
+                                    e.preventDefault();
+                                    addService(suggestion);
+                                }}
                             >
                                 {suggestion}
                             </button>
