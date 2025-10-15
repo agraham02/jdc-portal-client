@@ -7,8 +7,6 @@ import type { Address } from "@/lib/types/auth";
 import { useFormContext } from "react-hook-form";
 import { ReactNode } from "react";
 
-// TODO: update address form for better UI and UX
-
 interface BaseAddressFormProps {
     /** Field title/heading */
     label?: string;
@@ -211,7 +209,7 @@ function AddressFieldsLayout({
     ) => ReactNode;
 }) {
     return (
-        <div className={cn("space-y-4", className)}>
+        <div className={cn("space-y-3", className)}>
             {displayLabel && (
                 <h3 className="text-sm font-medium">
                     {displayLabel}
@@ -221,7 +219,7 @@ function AddressFieldsLayout({
                 </h3>
             )}
 
-            <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 gap-3">
                 {/* Address Line 1 */}
                 <div>
                     <Label htmlFor={`${idPrefix}-line1`}>
@@ -264,9 +262,9 @@ function AddressFieldsLayout({
                     )}
                 </div>
 
-                {/* City & State */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
+                {/* City, State & ZIP */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-3">
+                    <div className="md:col-span-6">
                         <Label htmlFor={`${idPrefix}-city`}>
                             City
                             {required && (
@@ -284,7 +282,7 @@ function AddressFieldsLayout({
                         )}
                     </div>
 
-                    <div>
+                    <div className="md:col-span-3">
                         <Label htmlFor={`${idPrefix}-state`}>
                             State
                             {required && (
@@ -302,7 +300,7 @@ function AddressFieldsLayout({
                         )}
                     </div>
 
-                    <div>
+                    <div className="md:col-span-3">
                         <Label htmlFor={`${idPrefix}-zip`}>
                             ZIP Code
                             {required && (
