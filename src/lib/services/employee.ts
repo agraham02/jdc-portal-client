@@ -10,12 +10,21 @@ export type EmployeeWithUser = Omit<Employee, "userId"> & {
 export type EmployeeListResponse = PaginatedResponse<EmployeeWithUser>;
 
 export interface CreateEmployeeDto {
-    userId: string;
+    email: string;
     employeeId?: string;
     jobTitle?: string;
     department?: string;
     hireDate?: string; // ISO date string
     managerId?: string;
+}
+
+export interface CompleteEmployeeOnboardingDto {
+    activationToken: string;
+    firstName: string;
+    lastName: string;
+    password: string;
+    contactPhone?: string;
+    contactEmail?: string;
 }
 
 export interface UpdateEmployeeDto {
@@ -98,5 +107,19 @@ export class EmployeeService {
      */
     static async deleteEmployee(id: string): Promise<{ message: string }> {
         return apiClient.delete<{ message: string }>(`/employees/${id}`);
+    }
+
+    /**
+     * Complete employee onboarding with activation token
+     * Public endpoint - no auth required
+     */
+    static async completeOnboarding(
+        data: CompleteEmployeeOnboardingDto
+    ): Promise<{ message: string; userId: string; email: string }> {
+        return apiClient.post<{
+            message: string;
+            userId: string;
+            email: string;
+        }>("/employees/onboard", data);
     }
 }

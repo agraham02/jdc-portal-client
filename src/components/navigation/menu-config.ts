@@ -19,7 +19,6 @@ import { PermissionName as P } from "@/lib/constants/permission-names";
 
 export const menu = {
     application: [
-        { title: "Home", url: "/", icon: Home },
         { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
         { title: "Notifications", url: "/notifications", icon: Bell },
     ] satisfies MenuItem[],

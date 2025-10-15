@@ -2,50 +2,31 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 import EntityCreateForm from "@/components/common/EntityCreateForm";
 
-// TODO: have the user only enter the new employees email and optional higher info (manager, hire date, etc). The employee themselves will fill in the basic and personal info (address, contact, password). Then once they are created, only user with higher permissions will edit their employee specific data, but they can edit their personal infor in their profile
-
-export default function EmployeeCreatePage() {
+/**
+ * Employee invitation page.
+ * Admin provides email and optional HR fields. Employee receives activation email
+ * and completes their profile at /onboarding?token=xxx
+ */
+export default function EmployeeInvitePage() {
     const sections = [
         {
-            title: "General info",
-            description: "Account and contact information",
+            title: "Employee Invitation",
+            description:
+                "Enter email address and optional HR information. The employee will receive an activation email to complete their profile.",
             fields: [
                 {
                     name: "email",
-                    label: "Email",
-                    placeholder: "employee@example.com",
+                    label: "Work Email",
+                    placeholder: "employee@company.com",
                     type: "email",
                     required: true,
-                },
-                {
-                    name: "firstName",
-                    label: "First name",
-                    placeholder: "First name",
-                    required: true,
-                },
-                {
-                    name: "lastName",
-                    label: "Last name",
-                    placeholder: "Last name",
-                    required: true,
-                },
-                {
-                    name: "contactPhone",
-                    type: "tel",
-                    label: "Phone",
-                    placeholder: "(555) 555-5555",
-                },
-                {
-                    name: "contactEmail",
-                    type: "email",
-                    label: "Contact Email (Optional)",
-                    placeholder: "personal@example.com",
                 },
             ],
         },
         {
-            title: "Employee info",
-            description: "HR-specific fields",
+            title: "HR Information (Optional)",
+            description:
+                "Additional employee details. These can be updated later.",
             fields: [
                 {
                     name: "employeeId",
@@ -54,7 +35,7 @@ export default function EmployeeCreatePage() {
                 },
                 {
                     name: "jobTitle",
-                    label: "Job title",
+                    label: "Job Title",
                     placeholder: "Software Engineer",
                 },
                 {
@@ -64,9 +45,14 @@ export default function EmployeeCreatePage() {
                 },
                 {
                     name: "hireDate",
-                    label: "Hire date",
+                    label: "Hire Date",
                     placeholder: "YYYY-MM-DD",
                     type: "date",
+                },
+                {
+                    name: "managerId",
+                    label: "Manager ID (Optional)",
+                    placeholder: "507f1f77bcf86cd799439011",
                 },
             ],
         },
@@ -75,13 +61,21 @@ export default function EmployeeCreatePage() {
     return (
         <ProtectedRoute anyOf={[P.EMPLOYEE_CREATE]}>
             <main className="space-y-4">
-                <h1 className="text-2xl font-semibold">Create Employee</h1>
+                <div>
+                    <h1 className="text-2xl font-semibold">
+                        Invite New Employee
+                    </h1>
+                    <p className="text-sm text-muted-foreground mt-1">
+                        Send an activation email to a new employee. They&apos;ll
+                        complete their profile and set their password.
+                    </p>
+                </div>
                 <EntityCreateForm
                     sections={sections}
                     fields={[]}
                     apiPath="/employees"
                     onSuccessPath="/employees"
-                    submitLabel="Create Employee"
+                    submitLabel="Send Invitation"
                 />
             </main>
         </ProtectedRoute>
