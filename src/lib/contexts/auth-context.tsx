@@ -11,12 +11,13 @@ import React, {
 } from "react";
 import { AuthService } from "../services/auth";
 import { session } from "../session";
-import type { Role, User } from "../types/auth";
+import type { AccountType, Role, User } from "../types/auth";
 import { useAuthz } from "@/lib/authz/useAuthz";
 import { UserStatusHelper } from "@/lib/utils/user-status-helper";
 
 type AuthContextValue = {
     user: User | null;
+    accountType: AccountType | null;
     isAuthenticated: boolean;
     isLoading: boolean;
     login: (data: { email: string; password: string }) => Promise<User | null>;
@@ -33,6 +34,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
+    const [accountType, setAccountType] = useState<AccountType | null>(null);
     const [loading, setLoading] = useState(true);
     const refreshingRef = useRef<Promise<void> | null>(null);
     const { refresh: refreshPermissions, hasAny } = useAuthz();
@@ -51,6 +53,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return p;
     }, []);
 
+    const fetchAccountType = useCallback(async () => {
+        try {
+            const { accountType: type } = await AuthService.getAccountType();
+            setAccountType(type as AccountType | null);
+        } catch {
+            setAccountType(null);
+        }
+    }, []);
+
     // Load session on mount
     useEffect(() => {
         let cancelled = false;
@@ -66,13 +77,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     await safeRefresh();
                     return AuthService.getProfile();
                 });
-                if (!cancelled) setUser(me);
+                if (!cancelled) {
+                    setUser(me);
+                    // Fetch account type after user is loaded
+                    await fetchAccountType();
+                }
                 // Refresh permissions in parallel
                 refreshPermissions().catch(() => {});
             } catch {
                 // Not signed in
                 session.clear();
-                if (!cancelled) setUser(null);
+                if (!cancelled) {
+                    setUser(null);
+                    setAccountType(null);
+                }
             } finally {
                 if (!cancelled) setLoading(false);
             }
@@ -81,17 +99,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return () => {
             cancelled = true;
         };
-    }, [refreshPermissions, safeRefresh]);
+    }, [refreshPermissions, safeRefresh, fetchAccountType]);
 
     const login = useCallback(
         async (data: { email: string; password: string }) => {
             const res = await AuthService.login(data);
             setUser(res.user);
+            // Fetch account type after login
+            await fetchAccountType();
             // Ensure permissions are up to date post-login
             refreshPermissions().catch(() => {});
             return res.user ?? null;
         },
-        [refreshPermissions]
+        [refreshPermissions, fetchAccountType]
     );
 
     const logout = useCallback(async () => {
@@ -100,6 +120,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } finally {
             session.clear();
             setUser(null);
+            setAccountType(null);
         }
     }, []);
 
@@ -108,9 +129,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Optionally refresh profile if needed
         const me = await AuthService.getProfile();
         setUser(me);
+        // Fetch account type
+        await fetchAccountType();
         // Also refresh permissions
         await refreshPermissions();
-    }, [safeRefresh, refreshPermissions]);
+    }, [safeRefresh, refreshPermissions, fetchAccountType]);
 
     const hasRole = useCallback(
         (required: string | string[]) => {
@@ -151,6 +174,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const value = useMemo<AuthContextValue>(
         () => ({
             user,
+            accountType,
             isAuthenticated: !!user,
             isLoading: loading,
             login,
@@ -164,6 +188,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }),
         [
             user,
+            accountType,
             loading,
             login,
             logout,

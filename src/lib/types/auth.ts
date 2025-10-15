@@ -57,7 +57,6 @@ export interface User {
     lastName?: string;
     fullName: string; // Virtual field - not optional
     roles: string[] | Role[]; // Can be ObjectIds or populated Role objects
-    accountType: AccountType;
     status: UserStatus;
     physicalAddress?: Address;
     mailingAddress?: Address;

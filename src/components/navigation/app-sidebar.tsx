@@ -11,7 +11,6 @@ import { NavSection } from "@/components/navigation/NavSection";
 import { menu } from "@/components/navigation/menu-config";
 import { ThemeToggle } from "@/components/navigation/ThemeToggle";
 
-// TODO: make sure title is not show if nav section is empty (it is currently being shown)
 export function AppSidebar() {
     return (
         <Sidebar>

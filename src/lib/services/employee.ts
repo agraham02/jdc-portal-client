@@ -55,6 +55,13 @@ export class EmployeeService {
     }
 
     /**
+     * Get current employee profile (for employees to view their own profile)
+     */
+    static async getMyProfile(): Promise<EmployeeWithUser> {
+        return apiClient.get<EmployeeWithUser>("/employees/me");
+    }
+
+    /**
      * Get employee by ID
      */
     static async getEmployee(id: string): Promise<EmployeeWithUser> {

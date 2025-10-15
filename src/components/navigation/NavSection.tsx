@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState, useEffect, useRef } from "react";
 import {
     SidebarGroup,
     SidebarGroupContent,
@@ -26,11 +27,26 @@ export function NavSection({
     items: MenuItem[];
 }) {
     const pathname = usePathname();
+    const [hasChecked, setHasChecked] = useState(false);
+    const [visibleCount, setVisibleCount] = useState(-1);
+    const menuRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (menuRef.current) {
+            const visibleItems = menuRef.current.querySelectorAll("li");
+            setVisibleCount(visibleItems.length);
+            setHasChecked(true);
+        }
+    }, [items]);
+
+    // Hide the entire section if we've checked and found no visible items
+    if (hasChecked && visibleCount === 0) return null;
+
     return (
         <SidebarGroup>
             <SidebarGroupLabel>{label}</SidebarGroupLabel>
             <SidebarGroupContent>
-                <SidebarMenu>
+                <SidebarMenu ref={menuRef as any}>
                     {items.map((item) => {
                         const content = (
                             <SidebarMenuItem key={item.title}>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useForm, FormProvider } from "react-hook-form";
+import { useForm, FormProvider, useWatch } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
     FormControl,
@@ -16,6 +16,7 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -31,10 +32,9 @@ import { FormMessage } from "@/components/ui/form";
 import { PhoneInput } from "../ui/phone-input";
 import { AddressForm, ServicesInput } from "../common";
 
-// TODO: add option to make mailing address same as physical address
-
 export default function VendorRegistrationForm() {
     const [step, setStep] = useState<number>(0);
+    const [sameAsPhysical, setSameAsPhysical] = useState(false);
     const totalSteps = 3;
     const router = useRouter();
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -480,10 +480,40 @@ export default function VendorRegistrationForm() {
                                             title="Physical Address"
                                             required
                                         />
-                                        <AddressForm
-                                            prefix="mailingAddress"
-                                            title="Mailing Address"
-                                        />
+
+                                        <div className="flex items-center space-x-2 py-2">
+                                            <Checkbox
+                                                id="sameAsPhysical"
+                                                checked={sameAsPhysical}
+                                                onCheckedChange={(checked) => {
+                                                    const isChecked = checked === true;
+                                                    setSameAsPhysical(isChecked);
+                                                    
+                                                    if (isChecked) {
+                                                        // Copy physical address to mailing address
+                                                        const physicalAddress = methods.getValues("physicalAddress");
+                                                        setValue("mailingAddress.line1", physicalAddress.line1);
+                                                        setValue("mailingAddress.line2", physicalAddress.line2 || "");
+                                                        setValue("mailingAddress.city", physicalAddress.city);
+                                                        setValue("mailingAddress.state", physicalAddress.state);
+                                                        setValue("mailingAddress.zip", physicalAddress.zip);
+                                                    }
+                                                }}
+                                            />
+                                            <label
+                                                htmlFor="sameAsPhysical"
+                                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                                            >
+                                                Mailing address same as physical address
+                                            </label>
+                                        </div>
+
+                                        {!sameAsPhysical && (
+                                            <AddressForm
+                                                prefix="mailingAddress"
+                                                title="Mailing Address"
+                                            />
+                                        )}
                                     </div>
 
                                     {serverError && (
