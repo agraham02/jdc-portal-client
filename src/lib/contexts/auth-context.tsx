@@ -12,8 +12,8 @@ import React, {
 import { AuthService } from "../services/auth";
 import { session } from "../session";
 import type { Role, User } from "../types/auth";
-import { UserStatus } from "../types/auth";
 import { useAuthz } from "@/lib/authz/useAuthz";
+import { UserStatusHelper } from "@/lib/utils/user-status-helper";
 
 type AuthContextValue = {
     user: User | null;
@@ -135,17 +135,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const isAccountActive = useCallback(() => {
         if (!user) return false;
-        return user.status === UserStatus.ACTIVE;
+        return UserStatusHelper.isActive(user.status);
     }, [user]);
 
     const isAccountPending = useCallback(() => {
         if (!user) return false;
-        return user.status === UserStatus.PENDING;
+        return UserStatusHelper.isPending(user.status);
     }, [user]);
 
     const isAccountRejected = useCallback(() => {
         if (!user) return false;
-        return user.status === UserStatus.REJECTED;
+        return UserStatusHelper.isRejected(user.status);
     }, [user]);
 
     const value = useMemo<AuthContextValue>(

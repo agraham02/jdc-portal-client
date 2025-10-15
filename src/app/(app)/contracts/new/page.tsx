@@ -19,8 +19,6 @@ import { toast } from "sonner";
 
 const isDevelopment = process.env.NODE_ENV === "development";
 
-// FIXME: creating a contract gives me this error: requiresResponsiveSupport must be a boolean value; Maximum 10 required documents allowed
-
 export default function ContractCreatePage() {
     const router = useRouter();
     const [isSubmitting, setIsSubmitting] = useState(false);

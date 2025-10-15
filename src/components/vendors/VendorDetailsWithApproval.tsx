@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { VendorService, type VendorWithUser } from "@/lib/services/vendor";
 import { UserStatus } from "@/lib/types/auth";
 import { useApi } from "@/lib/hooks/useApi";
+import { UserStatusHelper } from "@/lib/utils/user-status-helper";
 import { Button } from "@/components/ui/button";
 import {
     Card,
@@ -206,7 +207,7 @@ export function VendorDetailsWithApproval({
     }
 
     const user = vendor.userId;
-    const isPending = user.status === UserStatus.PENDING;
+    const isPending = UserStatusHelper.isPending(user.status);
 
     return (
         <div className="container py-8 space-y-6">
