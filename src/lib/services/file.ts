@@ -286,7 +286,7 @@ export class HrDocumentsService {
      */
     static async uploadFile(
         file: File,
-        metadata: { description?: string; tags?: string[] } = {}
+        metadata: { description?: string; tags?: string[]; isPublic?: boolean } = {}
     ): Promise<HRDocument> {
         const formData = this.buildFormData(file, metadata);
         return apiClient.postFormData<HRDocument>(
@@ -332,7 +332,7 @@ export class HrDocumentsService {
     static async replaceFile(
         id: string,
         file: File,
-        metadata: { description?: string; tags?: string[] } = {}
+        metadata: { description?: string; tags?: string[]; isPublic?: boolean } = {}
     ): Promise<HRDocument> {
         const formData = this.buildFormData(file, metadata);
         return apiClient.put<HRDocument>(`/hr-documents/files/${id}`, formData);

@@ -14,6 +14,7 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { useState } from "react";
 import { motion } from "motion/react";
 import { HrDocumentsService } from "@/lib/services/file";
@@ -54,6 +55,7 @@ export default function HRUploadPage() {
     >([]);
     const [description, setDescription] = useState("");
     const [tags, setTags] = useState("");
+    const [isPublic, setIsPublic] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
     const onSubmit = async (e: React.FormEvent) => {
@@ -87,6 +89,7 @@ export default function HRUploadPage() {
                           .map((t) => t.trim())
                           .filter(Boolean)
                     : undefined,
+                isPublic: isPublic,
             });
 
             clearInterval(progressInterval);
@@ -105,6 +108,7 @@ export default function HRUploadPage() {
                 setUploadingFiles([]);
                 setDescription("");
                 setTags("");
+                setIsPublic(false);
             }, 1000);
         } catch (err: unknown) {
             clearInterval(progressInterval);
@@ -244,6 +248,29 @@ export default function HRUploadPage() {
                                         </p>
                                     </div>
 
+                                    {/* Public Access Toggle */}
+                                    <div className="flex items-center justify-between rounded-lg border p-4">
+                                        <div className="space-y-0.5">
+                                            <Label
+                                                htmlFor="isPublic"
+                                                className="font-medium"
+                                            >
+                                                Public Access
+                                            </Label>
+                                            <p className="text-sm text-muted-foreground">
+                                                Make this document visible to all
+                                                users. If disabled, only users
+                                                with FILE_READ permission can see
+                                                it.
+                                            </p>
+                                        </div>
+                                        <Switch
+                                            id="isPublic"
+                                            checked={isPublic}
+                                            onCheckedChange={setIsPublic}
+                                        />
+                                    </div>
+
                                     {/* Submit Button */}
                                     <div className="flex gap-3 pt-4">
                                         <Button
@@ -273,6 +300,7 @@ export default function HRUploadPage() {
                                                 setUploadingFiles([]);
                                                 setDescription("");
                                                 setTags("");
+                                                setIsPublic(false);
                                             }}
                                         >
                                             Clear Form

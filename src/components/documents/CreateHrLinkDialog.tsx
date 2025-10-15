@@ -23,6 +23,7 @@ import {
 import { toast } from "sonner";
 import { HrDocumentsService } from "@/lib/services/file";
 import { HRLinkCategory } from "@/lib/types/file";
+import { Switch } from "@/components/ui/switch";
 
 interface CreateHrLinkDialogProps {
     open: boolean;
@@ -42,6 +43,7 @@ export function CreateHrLinkDialog({
     const [category, setCategory] = useState<string>(HRLinkCategory.OTHER);
     const [sortOrder, setSortOrder] = useState("0");
     const [tags, setTags] = useState("");
+    const [isPublic, setIsPublic] = useState(false);
 
     const resetForm = () => {
         setTitle("");
@@ -50,6 +52,7 @@ export function CreateHrLinkDialog({
         setCategory(HRLinkCategory.OTHER);
         setSortOrder("0");
         setTags("");
+        setIsPublic(false);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -85,6 +88,7 @@ export function CreateHrLinkDialog({
                     .split(",")
                     .map((t) => t.trim())
                     .filter(Boolean),
+                isPublic: isPublic,
             });
 
             toast.success("Link created successfully");
@@ -205,6 +209,23 @@ export function CreateHrLinkDialog({
                             value={tags}
                             onChange={(e) => setTags(e.target.value)}
                             placeholder="payroll, monthly, important"
+                        />
+                    </div>
+
+                    <div className="flex items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                            <Label htmlFor="isPublic" className="font-medium">
+                                Public Access
+                            </Label>
+                            <p className="text-sm text-muted-foreground">
+                                Make this link visible to all users. If disabled,
+                                only users with FILE_READ permission can see it.
+                            </p>
+                        </div>
+                        <Switch
+                            id="isPublic"
+                            checked={isPublic}
+                            onCheckedChange={setIsPublic}
                         />
                     </div>
 

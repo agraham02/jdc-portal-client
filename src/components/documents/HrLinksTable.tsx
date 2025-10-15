@@ -383,17 +383,34 @@ export function HrLinksTable() {
                                         </a>
                                     </TableCell>
                                     <TableCell>
-                                        <Badge
-                                            variant={
-                                                link.isActive
-                                                    ? "default"
-                                                    : "secondary"
-                                            }
-                                        >
-                                            {link.isActive
-                                                ? "Active"
-                                                : "Inactive"}
-                                        </Badge>
+                                        <div className="flex flex-col gap-1">
+                                            <Badge
+                                                variant={
+                                                    link.isActive
+                                                        ? "default"
+                                                        : "secondary"
+                                                }
+                                            >
+                                                {link.isActive
+                                                    ? "Active"
+                                                    : "Inactive"}
+                                            </Badge>
+                                            {link.isPublic ? (
+                                                <Badge
+                                                    variant="outline"
+                                                    className="text-xs bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
+                                                >
+                                                    Public
+                                                </Badge>
+                                            ) : (
+                                                <Badge
+                                                    variant="outline"
+                                                    className="text-xs bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800"
+                                                >
+                                                    Private
+                                                </Badge>
+                                            )}
+                                        </div>
                                     </TableCell>
                                     <TableCell className="text-sm">
                                         <div className="flex flex-col">

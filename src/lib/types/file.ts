@@ -145,6 +145,7 @@ export interface HRDocument {
     tags: string[];
     uploadedBy: UserReference;
     approvedBy?: UserReference;
+    isPublic?: boolean; // If true, visible to all users; if false, only users with FILE_READ permission
     createdAt: string; // ISO 8601
     updatedAt: string; // ISO 8601
 }
@@ -183,6 +184,7 @@ export interface HrLink {
     url: string;
     category: HRLinkCategory;
     isActive: boolean;
+    isPublic?: boolean; // If true, visible to all users; if false, only users with FILE_READ permission
     sortOrder: number;
     tags: string[];
     createdBy: UserReference;
@@ -208,6 +210,7 @@ export interface CreateHrLinkDto {
     category?: HRLinkCategory | string;
     sortOrder?: number;
     tags?: string[];
+    isPublic?: boolean;
 }
 
 // Update HR Link DTO
@@ -219,6 +222,7 @@ export interface UpdateHrLinkDto {
     isActive?: boolean;
     sortOrder?: number;
     tags?: string[];
+    isPublic?: boolean;
 }
 
 export type HrLinksResponse = HRLinkListResponse;
