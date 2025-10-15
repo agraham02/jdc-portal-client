@@ -61,35 +61,40 @@
 
 ### Phase 4: UI/UX Enhancements 🎨
 
--   [ ] **4.1 Hide sidebar nav section titles when empty**
+-   [x] **4.1 Hide sidebar nav section titles when empty**
 
     -   **File:** `src/components/navigation/app-sidebar.tsx:14`
     -   **Solution:** Update NavSection to conditionally render title
     -   **Time:** 2 hours
 
--   [ ] **4.2 Add 'same as physical address' checkbox**
+-   [x] **4.2 Add 'same as physical address' checkbox**
 
     -   **File:** `src/components/vendors/VendorRegistrationForm.tsx:37`
     -   **Solution:** Add checkbox with setValue to copy address fields
     -   **Time:** 1 hour
 
--   [ ] **4.3 Improve AddressForm UI/UX**
+-   [x] **4.3 Improve AddressForm UI/UX**
 
     -   **File:** `src/components/common/AddressForm.tsx:10`
     -   **Solution:** Better spacing, responsive grid, placeholders, ZIP validation
     -   **Time:** 4 hours
 
--   [ ] **4.4 Refactor activate-account to multi-step flow**
+-   [x] **4.4 Refactor activate-account to multi-step flow** ✅
 
     -   **File:** `src/app/(auth)/activate-account/page.tsx:31`
     -   **Solution:** Multi-step form like VendorRegistrationForm
     -   **Time:** 6 hours
 
--   [ ] **4.5 Improve profile page**
+-   [x] **4.5 Improve profile page** ✅
 
     -   **File:** `src/app/(app)/profile/page.tsx:25`
-    -   **Solution:** Fix prefill timing, reorganize layout, better sections
-    -   **Dependencies:** Backend /employees/me endpoint
+    -   **Solution:** Broke into smaller components, added edit mode for employee data, better organization
+    -   **Components Created:**
+        -   `ProfileHeader.tsx` - Avatar upload section
+        -   `GeneralInfoSection.tsx` - User personal info (editable)
+        -   `PasswordSection.tsx` - Password change form
+        -   `AccountInfoSection.tsx` - Read-only account details
+        -   `EmployeeSection.tsx` - Employment info with RBAC-based editing
     -   **Time:** 6 hours
 
 -   [ ] **4.6 Improve dashboard**
@@ -127,12 +132,6 @@
     -   **Solution:** Fetch roles from API, multi-select dropdown
     -   **Dependencies:** Backend /rbac/roles/names endpoint
     -   **Time:** 2 hours (frontend only)
-
--   [ ] **6.3 Profile avatar upload integration**
-    -   **File:** `src/app/(app)/profile/page.tsx:183`
-    -   **Solution:** Integrate FileService.uploadProfileImage
-    -   **Dependencies:** Backend /files/profile-image endpoint
-    -   **Time:** 3 hours (frontend only)
 
 ---
 
