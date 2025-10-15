@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-export default function EmployeeOnboardingPage() {
+function OnboardingForm() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const token = searchParams.get("token");
@@ -580,5 +580,19 @@ export default function EmployeeOnboardingPage() {
                 </motion.p>
             </motion.div>
         </div>
+    );
+}
+
+export default function EmployeeOnboardingPage() {
+    return (
+        <Suspense
+            fallback={
+                <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
+                    <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                </div>
+            }
+        >
+            <OnboardingForm />
+        </Suspense>
     );
 }
