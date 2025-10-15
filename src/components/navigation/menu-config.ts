@@ -6,7 +6,6 @@ import {
     Database,
     FileText,
     HardDrive,
-    Home,
     LayoutDashboard,
     Mail,
     Settings,
@@ -19,7 +18,6 @@ import { PermissionName as P } from "@/lib/constants/permission-names";
 
 export const menu = {
     application: [
-        { title: "Home", url: "/", icon: Home },
         { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
         { title: "Notifications", url: "/notifications", icon: Bell },
     ] satisfies MenuItem[],
@@ -44,7 +42,7 @@ export const menu = {
             title: "HR Resources",
             url: "/hr-resources",
             icon: FileText,
-            anyOf: [P.HR_DOCUMENT_READ],
+            // No permission required - public resources visible to all authenticated users
         },
     ] satisfies MenuItem[],
 
@@ -59,7 +57,7 @@ export const menu = {
             title: "Vendors",
             url: "/vendors",
             icon: Building2,
-            anyOf: [P.VENDOR_READ, P.VENDOR_READ_ALL],
+            anyOf: [P.VENDOR_READ_ALL],
         },
     ] satisfies MenuItem[],
 
@@ -68,7 +66,7 @@ export const menu = {
             title: "Users",
             url: "/users",
             icon: Users,
-            anyOf: [P.USER_READ, P.USER_READ_ALL, P.RBAC_USER_ASSIGN_ROLES],
+            anyOf: [P.USER_READ_ALL, P.RBAC_USER_ASSIGN_ROLES],
         },
         {
             title: "Roles",

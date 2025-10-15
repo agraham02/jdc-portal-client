@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/contexts/auth-context";
 import { UserStatus, type User } from "@/lib/types/auth";
+import { UserStatusHelper } from "@/lib/utils/user-status-helper";
 
 interface AccountStatusProps {
     user: User | null;
@@ -100,7 +101,7 @@ export function AccountStatusPage({ user }: AccountStatusProps) {
                         >
                             Sign Out
                         </Button>
-                        {user.status === UserStatus.PENDING && (
+                        {UserStatusHelper.isPending(user.status) && (
                             <Button className="flex-1">Contact Support</Button>
                         )}
                     </div>

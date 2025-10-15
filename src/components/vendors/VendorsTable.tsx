@@ -9,6 +9,7 @@ import {
 import { VendorService } from "@/lib/services/vendor";
 import { UserStatus, type User, type Vendor } from "@/lib/types/auth";
 import { useAuthz } from "@/lib/authz/useAuthz";
+import { UserStatusHelper } from "@/lib/utils/user-status-helper";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 import TextPreview from "@/components/common/TextPreview";
 import { useRouter } from "next/navigation";
@@ -254,7 +255,12 @@ export function VendorsTable() {
                               onClick: handleDeactivate,
                               hidden: (vendor: Vendor) => {
                                   const user = getPopulatedUser(vendor);
-                                  return user?.status === UserStatus.INACTIVE;
+                                  return (
+                                      !user?.status ||
+                                      UserStatusHelper.isRestricted(
+                                          user.status
+                                      )
+                                  );
                               },
                           },
                       ]

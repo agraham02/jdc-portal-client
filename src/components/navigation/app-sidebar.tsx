@@ -9,7 +9,6 @@ import {
 } from "@/components/ui/sidebar";
 import { NavSection } from "@/components/navigation/NavSection";
 import { menu } from "@/components/navigation/menu-config";
-import { ThemeToggle } from "@/components/navigation/ThemeToggle";
 
 export function AppSidebar() {
     return (
@@ -37,7 +36,6 @@ export function AppSidebar() {
             </SidebarContent>
             <SidebarFooter>
                 <NavSection label="Account" items={menu.account} />
-                <ThemeToggle />
             </SidebarFooter>
         </Sidebar>
     );

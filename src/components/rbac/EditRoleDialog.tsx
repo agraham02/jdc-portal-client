@@ -94,7 +94,7 @@ export function EditRoleDialog({ roleId, open, onClose, onUpdated }: Props) {
         };
     }, [open, roleId]);
 
-    // TODO add role.isSystem field in backend
+    // TODO add role.isSystemRole field in backend
     const isSystemRole = useMemo(() => {
         const n = role?.name;
         return (

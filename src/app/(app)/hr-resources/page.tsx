@@ -34,6 +34,8 @@ import { HrLinksTable } from "@/components/documents/HrLinksTable";
 import { toast } from "sonner";
 import { formatBytes } from "@/lib/utils/formatters";
 
+// TODO: update page to align with new isPublic logic structure
+
 export default function HRResourcesPage() {
     const [activeTab, setActiveTab] = useState<"documents" | "links">(
         "documents"

@@ -14,6 +14,10 @@ import type {
 } from "@/lib/types/notifications";
 import { toast } from "sonner";
 
+// TODO: roles selection should be a dropdown list, not user typed
+// FIXME: system notification did not work (it did not send)
+// FIXME: web sockets sometimes does not connect unless you refresh the page
+
 export default function NotificationsBroadcastsPage() {
     const [title, setTitle] = useState("");
     const [message, setMessage] = useState("");

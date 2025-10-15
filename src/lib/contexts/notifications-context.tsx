@@ -26,6 +26,7 @@ import {
     type ConnectionState,
 } from "@/lib/services/realtime";
 import { toast } from "sonner";
+import { useAuth } from "@/lib/contexts/auth-context";
 
 const MAX_NOTIFICATIONS_IN_MEMORY = 100;
 const notificationsDebug =
@@ -74,6 +75,7 @@ export function NotificationsProvider({
 }: {
     children: React.ReactNode;
 }) {
+    const { isAuthenticated, isLoading: authLoading } = useAuth();
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [loading, setLoading] = useState(false);
@@ -377,9 +379,19 @@ export function NotificationsProvider({
 
     /**
      * Setup WebSocket connection and listeners
-     * Only runs once on mount
+     * Only runs once auth is ready
      */
     useEffect(() => {
+        // Wait for auth to complete before initializing
+        if (authLoading) {
+            return;
+        }
+
+        // Only proceed if authenticated
+        if (!isAuthenticated) {
+            return;
+        }
+
         // Initial data load using ref to avoid dependency issues
         listRef.current({ page: 1, limit: 20 }).catch(() => {});
         refreshUnreadCountRef.current().catch(() => {});
@@ -459,7 +471,7 @@ export function NotificationsProvider({
             offRetry();
             notificationsSocket.disconnect();
         };
-    }, []); // Empty deps - only run once on mount
+    }, [authLoading, isAuthenticated]); // Re-run when auth state changes
 
     const value = useMemo<NotificationsContextValue>(
         () => ({

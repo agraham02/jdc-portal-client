@@ -72,6 +72,13 @@ interface HealthStatus {
     timestamp: string;
 }
 
+interface CacheStats {
+    size: number;
+    hits: number;
+    misses: number;
+    hitRate: string;
+}
+
 function ObservabilityDashboard() {
     const [systemMetrics, setSystemMetrics] = useState<SystemMetrics | null>(
         null
@@ -79,12 +86,13 @@ function ObservabilityDashboard() {
     const [performanceMetrics, setPerformanceMetrics] =
         useState<PerformanceMetrics | null>(null);
     const [healthStatus, setHealthStatus] = useState<HealthStatus | null>(null);
+    const [cacheStats, setCacheStats] = useState<CacheStats | null>(null);
     const [loading, setLoading] = useState(true);
     const [autoRefresh, setAutoRefresh] = useState(true);
 
     const fetchMetrics = async () => {
         try {
-            const [system, performance, health] = await Promise.all([
+            const [system, performance, health, cache] = await Promise.all([
                 apiClient.get<SystemMetrics>(
                     "/admin/observability/metrics/system"
                 ),
@@ -92,11 +100,13 @@ function ObservabilityDashboard() {
                     "/admin/observability/metrics/performance"
                 ),
                 apiClient.get<HealthStatus>("/admin/observability/health"),
+                apiClient.get<CacheStats>("/admin/cache/stats"),
             ]);
 
             setSystemMetrics(system);
             setPerformanceMetrics(performance);
             setHealthStatus(health);
+            setCacheStats(cache);
         } catch (error) {
             console.error(error);
             apiToast.error("Failed to fetch metrics");
@@ -466,6 +476,68 @@ function ObservabilityDashboard() {
                                 </div>
                             </div>
                         </div>
+                    </CardContent>
+                </Card>
+            )}
+
+            {/* Permission Cache Stats */}
+            {cacheStats && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Database className="h-5 w-5" />
+                            Permission Cache Statistics
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                            <div>
+                                <div className="text-muted-foreground">
+                                    Cache Size
+                                </div>
+                                <div className="text-lg font-semibold">
+                                    {cacheStats.size} entries
+                                </div>
+                            </div>
+                            <div>
+                                <div className="text-muted-foreground">
+                                    Cache Hits
+                                </div>
+                                <div className="text-lg font-semibold text-green-600">
+                                    {cacheStats.hits}
+                                </div>
+                            </div>
+                            <div>
+                                <div className="text-muted-foreground">
+                                    Cache Misses
+                                </div>
+                                <div className="text-lg font-semibold text-yellow-600">
+                                    {cacheStats.misses}
+                                </div>
+                            </div>
+                            <div>
+                                <div className="text-muted-foreground">
+                                    Hit Rate
+                                </div>
+                                <div
+                                    className={`text-lg font-semibold ${
+                                        parseFloat(cacheStats.hitRate) > 90
+                                            ? "text-green-600"
+                                            : parseFloat(cacheStats.hitRate) >
+                                              70
+                                            ? "text-yellow-600"
+                                            : "text-red-600"
+                                    }`}
+                                >
+                                    {cacheStats.hitRate}
+                                </div>
+                            </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-4">
+                            Permission cache reduces database queries by storing
+                            computed user permissions in memory. Higher hit
+                            rates indicate better performance.
+                        </p>
                     </CardContent>
                 </Card>
             )}

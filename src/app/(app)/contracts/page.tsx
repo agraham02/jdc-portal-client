@@ -21,11 +21,13 @@ import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { ContractListSkeleton } from "@/components/common/LoadingSkeletons";
 import { NoContractsFound, ErrorState } from "@/components/common/EmptyStates";
 import { useErrorState } from "@/lib/hooks/useErrorState";
+import { useAuthz } from "@/lib/authz/useAuthz";
 
 export default function ContractsPage() {
     const router = useRouter();
     const { notifications } = useNotificationsCtx();
     const { error, setError, clearError } = useErrorState();
+    const { hasAny } = useAuthz();
     const [contracts, setContracts] = useState<Contract[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [page, setPage] = useState(1);
@@ -133,8 +135,12 @@ export default function ContractsPage() {
                                 setStatusFilter(undefined);
                                 setPage(1);
                             }}
-                            onCreateNew={() => router.push("/contracts/new")}
-                            canCreate={true}
+                            onCreateNew={
+                                hasAny([P.CONTRACT_CREATE])
+                                    ? () => router.push("/contracts/new")
+                                    : undefined
+                            }
+                            canCreate={hasAny([P.CONTRACT_CREATE])}
                         />
                     ) : (
                         <ContractList

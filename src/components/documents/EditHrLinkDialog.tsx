@@ -23,6 +23,7 @@ import {
 import { toast } from "sonner";
 import { HrDocumentsService } from "@/lib/services/file";
 import { HrLink, HRLinkCategory } from "@/lib/types/file";
+import { Switch } from "@/components/ui/switch";
 
 interface EditHrLinkDialogProps {
     open: boolean;
@@ -45,6 +46,7 @@ export function EditHrLinkDialog({
     const [sortOrder, setSortOrder] = useState("0");
     const [tags, setTags] = useState("");
     const [isActive, setIsActive] = useState(true);
+    const [isPublic, setIsPublic] = useState(false);
 
     // Populate form when link changes
     useEffect(() => {
@@ -56,6 +58,7 @@ export function EditHrLinkDialog({
             setSortOrder(link.sortOrder?.toString() || "0");
             setTags(link.tags?.join(", ") || "");
             setIsActive(link.isActive);
+            setIsPublic(link.isPublic ?? false);
         }
     }, [link]);
 
@@ -93,6 +96,7 @@ export function EditHrLinkDialog({
                     .map((t) => t.trim())
                     .filter(Boolean),
                 isActive,
+                isPublic,
             });
 
             toast.success("Link updated successfully");
@@ -226,6 +230,23 @@ export function EditHrLinkDialog({
                         <Label htmlFor="isActive" className="cursor-pointer">
                             Active (visible to all users)
                         </Label>
+                    </div>
+
+                    <div className="flex items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                            <Label htmlFor="isPublic" className="font-medium">
+                                Public Access
+                            </Label>
+                            <p className="text-sm text-muted-foreground">
+                                Make this link visible to all users. If disabled,
+                                only users with FILE_READ permission can see it.
+                            </p>
+                        </div>
+                        <Switch
+                            id="isPublic"
+                            checked={isPublic}
+                            onCheckedChange={setIsPublic}
+                        />
                     </div>
 
                     <DialogFooter>

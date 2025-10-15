@@ -57,6 +57,15 @@ export const AuthService = {
     getUserPermissions: (): Promise<{ permissions: string[] }> => {
         return apiClient.get("/auth/me/permissions");
     },
+    /**
+     * Get computed account type from user's roles
+     * Priority: Admin > Vendor > Employee > Housing_Tenant
+     */
+    getAccountType: (): Promise<{
+        accountType: "Admin" | "Vendor" | "Employee" | "Housing_Tenant" | null;
+    }> => {
+        return apiClient.get("/auth/account-type");
+    },
     getPendingAccounts() {
         return apiClient.get<{ users: User[] }>("/auth/pending");
     },
@@ -168,18 +177,6 @@ export const AuthService = {
             `/auth/validate-activation-token?token=${encodeURIComponent(
                 token
             )}`,
-            { skipAuthRetry: true }
-        );
-    },
-    completeActivation(
-        data: import("../validations/auth").AccountActivationFormData
-    ) {
-        // Remove confirmPassword before sending
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { confirmPassword, ...activationData } = data;
-        return apiClient.post<{ message: string }>(
-            "/auth/activate-account",
-            activationData,
             { skipAuthRetry: true }
         );
     },

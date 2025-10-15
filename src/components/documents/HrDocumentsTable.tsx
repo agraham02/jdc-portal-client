@@ -125,7 +125,6 @@ export function HrDocumentsTable() {
         "image/png",
         "image/jpeg",
     ];
-    // TODO: Increased max file size to 100MB. Ensure server-side validation matches this.
     const maxBytes = 100 * 1024 * 1024; // 100MB
 
     const onReplace = async (file: HRDocument, picked: File | null) => {
@@ -311,14 +310,31 @@ export function HrDocumentsTable() {
                                         </div>
                                     </TableCell>
                                     <TableCell>
-                                        <Badge
-                                            variant="outline"
-                                            className="text-xs"
-                                        >
-                                            {f.mimetype
-                                                ?.split("/")?.[1]
-                                                ?.toUpperCase() || "FILE"}
-                                        </Badge>
+                                        <div className="flex items-center gap-2">
+                                            <Badge
+                                                variant="outline"
+                                                className="text-xs"
+                                            >
+                                                {f.mimetype
+                                                    ?.split("/")?.[1]
+                                                    ?.toUpperCase() || "FILE"}
+                                            </Badge>
+                                            {f.isPublic ? (
+                                                <Badge
+                                                    variant="outline"
+                                                    className="text-xs bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
+                                                >
+                                                    Public
+                                                </Badge>
+                                            ) : (
+                                                <Badge
+                                                    variant="outline"
+                                                    className="text-xs bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800"
+                                                >
+                                                    Private
+                                                </Badge>
+                                            )}
+                                        </div>
                                     </TableCell>
                                     <TableCell className="text-sm">
                                         {formatBytes(f.size)}

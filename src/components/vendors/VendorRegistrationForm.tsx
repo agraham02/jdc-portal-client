@@ -16,6 +16,7 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -33,6 +34,7 @@ import { AddressForm, ServicesInput } from "../common";
 
 export default function VendorRegistrationForm() {
     const [step, setStep] = useState<number>(0);
+    const [sameAsPhysical, setSameAsPhysical] = useState(false);
     const totalSteps = 3;
     const router = useRouter();
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -41,7 +43,8 @@ export default function VendorRegistrationForm() {
 
     const methods = useForm<VendorRegistrationFormData>({
         resolver: zodResolver(vendorRegistrationSchema),
-        mode: "onTouched", // Validate after user interacts with field
+        mode: "onBlur", // Validate on blur for better performance in multi-step forms
+        reValidateMode: "onBlur", // Re-validate on blur after first submit attempt
         shouldUnregister: false, // Keep field values when inputs unmount (multi-step form)
         defaultValues: {
             email: "",
@@ -93,7 +96,9 @@ export default function VendorRegistrationForm() {
     const handleNext = async () => {
         // Validate only the current step's fields
         // eslint-disable-next-line @typescript-eslint/no-explicit-any -- react-hook-form trigger accepts field paths as any
-        const isValid = await trigger(stepFields[step] as any);
+        const isValid = await trigger(stepFields[step] as any, {
+            shouldFocus: true, // Focus on first error field
+        });
 
         if (isValid) {
             setStep((prev) => prev + 1);
@@ -475,10 +480,63 @@ export default function VendorRegistrationForm() {
                                             title="Physical Address"
                                             required
                                         />
-                                        <AddressForm
-                                            prefix="mailingAddress"
-                                            title="Mailing Address"
-                                        />
+
+                                        <div className="flex items-center space-x-2 py-2">
+                                            <Checkbox
+                                                id="sameAsPhysical"
+                                                checked={sameAsPhysical}
+                                                onCheckedChange={(checked) => {
+                                                    const isChecked =
+                                                        checked === true;
+                                                    setSameAsPhysical(
+                                                        isChecked
+                                                    );
+
+                                                    if (isChecked) {
+                                                        // Copy physical address to mailing address
+                                                        const physicalAddress =
+                                                            methods.getValues(
+                                                                "physicalAddress"
+                                                            );
+                                                        setValue(
+                                                            "mailingAddress.line1",
+                                                            physicalAddress.line1
+                                                        );
+                                                        setValue(
+                                                            "mailingAddress.line2",
+                                                            physicalAddress.line2 ||
+                                                                ""
+                                                        );
+                                                        setValue(
+                                                            "mailingAddress.city",
+                                                            physicalAddress.city
+                                                        );
+                                                        setValue(
+                                                            "mailingAddress.state",
+                                                            physicalAddress.state
+                                                        );
+                                                        setValue(
+                                                            "mailingAddress.zip",
+                                                            physicalAddress.zip
+                                                        );
+                                                    }
+                                                }}
+                                            />
+                                            <label
+                                                htmlFor="sameAsPhysical"
+                                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                                            >
+                                                Mailing address same as physical
+                                                address
+                                            </label>
+                                        </div>
+
+                                        {!sameAsPhysical && (
+                                            <AddressForm
+                                                prefix="mailingAddress"
+                                                title="Mailing Address"
+                                            />
+                                        )}
                                     </div>
 
                                     {serverError && (

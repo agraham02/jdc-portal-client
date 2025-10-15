@@ -256,13 +256,19 @@ export class FileService {
 }
 
 // HR Documents service for managing HR documents and links
+export interface HrDocumentMetadata {
+    description?: string;
+    tags?: string[];
+    isPublic?: boolean;
+}
+
 export class HrDocumentsService {
     /**
      * Helper method to build FormData for file upload
      */
     private static buildFormData(
         file: File,
-        metadata: { description?: string; tags?: string[] } = {}
+        metadata: HrDocumentMetadata = {}
     ): FormData {
         const formData = new FormData();
         formData.append("file", file);
@@ -273,6 +279,9 @@ export class HrDocumentsService {
         if (metadata.tags && metadata.tags.length > 0) {
             // Backend expects tags as array items
             metadata.tags.forEach((tag) => formData.append("tags", tag));
+        }
+        if (metadata.isPublic !== undefined) {
+            formData.append("isPublic", metadata.isPublic.toString());
         }
 
         return formData;
@@ -286,7 +295,7 @@ export class HrDocumentsService {
      */
     static async uploadFile(
         file: File,
-        metadata: { description?: string; tags?: string[] } = {}
+        metadata: HrDocumentMetadata = {}
     ): Promise<HRDocument> {
         const formData = this.buildFormData(file, metadata);
         return apiClient.postFormData<HRDocument>(
@@ -332,7 +341,7 @@ export class HrDocumentsService {
     static async replaceFile(
         id: string,
         file: File,
-        metadata: { description?: string; tags?: string[] } = {}
+        metadata: HrDocumentMetadata = {}
     ): Promise<HRDocument> {
         const formData = this.buildFormData(file, metadata);
         return apiClient.put<HRDocument>(`/hr-documents/files/${id}`, formData);
