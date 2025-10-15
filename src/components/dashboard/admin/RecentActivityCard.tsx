@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { ExternalLink, Bell } from "lucide-react";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
-import type { NotificationResponseDto } from "@/lib/types/notifications";
 
 /**
  * RecentActivityCard shows recent system-wide notifications

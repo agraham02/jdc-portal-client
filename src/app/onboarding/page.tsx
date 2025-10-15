@@ -12,7 +12,7 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { PasswordInput } from "@/components/ui/password-input";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { EmployeeService } from "@/lib/services/employee";
@@ -496,8 +496,8 @@ export default function EmployeeOnboardingPage() {
                                         )}
                                     </AnimatePresence>
                                     <p className="text-xs text-muted-foreground">
-                                        We'll use this for important account
-                                        notifications
+                                        We&apos;ll use this for important
+                                        account notifications
                                     </p>
                                 </div>
 

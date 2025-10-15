@@ -6,7 +6,6 @@ import {
     Database,
     FileText,
     HardDrive,
-    Home,
     LayoutDashboard,
     Mail,
     Settings,

@@ -24,11 +24,7 @@ export default function ProfilePage() {
     const { user, accountType, refresh } = useAuth();
 
     // Fetch vendor data - only when user is a Vendor
-    const {
-        data: vendorData,
-        isLoading: loadingVendor,
-        error: vendorError,
-    } = useSWR(
+    const { data: vendorData, isLoading: loadingVendor } = useSWR(
         accountType === "Vendor" ? "/vendors/me" : null,
         () => VendorService.getMyProfile(),
         {
@@ -38,11 +34,7 @@ export default function ProfilePage() {
     );
 
     // Fetch employee data - only when user is an Employee
-    const {
-        data: employeeData,
-        isLoading: loadingEmployee,
-        error: employeeError,
-    } = useSWR(
+    const { data: employeeData, isLoading: loadingEmployee } = useSWR(
         accountType === "Employee" ? "/employees/me" : null,
         () => EmployeeService.getMyProfile(),
         {
@@ -52,14 +44,6 @@ export default function ProfilePage() {
     );
 
     const isLoading = loadingVendor || loadingEmployee;
-
-    const initials = useMemo(
-        () =>
-            `${(user?.firstName || "").charAt(0)}${(
-                user?.lastName || ""
-            ).charAt(0)}`.toUpperCase(),
-        [user]
-    );
 
     const profileDefaultValues = useMemo<ProfileFormData>(
         () => ({

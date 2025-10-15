@@ -29,7 +29,7 @@ export function NavSection({
     const pathname = usePathname();
     const [hasChecked, setHasChecked] = useState(false);
     const [visibleCount, setVisibleCount] = useState(-1);
-    const menuRef = useRef<HTMLDivElement>(null);
+    const menuRef = useRef<HTMLUListElement | null>(null);
 
     useEffect(() => {
         if (menuRef.current) {
@@ -46,7 +46,7 @@ export function NavSection({
         <SidebarGroup>
             <SidebarGroupLabel>{label}</SidebarGroupLabel>
             <SidebarGroupContent>
-                <SidebarMenu ref={menuRef as any}>
+                <SidebarMenu ref={menuRef}>
                     {items.map((item) => {
                         const content = (
                             <SidebarMenuItem key={item.title}>

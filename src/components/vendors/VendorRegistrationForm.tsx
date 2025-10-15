@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useForm, FormProvider, useWatch } from "react-hook-form";
+import { useForm, FormProvider } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
     FormControl,
@@ -96,8 +96,8 @@ export default function VendorRegistrationForm() {
     const handleNext = async () => {
         // Validate only the current step's fields
         // eslint-disable-next-line @typescript-eslint/no-explicit-any -- react-hook-form trigger accepts field paths as any
-        const isValid = await trigger(stepFields[step] as any, { 
-            shouldFocus: true // Focus on first error field
+        const isValid = await trigger(stepFields[step] as any, {
+            shouldFocus: true, // Focus on first error field
         });
 
         if (isValid) {
@@ -486,17 +486,39 @@ export default function VendorRegistrationForm() {
                                                 id="sameAsPhysical"
                                                 checked={sameAsPhysical}
                                                 onCheckedChange={(checked) => {
-                                                    const isChecked = checked === true;
-                                                    setSameAsPhysical(isChecked);
-                                                    
+                                                    const isChecked =
+                                                        checked === true;
+                                                    setSameAsPhysical(
+                                                        isChecked
+                                                    );
+
                                                     if (isChecked) {
                                                         // Copy physical address to mailing address
-                                                        const physicalAddress = methods.getValues("physicalAddress");
-                                                        setValue("mailingAddress.line1", physicalAddress.line1);
-                                                        setValue("mailingAddress.line2", physicalAddress.line2 || "");
-                                                        setValue("mailingAddress.city", physicalAddress.city);
-                                                        setValue("mailingAddress.state", physicalAddress.state);
-                                                        setValue("mailingAddress.zip", physicalAddress.zip);
+                                                        const physicalAddress =
+                                                            methods.getValues(
+                                                                "physicalAddress"
+                                                            );
+                                                        setValue(
+                                                            "mailingAddress.line1",
+                                                            physicalAddress.line1
+                                                        );
+                                                        setValue(
+                                                            "mailingAddress.line2",
+                                                            physicalAddress.line2 ||
+                                                                ""
+                                                        );
+                                                        setValue(
+                                                            "mailingAddress.city",
+                                                            physicalAddress.city
+                                                        );
+                                                        setValue(
+                                                            "mailingAddress.state",
+                                                            physicalAddress.state
+                                                        );
+                                                        setValue(
+                                                            "mailingAddress.zip",
+                                                            physicalAddress.zip
+                                                        );
                                                     }
                                                 }}
                                             />
@@ -504,7 +526,8 @@ export default function VendorRegistrationForm() {
                                                 htmlFor="sameAsPhysical"
                                                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
                                             >
-                                                Mailing address same as physical address
+                                                Mailing address same as physical
+                                                address
                                             </label>
                                         </div>
 
