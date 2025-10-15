@@ -178,7 +178,7 @@ export class UserStatusHelper {
      * @param status - The user's current status
      * @returns Reason string or null if user can login
      */
-    static getLoginBlockReason(status: UserStatus): string | null {
+    static getLoginRestrictionReason(status: UserStatus): string | null {
         if (this.canLogin(status)) return null;
 
         const reasons: Partial<Record<UserStatus, string>> = {

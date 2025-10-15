@@ -9,7 +9,7 @@ import type { NextRequest } from "next/server";
  *
  * Authentication is detected via the presence of accessToken cookie
  */
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
     // Only handle root path
@@ -17,12 +17,25 @@ export function middleware(request: NextRequest) {
         return NextResponse.next();
     }
 
-    // Check for authentication via cookie
+    // Check for authentication via cookie and validate JWT
     const accessToken = request.cookies.get("accessToken");
 
     if (accessToken?.value) {
-        // Authenticated: redirect to dashboard
-        return NextResponse.redirect(new URL("/dashboard", request.url));
+        try {
+            // Dynamically import the JWT library to avoid issues in edge runtime
+            const { jwtVerify } = await import("jose");
+            const secret = new TextEncoder().encode(
+                process.env.NEXT_PUBLIC_JWT_SECRET || ""
+            );
+            // Verify the token (throws if invalid/expired)
+            await jwtVerify(accessToken.value, secret);
+
+            // Authenticated: redirect to dashboard
+            return NextResponse.redirect(new URL("/dashboard", request.url));
+        } catch {
+            // Invalid or expired token: redirect to login
+            return NextResponse.redirect(new URL("/login", request.url));
+        }
     }
 
     // Unauthenticated: redirect to login

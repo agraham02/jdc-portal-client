@@ -43,8 +43,8 @@ export default function VendorRegistrationForm() {
 
     const methods = useForm<VendorRegistrationFormData>({
         resolver: zodResolver(vendorRegistrationSchema),
-        mode: "onChange", // Validate on change for better UX in multi-step forms
-        reValidateMode: "onChange", // Re-validate on change after first submit attempt
+        mode: "onBlur", // Validate on blur for better performance in multi-step forms
+        reValidateMode: "onBlur", // Re-validate on blur after first submit attempt
         shouldUnregister: false, // Keep field values when inputs unmount (multi-step form)
         defaultValues: {
             email: "",
