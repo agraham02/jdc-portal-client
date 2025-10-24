@@ -298,7 +298,14 @@ export function EmployeesTable() {
             loadingMessage: "Loading employees…",
             emptyMessage: "No employees found",
         };
-    }, [canUpdate, canDelete, loadEmployees, router, filterDefinitions]);
+    }, [
+        canUpdate,
+        canDelete,
+        loadEmployees,
+        router,
+        filterDefinitions,
+        canResendActivation,
+    ]);
 
     if (!canRead) {
         return (

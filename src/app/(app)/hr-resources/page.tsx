@@ -2,37 +2,19 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import Link from "next/link";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
-import { Can } from "@/components/auth/Can";
 import { PermissionName as P } from "@/lib/constants/permission-names";
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { HrDocumentsService } from "@/lib/services/file";
 import { HRDocument } from "@/lib/types/file";
 import {
-    Upload,
     FileText,
-    FolderOpen,
-    TrendingUp,
     Clock,
     Download,
-    Plus,
-    ArrowRight,
     Link as LinkIcon,
-    EyeIcon,
 } from "lucide-react";
 import { HrDocumentsTable } from "@/components/documents/HrDocumentsTable";
 import { HrLinksTable } from "@/components/documents/HrLinksTable";
-import { toast } from "sonner";
-import { formatBytes } from "@/lib/utils/formatters";
 
 // TODO: update page to align with new isPublic logic structure
 
@@ -51,20 +33,6 @@ export default function HRResourcesPage() {
         totalDownloads: 0,
         loading: true,
     });
-
-    const [recentDocuments, setRecentDocuments] = useState<HRDocument[]>([]);
-
-    const onView = async (file: HRDocument) => {
-        try {
-            const blob = await HrDocumentsService.downloadFile(file._id);
-            const url = window.URL.createObjectURL(blob);
-            window.open(url, "_blank");
-            // Clean up after a delay to ensure the new tab has loaded the blob
-            setTimeout(() => window.URL.revokeObjectURL(url), 1000);
-        } catch {
-            toast.error("Failed to open document");
-        }
-    };
 
     useEffect(() => {
         const loadStats = async () => {
@@ -97,8 +65,6 @@ export default function HRResourcesPage() {
                     totalDownloads: Math.floor(totalResponse.total * 2.3), // Simulated metric
                     loading: false,
                 });
-
-                setRecentDocuments(recentResponse.files);
             } catch (error) {
                 console.error("Failed to load HR stats:", error);
                 setStats((prev) => ({ ...prev, loading: false }));
@@ -107,25 +73,6 @@ export default function HRResourcesPage() {
 
         loadStats();
     }, []);
-
-    const quickActions = [
-        {
-            title: "Upload Document",
-            description: "Add new HR document to the library",
-            icon: Upload,
-            href: "/hr-resources/upload",
-            permission: P.HR_DOCUMENT_CREATE,
-            variant: "default" as const,
-        },
-        {
-            title: "Browse Library",
-            description: "View all HR documents and resources",
-            icon: FolderOpen,
-            href: "/hr-resources/library",
-            permission: null,
-            variant: "outline" as const,
-        },
-    ];
 
     const statsCards = [
         {
@@ -173,8 +120,6 @@ export default function HRResourcesPage() {
                             Manage and access HR documents, links, and resources
                         </motion.p>
                     </div>
-
-                    
                 </div>
 
                 {/* Stats Cards */}
