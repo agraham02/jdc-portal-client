@@ -30,11 +30,13 @@ import {
     Trash2Icon,
     RotateCcwIcon,
     Search,
+    Upload,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Can } from "@/components/auth/Can";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 import { formatBytes } from "@/lib/utils/formatters";
+import Link from "next/link";
 
 type SortDir = "asc" | "desc";
 
@@ -185,6 +187,17 @@ export function HrDocumentsTable() {
                     </Select>
                 </div>
                 <div className="flex gap-2 justify-end">
+                    <Can anyOf={[P.HR_DOCUMENT_CREATE]}>
+                        <Button asChild className="min-w-fit">
+                            <Link
+                                href="/hr-resources/upload"
+                                className="flex items-center gap-2"
+                            >
+                                <Upload className="w-4 h-4" />
+                                Upload Document
+                            </Link>
+                        </Button>
+                    </Can>
                     <Button
                         variant="outline"
                         size="sm"
