@@ -10,6 +10,7 @@ import {
     EmployeeService,
     type EmployeeWithUser,
 } from "@/lib/services/employee";
+import { AuthService } from "@/lib/services/auth";
 import { useAuthz } from "@/lib/authz/useAuthz";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 import { useErrorState } from "@/lib/hooks/useErrorState";
@@ -25,6 +26,7 @@ export function EmployeesTable() {
     const canRead = hasAny([P.EMPLOYEE_READ, P.EMPLOYEE_READ_ALL]);
     const canUpdate = hasAny([P.EMPLOYEE_UPDATE]);
     const canDelete = hasAny([P.EMPLOYEE_DELETE]);
+    const canResendActivation = hasAny([P.EMPLOYEE_CREATE, P.EMPLOYEE_UPDATE]);
 
     const [loading, setLoading] = useState(true);
     const [employees, setEmployees] = useState<EmployeeWithUser[]>([]);
@@ -216,6 +218,48 @@ export function EmployeesTable() {
                               onClick: (employee: EmployeeWithUser) => {
                                   // Navigate to edit page or open edit dialog
                                   router.push(`/employees/${employee._id}`);
+                              },
+                          },
+                      ]
+                    : []),
+                ...(canResendActivation
+                    ? [
+                          {
+                              key: "resend",
+                              label: "Resend activation",
+                              variant: "secondary" as const,
+                              onClick: async (employee: EmployeeWithUser) => {
+                                  try {
+                                      await AuthService.resendActivation(
+                                          employee.userId._id
+                                      );
+                                      apiToast.success("Activation email sent");
+                                      await loadEmployees();
+                                  } catch (err) {
+                                      apiToast.error(
+                                          errorMessages.auth.resendVerification,
+                                          err
+                                      );
+                                  }
+                              },
+                              hidden: (employee: EmployeeWithUser) => {
+                                  // Only show for pending accounts whose activation likely expired (older than 7 days)
+                                  if (
+                                      !(
+                                          employee.userId.status ===
+                                              UserStatus.PENDING ||
+                                          employee.userId.status ===
+                                              UserStatus.ONBOARDING
+                                      )
+                                  )
+                                      return true;
+                                  const created = employee.userId.createdAt
+                                      ? new Date(employee.userId.createdAt)
+                                      : null;
+                                  if (!created) return true;
+                                  const ageMs = Date.now() - created.getTime();
+                                  const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+                                  return ageMs <= sevenDaysMs;
                               },
                           },
                       ]
