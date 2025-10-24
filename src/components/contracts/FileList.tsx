@@ -74,7 +74,7 @@ export function FileList({
                                         <span>•</span>
                                         <span>
                                             {format(
-                                                new Date(file.uploadedAt),
+                                                new Date(file.updatedAt),
                                                 "MMM d, yyyy"
                                             )}
                                         </span>

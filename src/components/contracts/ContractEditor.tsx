@@ -27,6 +27,7 @@ import {
 import { CreateContractDto, RequiredDocument } from "@/lib/types/contracts";
 import { PlusIcon, TrashIcon } from "lucide-react";
 import { useState } from "react";
+import { FileUpload } from "../common";
 
 // Common currencies
 const CURRENCIES = [
@@ -91,6 +92,8 @@ interface ContractEditorProps {
     isSubmitting?: boolean;
     submitLabel?: string;
     className?: string;
+    files?: File[];
+    setFiles?: (files: File[]) => void;
 }
 
 export function ContractEditor({
@@ -100,6 +103,8 @@ export function ContractEditor({
     isSubmitting = false,
     submitLabel = "Create Contract",
     className,
+    files = [],
+    setFiles = () => {},
 }: ContractEditorProps) {
     const [requiredDocs, setRequiredDocs] = useState<RequiredDocument[]>(
         initialData?.requiredDocuments || []
@@ -490,6 +495,42 @@ export function ContractEditor({
                                 ))}
                             </div>
                         )}
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Supporting Documents (Optional)</CardTitle>
+                        <p className="text-sm text-muted-foreground">
+                            Upload documents that potential applicants can view
+                            and download. Maximum 5 files, 5MB each.
+                        </p>
+                    </CardHeader>
+                    <CardContent>
+                        <FileUpload
+                            acceptedFileTypes={[
+                                ".pdf",
+                                ".doc",
+                                ".docx",
+                                ".xls",
+                                ".xlsx",
+                                ".png",
+                                ".jpg",
+                                ".jpeg",
+                            ]}
+                            maxFiles={5}
+                            maxFileSizeMB={5}
+                            disabled={isSubmitting}
+                            uploadingFiles={files.map((file) => ({
+                                file,
+                                progress: 0,
+                            }))}
+                            onUploadingFilesChange={(uploadingFiles) =>
+                                setFiles(uploadingFiles.map((uf) => uf.file))
+                            }
+                            showUploadButton={true}
+                            uploadButtonText="Select Files"
+                        />
                     </CardContent>
                 </Card>
 

@@ -147,43 +147,9 @@ export default function ContractCreatePage() {
                     onCancel={handleCancel}
                     isSubmitting={isSubmitting}
                     submitLabel="Create Contract"
+                    files={files}
+                    setFiles={setFiles}
                 />
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Supporting Documents (Optional)</CardTitle>
-                        <p className="text-sm text-muted-foreground">
-                            Upload documents that potential applicants can view
-                            and download. Maximum 5 files, 5MB each.
-                        </p>
-                    </CardHeader>
-                    <CardContent>
-                        <FileUpload
-                            acceptedFileTypes={[
-                                ".pdf",
-                                ".doc",
-                                ".docx",
-                                ".xls",
-                                ".xlsx",
-                                ".png",
-                                ".jpg",
-                                ".jpeg",
-                            ]}
-                            maxFiles={5}
-                            maxFileSizeMB={5}
-                            disabled={isSubmitting}
-                            uploadingFiles={files.map((file) => ({
-                                file,
-                                progress: 0,
-                            }))}
-                            onUploadingFilesChange={(uploadingFiles) =>
-                                setFiles(uploadingFiles.map((uf) => uf.file))
-                            }
-                            showUploadButton={true}
-                            uploadButtonText="Select Files"
-                        />
-                    </CardContent>
-                </Card>
             </main>
         </ProtectedRoute>
     );

@@ -40,7 +40,8 @@ export interface FileDocument {
     filename: string;
     mimetype: string;
     size: number;
-    uploadedAt: string; // ISO date string
+    createdAt: string; // ISO date string
+    updatedAt: string; // ISO date string
 }
 
 export interface User {
