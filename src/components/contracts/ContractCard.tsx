@@ -33,7 +33,7 @@ export function ContractCard({
 }: ContractCardProps) {
     const hasDeadline = !!contract.deadline;
     const isExpired = hasDeadline && isPast(new Date(contract.deadline!));
-    const applicationCount = contract.applications?.length ?? 0;
+    const applicationCount = contract.applicationCount ?? 0;
 
     return (
         <Card

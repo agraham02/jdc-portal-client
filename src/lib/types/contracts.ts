@@ -61,18 +61,24 @@ export interface Application {
     _id: string;
     contractId: string;
     vendorId: string;
+    userId: string; // The user who submitted the application
     vendor?: Vendor;
+    user?: User; // Populated user info
     contract?: {
         _id: string;
         title: string;
         status: ContractStatus;
+        deadline?: string;
     };
-    proposalDetails: string;
-    bidValue?: number;
+    proposal: string; // Proposal text
+    proposalDetails?: string; // Legacy alias for proposal
+    proposedBudget?: number; // The vendor's proposed budget
+    bidValue?: number; // Legacy alias for proposedBudget
     status: ApplicationStatus;
     documents: FileDocument[];
-    applicationDate: string; // ISO date string - when application was submitted
-    submittedAt?: string; // Alias for applicationDate (for backwards compatibility)
+    submittedAt: string; // ISO date string - when application was submitted
+    applicationDate?: string; // Legacy alias for submittedAt
+    statusHistory: ApplicationStatusHistory[];
     reviewedAt?: string | null;
     acceptedAt?: string | null;
     rejectedAt?: string | null;
@@ -85,6 +91,14 @@ export interface Application {
     updatedAt: string;
 }
 
+export interface ApplicationStatusHistory {
+    previousStatus: ApplicationStatus;
+    newStatus: ApplicationStatus;
+    changedAt: string;
+    changedBy: string;
+    comments?: string;
+}
+
 export interface Contract {
     _id: string;
     title: string;
@@ -93,15 +107,18 @@ export interface Contract {
     budget?: number;
     currency?: string; // e.g., "USD"
     deadline?: string; // ISO date string
-    requiresResponsiveSupport: boolean;
+    requiresResponsiveSupport?: boolean;
     requiredDocuments?: RequiredDocument[]; // Optional with default []
-    documents?: FileDocument[]; // Optional with default []
+    documents?: FileDocument[]; // Contract-level documents
     createdBy: User;
-    openedAt?: string | null; // ISO date string
-    closedAt?: string | null;
-    awardedAt?: string | null;
-    awardedApplication?: string | null; // Application ID
-    applications?: Application[]; // Only populated for staff with permissions
+    openedAt?: string | null; // When contract was opened for applications
+    closedAt?: string | null; // When contract was closed (terminal state)
+    awardedAt?: string | null; // When contract was awarded
+    awardedToVendorId?: string | null; // Vendor ID who won the contract
+    awardedApplicationId?: string | null; // Winning application ID
+    awardedVendor?: Vendor | null; // Populated vendor info
+    awardedApplication?: Application | null; // Populated application info
+    applicationCount?: number; // Number of applications (for list views)
     createdAt: string;
     updatedAt: string;
 }
@@ -142,8 +159,10 @@ export interface UpdateContractDto {
 }
 
 export interface ApplyToContractDto {
-    proposalDetails: string;
-    bidValue?: number;
+    proposal?: string; // Proposal text
+    proposalDetails?: string; // Legacy alias for proposal
+    proposedBudget?: number; // The vendor's proposed budget
+    bidValue?: number; // Legacy alias for proposedBudget
     // Documents are uploaded via multipart/form-data, not JSON
 }
 
@@ -152,7 +171,8 @@ export interface UpdateApplicationStatusDto {
 }
 
 export interface AwardContractDto {
-    applicationId: string;
+    vendorId: string; // Award contract to this vendor
+    applicationId?: string; // Optional: specific application ID (for reference)
 }
 
 export interface CreateInternalNoteDto {
@@ -214,6 +234,14 @@ export interface InternalNoteFilterParams {
     page?: number;
     limit?: number;
     applicationId?: string;
+    contractId?: string;
+}
+
+export interface VendorApplicationFilterParams {
+    page?: number;
+    limit?: number;
+    status?: ApplicationStatus;
+    contractId?: string;
 }
 
 // ============================================================================

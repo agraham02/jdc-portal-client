@@ -197,7 +197,7 @@ export function ApplicationList({
                             <TableBody>
                                 {filteredApplications.map((application) => {
                                     const isWinner =
-                                        contract.awardedApplication ===
+                                        contract.awardedApplicationId ===
                                         application._id;
                                     return (
                                         <TableRow

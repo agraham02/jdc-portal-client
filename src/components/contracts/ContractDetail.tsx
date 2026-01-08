@@ -29,7 +29,6 @@ import {
     TrophyIcon,
     TrashIcon,
     CheckCircleIcon,
-    RotateCcwIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { StatusBadge } from "../common";
@@ -38,7 +37,6 @@ interface ContractDetailProps {
     contract: Contract;
     onPublish?: () => Promise<void>;
     onClose?: () => Promise<void>;
-    onReopen?: () => Promise<void>;
     onDelete?: () => Promise<void>;
     onApply?: (
         proposalDetails: string,
@@ -53,7 +51,6 @@ export function ContractDetail({
     contract,
     onPublish,
     onClose,
-    onReopen,
     onDelete,
     onApply,
     showActions = true,
@@ -223,7 +220,7 @@ export function ContractDetail({
                                             onClick={() =>
                                                 openConfirmDialog(
                                                     "Close Contract",
-                                                    "This will stop accepting new applications. You can reopen it later if needed.",
+                                                    "This will permanently stop accepting new applications. This action cannot be undone.",
                                                     () => handleAction(onClose)
                                                 )
                                             }
@@ -231,25 +228,6 @@ export function ContractDetail({
                                         >
                                             <XCircleIcon className="h-4 w-4 mr-2" />
                                             Close
-                                        </Button>
-                                    </Can>
-                                )}
-
-                                {/* Reopen */}
-                                {isClosed && onReopen && (
-                                    <Can anyOf={[P.CONTRACT_PUBLISH]}>
-                                        <Button
-                                            onClick={() =>
-                                                openConfirmDialog(
-                                                    "Reopen Contract",
-                                                    "This will reopen the contract to accept new applications.",
-                                                    () => handleAction(onReopen)
-                                                )
-                                            }
-                                            disabled={isLoading}
-                                        >
-                                            <RotateCcwIcon className="h-4 w-4 mr-2" />
-                                            Reopen
                                         </Button>
                                     </Can>
                                 )}

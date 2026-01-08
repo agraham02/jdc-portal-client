@@ -22,7 +22,7 @@ import {
     FileUpload,
     type UploadingFileMetadata,
 } from "@/components/common/FileUpload";
-import type { Contract } from "@/lib/types/contracts";
+import type { Contract, FileDocument } from "@/lib/types/contracts";
 import { formatCurrency } from "@/lib/utils/formatters";
 import {
     FileTextIcon,

@@ -99,7 +99,6 @@ export default function MyApplicationsPage() {
         if (!selectedWithdraw) return;
         try {
             await ApplicationsService.withdrawApplication(
-                selectedWithdraw.contractId,
                 selectedWithdraw.applicationId
             );
             showContractActionSuccess(
