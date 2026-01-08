@@ -210,19 +210,14 @@ export function ContractsTable() {
                     label: "Budget",
                     render: (contract) =>
                         contract.budget
-                            ? formatCurrency(
-                                  contract.budget,
-                                  contract.currency
-                              )
+                            ? formatCurrency(contract.budget, contract.currency)
                             : "—",
                 },
                 {
                     key: "deadline",
                     label: "Deadline",
                     render: (contract) =>
-                        contract.deadline
-                            ? formatDate(contract.deadline)
-                            : "—",
+                        contract.deadline ? formatDate(contract.deadline) : "—",
                 },
                 {
                     key: "applicationCount",

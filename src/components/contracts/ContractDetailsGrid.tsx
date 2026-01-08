@@ -83,8 +83,8 @@ export function ContractDetailsGrid({ contract }: ContractDetailsGridProps) {
                     </CardHeader>
                     <CardContent>
                         <p className="text-sm text-muted-foreground">
-                            {contract.awardedVendor?.companyName || 
-                             `Vendor ID: ${contract.awardedToVendorId}`}
+                            {contract.awardedVendor?.companyName ||
+                                `Vendor ID: ${contract.awardedToVendorId}`}
                         </p>
                     </CardContent>
                 </Card>
