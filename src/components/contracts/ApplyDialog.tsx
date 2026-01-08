@@ -34,8 +34,6 @@ import {
 import { useErrorState } from "@/lib/hooks/useErrorState";
 import { apiToast } from "@/lib/utils/toast-helpers";
 import { ContractsService } from "@/lib/services/contracts";
-import { HRDocument } from "@/lib/types/file";
-import { HrDocumentsService } from "@/lib/services";
 import { toast } from "sonner";
 
 interface ApplyDialogProps {

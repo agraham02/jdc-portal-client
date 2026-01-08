@@ -74,7 +74,6 @@ export function ContractDetail({
 
     const isDraft = contract.status === ContractStatus.DRAFT;
     const isOpen = contract.status === ContractStatus.OPEN;
-    const isClosed = contract.status === ContractStatus.CLOSED;
     const isAwarded = contract.status === ContractStatus.AWARDED;
 
     async function handleAction(action: () => Promise<void>) {
