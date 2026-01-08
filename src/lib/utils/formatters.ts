@@ -2,6 +2,26 @@
  * Utility functions for formatting various data types
  */
 
+import { format, parseISO } from "date-fns";
+
+/**
+ * Format a date string to a human-readable format
+ * @param date ISO date string or Date object
+ * @param formatStr date-fns format string (default: "MMM d, yyyy")
+ */
+export function formatDate(
+    date: string | Date | undefined | null,
+    formatStr = "MMM d, yyyy"
+): string {
+    if (!date) return "—";
+    try {
+        const dateObj = typeof date === "string" ? parseISO(date) : date;
+        return format(dateObj, formatStr);
+    } catch {
+        return "—";
+    }
+}
+
 /**
  * Format bytes to human-readable string
  */

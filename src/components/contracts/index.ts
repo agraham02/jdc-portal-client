@@ -15,6 +15,7 @@ export { ContractActions } from "./ContractActions";
 // Core Components
 export { ContractCard } from "./ContractCard";
 export { ContractList } from "./ContractList";
+export { ContractsTable } from "./ContractsTable";
 export { ContractDetail } from "./ContractDetail";
 export { ContractEditor } from "./ContractEditor";
 export { ApplicationForm } from "./ApplicationForm";
