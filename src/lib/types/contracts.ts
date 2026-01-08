@@ -40,8 +40,8 @@ export interface FileDocument {
     filename: string;
     mimetype: string;
     size: number;
-    createdAt: string; // ISO date string
-    updatedAt: string; // ISO date string
+    createdAt: string; // ISO date string from timestamps
+    updatedAt?: string;
 }
 
 export interface User {
@@ -62,6 +62,11 @@ export interface Application {
     contractId: string;
     vendorId: string;
     vendor?: Vendor;
+    contract?: {
+        _id: string;
+        title: string;
+        status: ContractStatus;
+    };
     proposalDetails: string;
     bidValue?: number;
     status: ApplicationStatus;

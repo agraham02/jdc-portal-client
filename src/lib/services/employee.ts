@@ -33,6 +33,7 @@ export interface UpdateEmployeeDto {
     department?: string;
     hireDate?: string; // ISO date string
     managerId?: string;
+    status?: string; // Active, Inactive, Onboarding, Terminated
 }
 
 export class EmployeeService {

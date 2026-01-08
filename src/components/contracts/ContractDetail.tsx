@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { FileList } from "./FileList";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { ApplyDialog } from "./ApplyDialog";
-import { Contract, ContractStatus } from "@/lib/types/contracts";
+import { Contract, ContractStatus, FileDocument } from "@/lib/types/contracts";
 import { Can } from "@/components/auth/Can";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 import { formatCurrency } from "@/lib/utils/formatters";
@@ -16,6 +16,8 @@ import { format } from "date-fns";
 import { apiToast } from "@/lib/utils/toast-helpers";
 import { sanitizeUserContent } from "@/lib/utils/sanitize";
 import { useErrorState } from "@/lib/hooks/useErrorState";
+import { ContractsService } from "@/lib/services/contracts";
+import { toast } from "sonner";
 import {
     CalendarIcon,
     DollarSignIcon,
@@ -27,6 +29,7 @@ import {
     TrophyIcon,
     TrashIcon,
     CheckCircleIcon,
+    RotateCcwIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { StatusBadge } from "../common";
@@ -35,9 +38,8 @@ interface ContractDetailProps {
     contract: Contract;
     onPublish?: () => Promise<void>;
     onClose?: () => Promise<void>;
-    onAward?: (applicationId: string) => Promise<void>;
+    onReopen?: () => Promise<void>;
     onDelete?: () => Promise<void>;
-    onDownloadDocument?: (fileId: string, filename: string) => Promise<void>;
     onApply?: (
         proposalDetails: string,
         documents: Map<string, File[]>,
@@ -51,9 +53,8 @@ export function ContractDetail({
     contract,
     onPublish,
     onClose,
-    onAward,
+    onReopen,
     onDelete,
-    onDownloadDocument,
     onApply,
     showActions = true,
     className,
@@ -76,6 +77,7 @@ export function ContractDetail({
 
     const isDraft = contract.status === ContractStatus.DRAFT;
     const isOpen = contract.status === ContractStatus.OPEN;
+    const isClosed = contract.status === ContractStatus.CLOSED;
     const isAwarded = contract.status === ContractStatus.AWARDED;
 
     async function handleAction(action: () => Promise<void>) {
@@ -108,8 +110,30 @@ export function ContractDetail({
     }
 
     async function handleDownload(fileId: string, filename: string) {
-        if (onDownloadDocument) {
-            await onDownloadDocument(fileId, filename);
+        try {
+            await ContractsService.triggerDocumentDownload(
+                contract._id,
+                fileId,
+                filename
+            );
+            toast.success("Download started");
+        } catch {
+            toast.error("Failed to download document");
+        }
+    }
+
+    async function handleViewDocument(file: FileDocument) {
+        try {
+            const blob = await ContractsService.downloadDocumentAsBlob(
+                contract._id,
+                file._id
+            );
+            const url = window.URL.createObjectURL(blob);
+            window.open(url, "_blank");
+            // Clean up after a delay to ensure the new tab has loaded the blob
+            setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+        } catch {
+            toast.error("Failed to open document");
         }
     }
 
@@ -211,6 +235,25 @@ export function ContractDetail({
                                     </Can>
                                 )}
 
+                                {/* Reopen */}
+                                {isClosed && onReopen && (
+                                    <Can anyOf={[P.CONTRACT_PUBLISH]}>
+                                        <Button
+                                            onClick={() =>
+                                                openConfirmDialog(
+                                                    "Reopen Contract",
+                                                    "This will reopen the contract to accept new applications.",
+                                                    () => handleAction(onReopen)
+                                                )
+                                            }
+                                            disabled={isLoading}
+                                        >
+                                            <RotateCcwIcon className="h-4 w-4 mr-2" />
+                                            Reopen
+                                        </Button>
+                                    </Can>
+                                )}
+
                                 {/* Apply - shown for vendors when contract is open */}
                                 {isOpen && onApply && (
                                     <Can anyOf={[P.CONTRACT_APPLY]}>
@@ -227,18 +270,7 @@ export function ContractDetail({
                                     </Can>
                                 )}
 
-                                {/* Award - shown when there are applications */}
-                                {isOpen &&
-                                    onAward &&
-                                    contract.applications &&
-                                    contract.applications.length > 0 && (
-                                        <Can anyOf={[P.CONTRACT_AWARD]}>
-                                            <Button variant="default">
-                                                <TrophyIcon className="h-4 w-4 mr-2" />
-                                                Award Contract
-                                            </Button>
-                                        </Can>
-                                    )}
+                                {/* Award action is in ApplicationList - select which application to award there */}
 
                                 {/* Delete */}
                                 {!isAwarded && onDelete && (
@@ -461,14 +493,9 @@ export function ContractDetail({
                         <CardContent>
                             <FileList
                                 files={contract.documents}
-                                onDownload={
-                                    onDownloadDocument
-                                        ? (file) =>
-                                              handleDownload(
-                                                  file._id,
-                                                  file.filename
-                                              )
-                                        : undefined
+                                onView={handleViewDocument}
+                                onDownload={(file) =>
+                                    handleDownload(file._id, file.filename)
                                 }
                             />
                         </CardContent>

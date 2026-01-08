@@ -29,9 +29,14 @@ import {
     Download,
     AlertCircle,
     CheckCircle2,
+    Eye,
 } from "lucide-react";
 import { useErrorState } from "@/lib/hooks/useErrorState";
 import { apiToast } from "@/lib/utils/toast-helpers";
+import { ContractsService } from "@/lib/services/contracts";
+import { HRDocument } from "@/lib/types/file";
+import { HrDocumentsService } from "@/lib/services";
+import { toast } from "sonner";
 
 interface ApplyDialogProps {
     open: boolean;
@@ -42,7 +47,6 @@ interface ApplyDialogProps {
         documents: Map<string, File[]>,
         bidValue?: number
     ) => Promise<void>;
-    onDownloadDocument?: (fileId: string, filename: string) => Promise<void>;
     isLoading?: boolean;
 }
 
@@ -56,7 +60,6 @@ export function ApplyDialog({
     onOpenChange,
     contract,
     onSubmit,
-    onDownloadDocument,
     isLoading = false,
 }: ApplyDialogProps) {
     // Map of document uploads: documentName -> files
@@ -147,9 +150,30 @@ export function ApplyDialog({
         onOpenChange(false);
     }
 
+    async function handleViewDocument(file: FileDocument) {
+        try {
+            const blob = await ContractsService.downloadDocumentAsBlob(
+                contract._id,
+                file._id
+            );
+            const url = window.URL.createObjectURL(blob);
+            window.open(url, "_blank");
+            // Clean up after a delay to ensure the new tab has loaded the blob
+            setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+        } catch {
+            toast.error("Failed to open document");
+        }
+    }
+
     async function handleDownload(fileId: string, filename: string) {
-        if (onDownloadDocument) {
-            await onDownloadDocument(fileId, filename);
+        try {
+            await ContractsService.triggerDocumentDownload(
+                contract._id,
+                fileId,
+                filename
+            );
+        } catch {
+            apiToast.error("Failed to download document");
         }
     }
 
@@ -209,20 +233,35 @@ export function ApplyDialog({
                                                             )}
                                                         </div>
                                                     </div>
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() =>
-                                                            handleDownload(
-                                                                doc._id,
-                                                                doc.filename
-                                                            )
-                                                        }
-                                                    >
-                                                        <Download className="h-4 w-4 mr-2" />
-                                                        Download
-                                                    </Button>
+                                                    <div className="flex items-center gap-1">
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() =>
+                                                                handleViewDocument(
+                                                                    doc
+                                                                )
+                                                            }
+                                                        >
+                                                            <Eye className="h-4 w-4 mr-2" />
+                                                            View
+                                                        </Button>
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() =>
+                                                                handleDownload(
+                                                                    doc._id,
+                                                                    doc.filename
+                                                                )
+                                                            }
+                                                        >
+                                                            <Download className="h-4 w-4 mr-2" />
+                                                            Download
+                                                        </Button>
+                                                    </div>
                                                 </div>
                                             )
                                         )}

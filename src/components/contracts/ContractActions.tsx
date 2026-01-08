@@ -12,6 +12,7 @@ import {
     TrashIcon,
     CheckCircleIcon,
     FileTextIcon,
+    RotateCcwIcon,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -20,6 +21,7 @@ interface ContractActionsProps {
     isLoading: boolean;
     onPublish?: () => void;
     onClose?: () => void;
+    onReopen?: () => void;
     onAward?: () => void;
     onDelete?: () => void;
     onApply?: () => void;
@@ -30,12 +32,14 @@ export function ContractActions({
     isLoading,
     onPublish,
     onClose,
+    onReopen,
     onAward,
     onDelete,
     onApply,
 }: ContractActionsProps) {
     const isDraft = contract.status === ContractStatus.DRAFT;
     const isOpen = contract.status === ContractStatus.OPEN;
+    const isClosed = contract.status === ContractStatus.CLOSED;
     const isAwarded = contract.status === ContractStatus.AWARDED;
 
     return (
@@ -43,7 +47,7 @@ export function ContractActions({
             {/* Edit (for staff, only if draft) */}
             <Can anyOf={[P.CONTRACT_UPDATE]}>
                 {isDraft && (
-                    <Link href={`/app/contracts/${contract._id}/edit`}>
+                    <Link href={`/contracts/${contract._id}/edit`}>
                         <Button variant="outline" disabled={isLoading}>
                             <EditIcon className="mr-2 h-4 w-4" />
                             Edit Contract
@@ -72,6 +76,16 @@ export function ContractActions({
                     >
                         <XCircleIcon className="mr-2 h-4 w-4" />
                         Close Contract
+                    </Button>
+                )}
+            </Can>
+
+            {/* Reopen (for staff, only if closed) */}
+            <Can anyOf={[P.CONTRACT_PUBLISH]}>
+                {isClosed && onReopen && (
+                    <Button onClick={onReopen} disabled={isLoading}>
+                        <RotateCcwIcon className="mr-2 h-4 w-4" />
+                        Reopen Contract
                     </Button>
                 )}
             </Can>
@@ -112,8 +126,8 @@ export function ContractActions({
 
             {/* View/Manage Applications (for staff with permission) */}
             <Can anyOf={[P.CONTRACT_REVIEW_APPLICATIONS]}>
-                {(isOpen || isAwarded) && (
-                    <Link href={`/app/contracts/${contract._id}/applications`}>
+                {(isOpen || isClosed || isAwarded) && (
+                    <Link href={`/contracts/${contract._id}/applications`}>
                         <Button variant="outline" disabled={isLoading}>
                             <FileTextIcon className="mr-2 h-4 w-4" />
                             {isAwarded

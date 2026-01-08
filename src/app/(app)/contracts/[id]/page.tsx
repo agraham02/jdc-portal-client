@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
@@ -10,15 +10,17 @@ import {
     ContractDetail,
     ApplicationList,
     InternalNotes,
+    ApplicationDetailSheet,
 } from "@/components/contracts";
 import {
     ContractsService,
     ApplicationsService,
-    InternalNotesService,
+    ContractNotesService,
 } from "@/lib/services/contracts";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 import type {
     Contract,
+    Application,
     ApplicationListResponse,
     InternalNoteListResponse,
 } from "@/lib/types/contracts";
@@ -40,6 +42,11 @@ export default function ContractDetailsPage() {
     const { notifications } = useNotificationsCtx();
     const { hasAny } = useAuthz();
     const canReadNotes = hasAny([P.INTERNAL_NOTE_READ]);
+
+    // Application detail sheet state
+    const [selectedApplication, setSelectedApplication] =
+        useState<Application | null>(null);
+    const [applicationSheetOpen, setApplicationSheetOpen] = useState(false);
 
     // Fetch contract details with SWR
     const {
@@ -136,6 +143,18 @@ export default function ContractDetailsPage() {
         }
     }
 
+    async function handleReopen() {
+        if (!contract) return;
+        try {
+            await ContractsService.reopenContract(contract._id);
+            apiToast.success(successMessages.contracts.reopened);
+            await loadContractData();
+        } catch (error) {
+            apiToast.error(errorMessages.contracts.reopen, error);
+            setActionError(error);
+        }
+    }
+
     async function handleAward(applicationId: string) {
         if (!contract) return;
         try {
@@ -213,9 +232,19 @@ export default function ContractDetailsPage() {
         }
     }
 
+    function handleViewApplication(applicationId: string) {
+        const application = applications.find(
+            (app) => app._id === applicationId
+        );
+        if (application) {
+            setSelectedApplication(application);
+            setApplicationSheetOpen(true);
+        }
+    }
+
     async function handleCreateNote(content: string, applicationId?: string) {
         try {
-            await InternalNotesService.createNote(params.id, {
+            await ContractNotesService.createNote(params.id, {
                 content,
                 applicationId,
             });
@@ -229,7 +258,7 @@ export default function ContractDetailsPage() {
 
     async function handleDeleteNote(noteId: string) {
         try {
-            await InternalNotesService.deleteNote(params.id, noteId);
+            await ContractNotesService.deleteNote(params.id, noteId);
             apiToast.success("Note deleted successfully");
             await loadContractData();
         } catch (error) {
@@ -319,7 +348,7 @@ export default function ContractDetailsPage() {
                         contract={contract}
                         onPublish={handlePublish}
                         onClose={handleClose}
-                        onAward={handleAward}
+                        onReopen={handleReopen}
                         onDelete={handleDelete}
                         onApply={handleApply}
                     />
@@ -329,10 +358,8 @@ export default function ContractDetailsPage() {
                         applications={applications}
                         onAccept={handleAcceptApplication}
                         onReject={handleRejectApplication}
-                        onViewDetails={(id) => {
-                            // TODO: Implement application detail or page
-                            console.log("View application:", id);
-                        }}
+                        onAward={handleAward}
+                        onViewDetails={handleViewApplication}
                     />
 
                     {canReadNotes && (
@@ -343,6 +370,17 @@ export default function ContractDetailsPage() {
                             onDelete={handleDeleteNote}
                         />
                     )}
+
+                    {/* Application Detail Sheet */}
+                    <ApplicationDetailSheet
+                        application={selectedApplication}
+                        isWinner={
+                            contract.awardedApplication ===
+                            selectedApplication?._id
+                        }
+                        open={applicationSheetOpen}
+                        onOpenChange={setApplicationSheetOpen}
+                    />
                 </main>
             </ContractErrorBoundary>
         </ProtectedRoute>

@@ -19,5 +19,6 @@ export { ContractDetail } from "./ContractDetail";
 export { ContractEditor } from "./ContractEditor";
 export { ApplicationForm } from "./ApplicationForm";
 export { ApplicationList } from "./ApplicationList";
+export { ApplicationDetailSheet } from "./ApplicationDetailSheet";
 export { InternalNotes } from "./InternalNotes";
 export { ApplyDialog } from "./ApplyDialog";

@@ -24,7 +24,10 @@ import {
 } from "@/components/ui/select";
 import { ApplicationsService } from "@/lib/services/contracts";
 import { PermissionName as P } from "@/lib/constants/permission-names";
-import type { ApplicationStatus, ApplicationListResponse } from "@/lib/types/contracts";
+import type {
+    ApplicationStatus,
+    ApplicationListResponse,
+} from "@/lib/types/contracts";
 import { useNotificationsCtx } from "@/lib/contexts/notifications-context";
 import {
     handleContractNotification,
@@ -35,6 +38,7 @@ import {
 import { NotificationType } from "@/lib/types/notifications";
 import { StatusBadge } from "@/components/common";
 import { usePaginatedApi } from "@/lib/hooks/useApi";
+import { ConfirmDialog } from "@/components/contracts/ConfirmDialog";
 
 export default function MyApplicationsPage() {
     const router = useRouter();
@@ -42,6 +46,11 @@ export default function MyApplicationsPage() {
     const [statusFilter, setStatusFilter] = useState<ApplicationStatus | "all">(
         "all"
     );
+    const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
+    const [selectedWithdraw, setSelectedWithdraw] = useState<{
+        applicationId: string;
+        contractId: string;
+    } | null>(null);
 
     // Fetch applications with SWR
     const {
@@ -81,16 +90,24 @@ export default function MyApplicationsPage() {
         }
     }, [notifications, revalidate]);
 
-    async function handleWithdraw(applicationId: string, contractId: string) {
+    function openWithdrawDialog(applicationId: string, contractId: string) {
+        setSelectedWithdraw({ applicationId, contractId });
+        setWithdrawDialogOpen(true);
+    }
+
+    async function handleWithdraw() {
+        if (!selectedWithdraw) return;
         try {
             await ApplicationsService.withdrawApplication(
-                contractId,
-                applicationId
+                selectedWithdraw.contractId,
+                selectedWithdraw.applicationId
             );
             showContractActionSuccess(
                 "Application Withdrawn",
                 "Your application has been withdrawn successfully"
             );
+            setWithdrawDialogOpen(false);
+            setSelectedWithdraw(null);
             // Revalidate the cache to refresh the list
             await revalidate();
         } catch (err) {
@@ -109,7 +126,12 @@ export default function MyApplicationsPage() {
     // Since we're filtering by status in the API call, no need for client-side filtering
     const filteredApplications = applications;
 
-    const errorMessage = error instanceof Error ? error.message : error ? "Failed to load applications" : undefined;
+    const errorMessage =
+        error instanceof Error
+            ? error.message
+            : error
+            ? "Failed to load applications"
+            : undefined;
 
     return (
         <ProtectedRoute anyOf={[P.CONTRACT_APPLY]}>
@@ -223,15 +245,26 @@ export default function MyApplicationsPage() {
                                                     <TableCell>
                                                         <div>
                                                             <p className="font-medium">
-                                                                Contract
+                                                                {application
+                                                                    .contract
+                                                                    ?.title ||
+                                                                    "Unknown Contract"}
                                                             </p>
-                                                            {application.contractId && (
-                                                                <p className="text-xs text-muted-foreground">
-                                                                    ID:{" "}
-                                                                    {application.contractId.slice(
-                                                                        -8
-                                                                    )}
-                                                                </p>
+                                                            {application
+                                                                .contract
+                                                                ?.status && (
+                                                                <StatusBadge
+                                                                    type="contract"
+                                                                    status={
+                                                                        application
+                                                                            .contract
+                                                                            .status
+                                                                    }
+                                                                    showIcon={
+                                                                        false
+                                                                    }
+                                                                    className="mt-1"
+                                                                />
                                                             )}
                                                         </div>
                                                     </TableCell>
@@ -288,7 +321,7 @@ export default function MyApplicationsPage() {
                                                                     variant="ghost"
                                                                     size="sm"
                                                                     onClick={() =>
-                                                                        handleWithdraw(
+                                                                        openWithdrawDialog(
                                                                             application._id,
                                                                             application.contractId
                                                                         )
@@ -308,6 +341,16 @@ export default function MyApplicationsPage() {
                         )}
                     </CardContent>
                 </Card>
+
+                {/* Withdraw Confirmation Dialog */}
+                <ConfirmDialog
+                    open={withdrawDialogOpen}
+                    onOpenChange={setWithdrawDialogOpen}
+                    title="Withdraw Application"
+                    description="Are you sure you want to withdraw this application? This action cannot be undone."
+                    onConfirm={handleWithdraw}
+                    variant="destructive"
+                />
             </main>
         </ProtectedRoute>
     );

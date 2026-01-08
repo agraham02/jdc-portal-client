@@ -146,8 +146,9 @@ export default function ContractCreatePage() {
                     isSubmitting={isSubmitting}
                     submitLabel="Create Contract"
                     files={files}
-                    setFiles={setFiles}
+                    onFilesChange={setFiles}
                 />
+
             </main>
         </ProtectedRoute>
     );

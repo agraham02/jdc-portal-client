@@ -126,6 +126,13 @@ export class ContractsService {
     }
 
     /**
+     * Reopen a closed contract (Closed → Open, accepts applications again)
+     */
+    static async reopenContract(id: string): Promise<ContractResponse> {
+        return apiClient.patch<ContractResponse>(`/contracts/${id}/reopen`, {});
+    }
+
+    /**
      * Award a contract (Open → Awarded, selects winner)
      */
     static async awardContract(
@@ -186,6 +193,60 @@ export class ContractsService {
         return apiClient.delete<{ message: string }>(
             `/contracts/${id}/documents/${fileId}`
         );
+    }
+
+    /**
+     * Get a secure download URL for a contract document
+     * @param contractId Contract ID
+     * @param documentId Document ID
+     * @returns Download URL with expiration info
+     */
+    static async getDocumentDownloadUrl(
+        contractId: string,
+        documentId: string
+    ): Promise<{ downloadUrl: string; filename: string; expiresAt: string }> {
+        return apiClient.get<{
+            downloadUrl: string;
+            filename: string;
+            expiresAt: string;
+        }>(`/contracts/${contractId}/documents/${documentId}/download`);
+    }
+
+    /**
+     * Download a contract document as blob via streaming endpoint
+     * @param contractId Contract ID
+     * @param documentId Document ID
+     * @returns File blob
+     */
+    static async downloadDocumentAsBlob(
+        contractId: string,
+        documentId: string
+    ): Promise<Blob> {
+        return apiClient.getBlob(
+            `/contracts/${contractId}/documents/${documentId}/stream`
+        );
+    }
+
+    /**
+     * Helper method to trigger file download in browser
+     * @param contractId Contract ID
+     * @param documentId Document ID
+     * @param filename Filename for download
+     */
+    static async triggerDocumentDownload(
+        contractId: string,
+        documentId: string,
+        filename: string
+    ): Promise<void> {
+        const blob = await this.downloadDocumentAsBlob(contractId, documentId);
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
     }
 }
 
@@ -353,10 +414,10 @@ export class ApplicationsService {
 }
 
 // ============================================================================
-// Internal Notes
+// Contract Internal Notes
 // ============================================================================
 
-export class InternalNotesService {
+export class ContractNotesService {
     /**
      * List internal notes for a contract
      */

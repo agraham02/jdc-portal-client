@@ -25,9 +25,9 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { CreateContractDto, RequiredDocument } from "@/lib/types/contracts";
+import { FileUpload } from "@/components/common/FileUpload";
 import { PlusIcon, TrashIcon } from "lucide-react";
 import { useState } from "react";
-import { FileUpload } from "../common";
 
 // Common currencies
 const CURRENCIES = [
@@ -93,7 +93,7 @@ interface ContractEditorProps {
     submitLabel?: string;
     className?: string;
     files?: File[];
-    setFiles?: (files: File[]) => void;
+    onFilesChange?: (files: File[]) => void;
 }
 
 export function ContractEditor({
@@ -104,7 +104,7 @@ export function ContractEditor({
     submitLabel = "Create Contract",
     className,
     files = [],
-    setFiles = () => {},
+    onFilesChange,
 }: ContractEditorProps) {
     const [requiredDocs, setRequiredDocs] = useState<RequiredDocument[]>(
         initialData?.requiredDocuments || []
@@ -498,6 +498,7 @@ export function ContractEditor({
                     </CardContent>
                 </Card>
 
+                {/* Supporting Documents */}
                 <Card>
                     <CardHeader>
                         <CardTitle>Supporting Documents (Optional)</CardTitle>
@@ -526,7 +527,7 @@ export function ContractEditor({
                                 progress: 0,
                             }))}
                             onUploadingFilesChange={(uploadingFiles) =>
-                                setFiles(uploadingFiles.map((uf) => uf.file))
+                                onFilesChange?.(uploadingFiles.map((uf) => uf.file))
                             }
                             showUploadButton={true}
                             uploadButtonText="Select Files"
