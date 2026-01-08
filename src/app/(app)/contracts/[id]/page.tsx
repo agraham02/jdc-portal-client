@@ -350,14 +350,16 @@ export default function ContractDetailsPage() {
                         onApply={handleApply}
                     />
 
-                    <ApplicationList
-                        contract={contract}
-                        applications={applications}
-                        onAccept={handleAcceptApplication}
-                        onReject={handleRejectApplication}
-                        onAward={handleAward}
-                        onViewDetails={handleViewApplication}
-                    />
+                    <section id="applications">
+                        <ApplicationList
+                            contract={contract}
+                            applications={applications}
+                            onAccept={handleAcceptApplication}
+                            onReject={handleRejectApplication}
+                            onAward={handleAward}
+                            onViewDetails={handleViewApplication}
+                        />
+                    </section>
 
                     {canReadNotes && (
                         <InternalNotes

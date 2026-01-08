@@ -12,7 +12,6 @@ import {
     TrashIcon,
     CheckCircleIcon,
     FileTextIcon,
-    RotateCcwIcon,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -21,7 +20,6 @@ interface ContractActionsProps {
     isLoading: boolean;
     onPublish?: () => void;
     onClose?: () => void;
-    onReopen?: () => void;
     onAward?: () => void;
     onDelete?: () => void;
     onApply?: () => void;
@@ -32,14 +30,12 @@ export function ContractActions({
     isLoading,
     onPublish,
     onClose,
-    onReopen,
     onAward,
     onDelete,
     onApply,
 }: ContractActionsProps) {
     const isDraft = contract.status === ContractStatus.DRAFT;
     const isOpen = contract.status === ContractStatus.OPEN;
-    const isClosed = contract.status === ContractStatus.CLOSED;
     const isAwarded = contract.status === ContractStatus.AWARDED;
 
     return (
@@ -80,16 +76,6 @@ export function ContractActions({
                 )}
             </Can>
 
-            {/* Reopen (for staff, only if closed) */}
-            <Can anyOf={[P.CONTRACT_PUBLISH]}>
-                {isClosed && onReopen && (
-                    <Button onClick={onReopen} disabled={isLoading}>
-                        <RotateCcwIcon className="mr-2 h-4 w-4" />
-                        Reopen Contract
-                    </Button>
-                )}
-            </Can>
-
             {/* Award (for staff, only if open and onAward provided) */}
             <Can anyOf={[P.CONTRACT_AWARD]}>
                 {isOpen && onAward && (
@@ -124,17 +110,17 @@ export function ContractActions({
                 )}
             </Can>
 
-            {/* View/Manage Applications (for staff with permission) */}
+            {/* View/Manage Applications - scroll to applications section */}
             <Can anyOf={[P.CONTRACT_REVIEW_APPLICATIONS]}>
-                {(isOpen || isClosed || isAwarded) && (
-                    <Link href={`/contracts/${contract._id}/applications`}>
+                {(isOpen || isAwarded) && (
+                    <a href="#applications">
                         <Button variant="outline" disabled={isLoading}>
                             <FileTextIcon className="mr-2 h-4 w-4" />
                             {isAwarded
                                 ? "View Applications"
                                 : "Review Applications"}
                         </Button>
-                    </Link>
+                    </a>
                 )}
             </Can>
         </div>

@@ -59,7 +59,7 @@ export default function MyApplicationsPage() {
         isLoading,
         mutate: revalidate,
     } = usePaginatedApi<ApplicationListResponse>(
-        "/contracts/my-applications",
+        "/contract-applications/my-applications",
         statusFilter === "all" ? {} : { status: statusFilter }
     );
 
