@@ -61,7 +61,7 @@ export default function ContractDetailsPage() {
         data: applicationsResponse,
         isLoading: loadingApplications,
         mutate: revalidateApplications,
-    } = useApi<ApplicationListResponse>(`/contracts/${params.id}/applications`);
+    } = useApi<ApplicationListResponse>(`/contract-applications?contractId=${params.id}`);
 
     // Fetch internal notes (only if user has permission)
     const {
@@ -69,7 +69,7 @@ export default function ContractDetailsPage() {
         isLoading: loadingNotes,
         mutate: revalidateNotes,
     } = useConditionalApi<InternalNoteListResponse>(
-        `/contracts/${params.id}/notes`,
+        `/internal-notes?contractId=${params.id}`,
         canReadNotes
     );
 
@@ -372,7 +372,7 @@ export default function ContractDetailsPage() {
                     <ApplicationDetailSheet
                         application={selectedApplication}
                         isWinner={
-                            contract.awardedApplication ===
+                            contract.awardedApplicationId ===
                             selectedApplication?._id
                         }
                         open={applicationSheetOpen}
