@@ -70,14 +70,11 @@ export interface Application {
         status: ContractStatus;
         deadline?: string;
     };
-    proposal: string; // Proposal text
-    proposalDetails?: string; // Legacy alias for proposal
+    proposalDetails?: string; // Proposal text (matches API)
     proposedBudget?: number; // The vendor's proposed budget
-    bidValue?: number; // Legacy alias for proposedBudget
     status: ApplicationStatus;
     documents: FileDocument[];
-    submittedAt: string; // ISO date string - when application was submitted
-    applicationDate?: string; // Legacy alias for submittedAt
+    applicationDate: string; // ISO date string - when application was submitted (matches API)
     statusHistory: ApplicationStatusHistory[];
     reviewedAt?: string | null;
     acceptedAt?: string | null;
@@ -160,9 +157,7 @@ export interface UpdateContractDto {
 
 export interface ApplyToContractDto {
     proposal?: string; // Proposal text
-    proposalDetails?: string; // Legacy alias for proposal
     proposedBudget?: number; // The vendor's proposed budget
-    bidValue?: number; // Legacy alias for proposedBudget
     // Documents are uploaded via multipart/form-data, not JSON
 }
 
@@ -178,10 +173,6 @@ export interface AwardContractDto {
 export interface CreateInternalNoteDto {
     content: string;
     applicationId?: string; // Optional - links note to specific application
-}
-
-export interface UpdateInternalNoteDto {
-    content: string;
 }
 
 // ============================================================================

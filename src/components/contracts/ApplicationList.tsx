@@ -256,7 +256,6 @@ export function ApplicationList({
                                                     {formatDistanceToNow(
                                                         new Date(
                                                             application.applicationDate ||
-                                                                application.submittedAt ||
                                                                 application.createdAt
                                                         ),
                                                         {

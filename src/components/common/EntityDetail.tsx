@@ -31,6 +31,9 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { PhoneInput } from "../ui/phone-input";
 import { AddressForm, DateInput, ServicesInput, StatusBadge } from ".";
+import { AuthService } from "@/lib/services/auth";
+import { useAuthz } from "@/lib/authz/useAuthz";
+import { PermissionName as P } from "@/lib/constants/permission-names";
 
 type EntityType = "user" | "employee" | "vendor";
 
@@ -44,6 +47,9 @@ export function EntityDetail({ entityType, id, canUpdate }: Props) {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [editing, setEditing] = useState(false);
+    const [resending, setResending] = useState(false);
+    const { hasAny } = useAuthz();
+    const canResendActivation = hasAny([P.EMPLOYEE_CREATE, P.EMPLOYEE_UPDATE]);
     const [data, setData] = useState<EmployeeWithUser | VendorWithUser | null>(
         null
     );
@@ -249,6 +255,32 @@ export function EntityDetail({ entityType, id, canUpdate }: Props) {
         }
     };
 
+    // Handler to resend activation email for pending/onboarding employees
+    const onResendActivation = async () => {
+        if (!data?.userId?._id) return;
+        setResending(true);
+        try {
+            await AuthService.resendActivation(data.userId._id);
+            toast.success("Activation email sent");
+        } catch (e) {
+            toast.error(
+                (e as Error)?.message || "Failed to send activation email"
+            );
+        } finally {
+            setResending(false);
+        }
+    };
+
+    // Check if resend activation should be shown (pending/onboarding employee)
+    const showResendActivation = useMemo(() => {
+        if (entityType !== "employee") return false;
+        if (!canResendActivation) return false;
+        const status = data?.userId?.status;
+        return (
+            status === UserStatus.PENDING || status === UserStatus.ONBOARDING
+        );
+    }, [entityType, canResendActivation, data?.userId?.status]);
+
     if (loading)
         return (
             <div className="flex items-center justify-center py-12">
@@ -286,6 +318,15 @@ export function EntityDetail({ entityType, id, canUpdate }: Props) {
                 </div>
                 {canUpdate && (
                     <div className="flex gap-2">
+                        {showResendActivation && (
+                            <Button
+                                variant="outline"
+                                onClick={onResendActivation}
+                                disabled={resending}
+                            >
+                                {resending ? "Sending..." : "Resend Activation"}
+                            </Button>
+                        )}
                         {editing ? (
                             <>
                                 <Button onClick={onSave}>Save Changes</Button>

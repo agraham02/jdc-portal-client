@@ -252,7 +252,7 @@ export class ApplicationsService {
     /**
      * Submit an application to a contract
      * @param contractId Contract ID
-     * @param data Application details (includes proposal, proposedBudget, and document names)
+     * @param data Application details (includes proposal and proposedBudget)
      * @param files Optional files to upload with the application
      */
     static async submitApplication(
@@ -262,9 +262,11 @@ export class ApplicationsService {
     ): Promise<ApplicationResponse> {
         const formData = new FormData();
         formData.append("contractId", contractId);
-        formData.append("proposal", data.proposalDetails || "");
-        if (data.bidValue !== undefined) {
-            formData.append("proposedBudget", data.bidValue.toString());
+        if (data.proposal) {
+            formData.append("proposal", data.proposal);
+        }
+        if (data.proposedBudget !== undefined) {
+            formData.append("proposedBudget", data.proposedBudget.toString());
         }
 
         // Add files if provided
@@ -350,10 +352,16 @@ export class ApplicationsService {
      */
     static async checkApplication(
         contractId: string
-    ): Promise<{ hasApplied: boolean; applicationId?: string; status?: string }> {
-        return apiClient.get<{ hasApplied: boolean; applicationId?: string; status?: string }>(
-            `/contract-applications/check/${contractId}`
-        );
+    ): Promise<{
+        hasApplied: boolean;
+        applicationId?: string;
+        status?: string;
+    }> {
+        return apiClient.get<{
+            hasApplied: boolean;
+            applicationId?: string;
+            status?: string;
+        }>(`/contract-applications/check/${contractId}`);
     }
 
     /**
@@ -366,7 +374,8 @@ export class ApplicationsService {
         if (params?.page) queryParams.append("page", params.page.toString());
         if (params?.limit) queryParams.append("limit", params.limit.toString());
         if (params?.status) queryParams.append("status", params.status);
-        if (params?.contractId) queryParams.append("contractId", params.contractId);
+        if (params?.contractId)
+            queryParams.append("contractId", params.contractId);
 
         const query = queryParams.toString();
         return apiClient.get<ApplicationListResponse>(
@@ -419,7 +428,21 @@ export class ApplicationsService {
             downloadUrl: string;
             filename: string;
             expiresAt: string;
-        }>(`/contract-applications/${applicationId}/documents/${documentId}/download`);
+        }>(
+            `/contract-applications/${applicationId}/documents/${documentId}/download`
+        );
+    }
+
+    /**
+     * Delete a document from an application (only if status is Submitted)
+     */
+    static async deleteApplicationDocument(
+        applicationId: string,
+        documentId: string
+    ): Promise<{ message: string }> {
+        return apiClient.delete<{ message: string }>(
+            `/contract-applications/${applicationId}/documents/${documentId}`
+        );
     }
 }
 
@@ -435,9 +458,15 @@ export class ContractNotesService {
         params: InternalNoteFilterParams
     ): Promise<InternalNoteListResponse> {
         const queryParams = new URLSearchParams();
-        if (params.contractId) queryParams.append("contractId", params.contractId);
-        if (params.applicationId) queryParams.append("applicationId", params.applicationId);
-        if (params.page) queryParams.append("offset", ((params.page - 1) * (params.limit || 10)).toString());
+        if (params.contractId)
+            queryParams.append("contractId", params.contractId);
+        if (params.applicationId)
+            queryParams.append("applicationId", params.applicationId);
+        if (params.page)
+            queryParams.append(
+                "offset",
+                ((params.page - 1) * (params.limit || 10)).toString()
+            );
         if (params.limit) queryParams.append("limit", params.limit.toString());
 
         return apiClient.get<InternalNoteListResponse>(
@@ -451,10 +480,7 @@ export class ContractNotesService {
     static async createNote(
         data: CreateInternalNoteDto & { contractId: string }
     ): Promise<InternalNoteResponse> {
-        return apiClient.post<InternalNoteResponse>(
-            `/internal-notes`,
-            data
-        );
+        return apiClient.post<InternalNoteResponse>(`/internal-notes`, data);
     }
 
     /**

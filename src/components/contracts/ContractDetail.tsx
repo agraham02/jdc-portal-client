@@ -39,9 +39,9 @@ interface ContractDetailProps {
     onClose?: () => Promise<void>;
     onDelete?: () => Promise<void>;
     onApply?: (
-        proposalDetails: string,
+        proposal: string,
         documents: Map<string, File[]>,
-        bidValue?: number
+        proposedBudget?: number
     ) => Promise<void>;
     showActions?: boolean;
     className?: string;
@@ -134,14 +134,14 @@ export function ContractDetail({
     }
 
     async function handleApply(
-        proposalDetails: string,
+        proposal: string,
         documents: Map<string, File[]>,
-        bidValue?: number
+        proposedBudget?: number
     ) {
         if (onApply) {
             try {
                 clearError();
-                await onApply(proposalDetails, documents, bidValue);
+                await onApply(proposal, documents, proposedBudget);
                 setShowApplyDialog(false);
             } catch (err) {
                 setError(err);

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
-import { Plus, Edit2, Trash2, User, Loader2 } from "lucide-react";
+import { Plus, Trash2, User, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,12 +14,10 @@ import { cn } from "@/lib/utils";
 import type { InternalNote } from "@/lib/types/contracts";
 
 interface InternalNotesProps {
-    contractId: string;
     applicationId?: string;
     notes: InternalNote[];
     isLoading?: boolean;
     onCreate?: (content: string, applicationId?: string) => Promise<void>;
-    onUpdate?: (noteId: string, content: string) => Promise<void>;
     onDelete?: (noteId: string) => Promise<void>;
     className?: string;
 }
@@ -29,14 +27,11 @@ export function InternalNotes({
     notes,
     isLoading = false,
     onCreate,
-    onUpdate,
     onDelete,
     className,
 }: InternalNotesProps) {
     const [isCreating, setIsCreating] = useState(false);
-    const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
     const [newNoteContent, setNewNoteContent] = useState("");
-    const [editNoteContent, setEditNoteContent] = useState("");
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [noteToDelete, setNoteToDelete] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -54,19 +49,6 @@ export function InternalNotes({
         }
     };
 
-    const handleUpdateNote = async (noteId: string) => {
-        if (!editNoteContent.trim() || !onUpdate) return;
-
-        setIsSubmitting(true);
-        try {
-            await onUpdate(noteId, editNoteContent);
-            setEditingNoteId(null);
-            setEditNoteContent("");
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
     const handleDeleteNote = async () => {
         if (!noteToDelete || !onDelete) return;
 
@@ -78,16 +60,6 @@ export function InternalNotes({
         } finally {
             setIsSubmitting(false);
         }
-    };
-
-    const startEdit = (note: InternalNote) => {
-        setEditingNoteId(note._id);
-        setEditNoteContent(note.content);
-    };
-
-    const cancelEdit = () => {
-        setEditingNoteId(null);
-        setEditNoteContent("");
     };
 
     const openDeleteDialog = (noteId: string) => {
@@ -207,135 +179,58 @@ export function InternalNotes({
                             </div>
                         ) : (
                             notes?.map((note) => (
-                                <Card
-                                    key={note._id}
-                                    className={cn(
-                                        editingNoteId === note._id &&
-                                            "border-2 border-primary"
-                                    )}
-                                >
+                                <Card key={note._id}>
                                     <CardContent className="pt-6">
-                                        {editingNoteId === note._id ? (
-                                            <div className="space-y-4">
-                                                <Textarea
-                                                    value={editNoteContent}
-                                                    onChange={(e) =>
-                                                        setEditNoteContent(
-                                                            e.target.value
-                                                        )
-                                                    }
-                                                    className="min-h-[100px] resize-y"
-                                                    disabled={isSubmitting}
-                                                />
-                                                <div className="flex justify-end gap-2">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={cancelEdit}
-                                                        disabled={isSubmitting}
-                                                    >
-                                                        Cancel
-                                                    </Button>
-                                                    <Button
-                                                        size="sm"
-                                                        onClick={() =>
-                                                            handleUpdateNote(
-                                                                note._id
-                                                            )
-                                                        }
-                                                        disabled={
-                                                            !editNoteContent.trim() ||
-                                                            isSubmitting
-                                                        }
-                                                    >
-                                                        {isSubmitting && (
-                                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        <div className="mb-3 flex items-start justify-between gap-4">
+                                            <div className="flex items-center gap-2">
+                                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                                                    <User className="h-4 w-4 text-primary" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-medium">
+                                                        {typeof note.author ===
+                                                        "object"
+                                                            ? `${note.author.firstName} ${note.author.lastName}`
+                                                            : "Unknown User"}
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {formatDistanceToNow(
+                                                            new Date(
+                                                                note.createdAt
+                                                            ),
+                                                            {
+                                                                addSuffix: true,
+                                                            }
                                                         )}
-                                                        Save
-                                                    </Button>
+                                                    </p>
                                                 </div>
                                             </div>
-                                        ) : (
-                                            <>
-                                                <div className="mb-3 flex items-start justify-between gap-4">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                                                            <User className="h-4 w-4 text-primary" />
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-sm font-medium">
-                                                                {typeof note.author ===
-                                                                "object"
-                                                                    ? `${note.author.firstName} ${note.author.lastName}`
-                                                                    : "Unknown User"}
-                                                            </p>
-                                                            <p className="text-xs text-muted-foreground">
-                                                                {formatDistanceToNow(
-                                                                    new Date(
-                                                                        note.createdAt
-                                                                    ),
-                                                                    {
-                                                                        addSuffix:
-                                                                            true,
-                                                                    }
-                                                                )}
-                                                                {note.updatedAt !==
-                                                                    note.createdAt && (
-                                                                    <span className="ml-1">
-                                                                        (edited)
-                                                                    </span>
-                                                                )}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex gap-1">
-                                                        <Can
-                                                            anyOf={[
-                                                                PermissionName.INTERNAL_NOTE_UPDATE,
-                                                            ]}
-                                                        >
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                onClick={() =>
-                                                                    startEdit(
-                                                                        note
-                                                                    )
-                                                                }
-                                                                className="h-8 w-8"
-                                                            >
-                                                                <Edit2 className="h-4 w-4" />
-                                                            </Button>
-                                                        </Can>
-                                                        <Can
-                                                            anyOf={[
-                                                                PermissionName.INTERNAL_NOTE_DELETE,
-                                                            ]}
-                                                        >
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                onClick={() =>
-                                                                    openDeleteDialog(
-                                                                        note._id
-                                                                    )
-                                                                }
-                                                                className="h-8 w-8 text-destructive hover:text-destructive"
-                                                            >
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </Button>
-                                                        </Can>
-                                                    </div>
-                                                </div>
-                                                <p className="whitespace-pre-wrap text-sm">
-                                                    {note.content}
-                                                </p>
-                                                {note.applicationId && (
-                                                    <p className="mt-2 text-xs text-muted-foreground">
-                                                        Linked to application
-                                                    </p>
-                                                )}
-                                            </>
+                                            <Can
+                                                anyOf={[
+                                                    PermissionName.INTERNAL_NOTE_DELETE,
+                                                ]}
+                                            >
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() =>
+                                                        openDeleteDialog(
+                                                            note._id
+                                                        )
+                                                    }
+                                                    className="h-8 w-8 text-destructive hover:text-destructive"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </Can>
+                                        </div>
+                                        <p className="whitespace-pre-wrap text-sm">
+                                            {note.content}
+                                        </p>
+                                        {note.applicationId && (
+                                            <p className="mt-2 text-xs text-muted-foreground">
+                                                Linked to application
+                                            </p>
                                         )}
                                     </CardContent>
                                 </Card>

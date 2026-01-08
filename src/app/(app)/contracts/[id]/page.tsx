@@ -61,7 +61,9 @@ export default function ContractDetailsPage() {
         data: applicationsResponse,
         isLoading: loadingApplications,
         mutate: revalidateApplications,
-    } = useApi<ApplicationListResponse>(`/contract-applications?contractId=${params.id}`);
+    } = useApi<ApplicationListResponse>(
+        `/contract-applications?contractId=${params.id}`
+    );
 
     // Fetch internal notes (only if user has permission)
     const {
@@ -147,9 +149,11 @@ export default function ContractDetailsPage() {
         if (!contract) return;
         try {
             // Find the application to get vendorId
-            const application = applications.find(app => app._id === applicationId);
+            const application = applications.find(
+                (app) => app._id === applicationId
+            );
             if (!application) {
-                throw new Error('Application not found');
+                throw new Error("Application not found");
             }
             await ContractsService.awardContract(contract._id, {
                 vendorId: application.vendorId,
@@ -176,9 +180,9 @@ export default function ContractDetailsPage() {
     }
 
     async function handleApply(
-        proposalDetails: string,
+        proposal: string,
         documents: Map<string, File[]>,
-        bidValue?: number
+        proposedBudget?: number
     ) {
         if (!contract) return;
         try {
@@ -189,7 +193,7 @@ export default function ContractDetailsPage() {
             });
             await ApplicationsService.submitApplication(
                 contract._id,
-                { proposalDetails, bidValue },
+                { proposal, proposedBudget },
                 files
             );
             apiToast.success(successMessages.applications.submitted);
@@ -203,10 +207,9 @@ export default function ContractDetailsPage() {
 
     async function handleAcceptApplication(applicationId: string) {
         try {
-            await ApplicationsService.updateApplicationStatus(
-                applicationId,
-                { status: ApplicationStatus.ACCEPTED }
-            );
+            await ApplicationsService.updateApplicationStatus(applicationId, {
+                status: ApplicationStatus.ACCEPTED,
+            });
             apiToast.success(successMessages.applications.statusUpdated);
             await loadContractData();
         } catch (error) {
@@ -217,10 +220,9 @@ export default function ContractDetailsPage() {
 
     async function handleRejectApplication(applicationId: string) {
         try {
-            await ApplicationsService.updateApplicationStatus(
-                applicationId,
-                { status: ApplicationStatus.REJECTED }
-            );
+            await ApplicationsService.updateApplicationStatus(applicationId, {
+                status: ApplicationStatus.REJECTED,
+            });
             apiToast.success(successMessages.applications.statusUpdated);
             await loadContractData();
         } catch (error) {
@@ -363,7 +365,6 @@ export default function ContractDetailsPage() {
 
                     {canReadNotes && (
                         <InternalNotes
-                            contractId={params.id}
                             notes={notes}
                             onCreate={handleCreateNote}
                             onDelete={handleDeleteNote}

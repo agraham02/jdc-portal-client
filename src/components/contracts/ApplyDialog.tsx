@@ -41,16 +41,16 @@ interface ApplyDialogProps {
     onOpenChange: (open: boolean) => void;
     contract: Contract;
     onSubmit: (
-        proposalDetails: string,
+        proposal: string,
         documents: Map<string, File[]>,
-        bidValue?: number
+        proposedBudget?: number
     ) => Promise<void>;
     isLoading?: boolean;
 }
 
 interface FormData {
-    proposalDetails: string;
-    bidValue?: string;
+    proposal: string;
+    proposedBudget?: string;
 }
 
 export function ApplyDialog({
@@ -74,8 +74,8 @@ export function ApplyDialog({
         reset,
     } = useForm<FormData>({
         defaultValues: {
-            proposalDetails: "",
-            bidValue: "",
+            proposal: "",
+            proposedBudget: "",
         },
     });
 
@@ -116,8 +116,8 @@ export function ApplyDialog({
 
         clearError();
         try {
-            const bidValue = data.bidValue
-                ? parseFloat(data.bidValue)
+            const proposedBudget = data.proposedBudget
+                ? parseFloat(data.proposedBudget)
                 : undefined;
 
             // Convert UploadingFileMetadata[] to File[] for each document
@@ -127,7 +127,7 @@ export function ApplyDialog({
                 documentsMap.set(docName, files);
             });
 
-            await onSubmit(data.proposalDetails, documentsMap, bidValue);
+            await onSubmit(data.proposal, documentsMap, proposedBudget);
 
             // Reset form on success
             reset();
@@ -273,15 +273,15 @@ export function ApplyDialog({
 
                     {/* Proposal Details */}
                     <div className="space-y-2">
-                        <Label htmlFor="proposalDetails">
+                        <Label htmlFor="proposal">
                             Proposal Details{" "}
                             <span className="text-destructive">*</span>
                         </Label>
                         <Textarea
-                            id="proposalDetails"
+                            id="proposal"
                             placeholder="Describe your qualifications, experience, and approach for this contract..."
                             rows={6}
-                            {...register("proposalDetails", {
+                            {...register("proposal", {
                                 required: "Proposal details are required",
                                 minLength: {
                                     value: 10,
@@ -296,34 +296,34 @@ export function ApplyDialog({
                             })}
                             disabled={isLoading}
                         />
-                        {errors.proposalDetails && (
+                        {errors.proposal && (
                             <p className="text-sm text-destructive">
-                                {errors.proposalDetails.message}
+                                {errors.proposal.message}
                             </p>
                         )}
                     </div>
 
-                    {/* Bid Value (Optional) */}
+                    {/* Proposed Budget (Optional) */}
                     {contract.budget && (
                         <div className="space-y-2">
-                            <Label htmlFor="bidValue">
-                                Bid Amount (Optional)
+                            <Label htmlFor="proposedBudget">
+                                Proposed Budget (Optional)
                             </Label>
                             <div className="flex items-center gap-2">
                                 <span className="text-sm text-muted-foreground">
                                     {contract.currency || "USD"}
                                 </span>
                                 <Input
-                                    id="bidValue"
+                                    id="proposedBudget"
                                     type="number"
                                     step="0.01"
                                     min="0"
                                     placeholder={`e.g. ${contract.budget}`}
-                                    {...register("bidValue", {
+                                    {...register("proposedBudget", {
                                         min: {
                                             value: 0,
                                             message:
-                                                "Bid amount must be positive",
+                                                "Proposed budget must be positive",
                                         },
                                     })}
                                     disabled={isLoading}
@@ -339,9 +339,9 @@ export function ApplyDialog({
                                     )}
                                 </p>
                             )}
-                            {errors.bidValue && (
+                            {errors.proposedBudget && (
                                 <p className="text-sm text-destructive">
-                                    {errors.bidValue.message}
+                                    {errors.proposedBudget.message}
                                 </p>
                             )}
                         </div>

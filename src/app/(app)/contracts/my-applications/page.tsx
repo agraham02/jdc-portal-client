@@ -282,7 +282,6 @@ export default function MyApplicationsPage() {
                                                             {formatDistanceToNow(
                                                                 new Date(
                                                                     application.applicationDate ||
-                                                                        application.submittedAt ||
                                                                         application.createdAt
                                                                 ),
                                                                 {
