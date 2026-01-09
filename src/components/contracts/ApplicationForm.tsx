@@ -32,7 +32,7 @@ import type {
 
 // Validation schema
 const applicationSchema = z.object({
-    proposalDetails: z
+    proposal: z
         .string()
         .min(50, "Proposal must be at least 50 characters")
         .max(10000, "Proposal must not exceed 10,000 characters"),
@@ -61,7 +61,7 @@ export function ApplicationForm({
     const form = useForm<ApplicationFormData>({
         resolver: zodResolver(applicationSchema),
         defaultValues: {
-            proposalDetails: "",
+            proposal: "",
         },
     });
 
@@ -83,7 +83,7 @@ export function ApplicationForm({
         }
 
         const dto: ApplyToContractDto = {
-            proposalDetails: data.proposalDetails,
+            proposal: data.proposal,
         };
 
         await onSubmit(dto);
@@ -132,7 +132,7 @@ export function ApplicationForm({
                         {/* Proposal Details */}
                         <FormField
                             control={form.control}
-                            name="proposalDetails"
+                            name="proposal"
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>
@@ -197,10 +197,16 @@ export function ApplicationForm({
 
                                 <FileUpload
                                     uploadEndpoint={`/api/contracts/${contract._id}/documents`}
-                                    acceptedFileTypes={FILE_VALIDATION_RULES.allowedTypes}
+                                    acceptedFileTypes={
+                                        FILE_VALIDATION_RULES.allowedTypes
+                                    }
                                     maxFiles={FILE_VALIDATION_RULES.maxFiles}
-                                    maxFileSizeMB={FILE_VALIDATION_RULES.maxSizeMB}
-                                    onUploadComplete={(fileIds) => handleUploadComplete(fileIds)}
+                                    maxFileSizeMB={
+                                        FILE_VALIDATION_RULES.maxSizeMB
+                                    }
+                                    onUploadComplete={(fileIds) =>
+                                        handleUploadComplete(fileIds)
+                                    }
                                     onUploadError={handleUploadError}
                                 />
 

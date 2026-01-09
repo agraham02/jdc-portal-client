@@ -62,6 +62,8 @@ export interface User {
     mailingAddress?: Address;
     contactEmail?: string;
     contactPhone?: string;
+    profilePhotoId?: string;
+    profilePhotoUrl?: string; // Presigned URL for avatar display
     lastLogin?: Date;
     createdBy?: string;
     updatedBy?: string;
@@ -155,9 +157,16 @@ export interface ConfirmPasswordResetDto {
 export interface UpdateProfileDto {
     firstName?: string;
     lastName?: string;
+    contactEmail?: string;
     contactPhone?: string;
     physicalAddress?: Address;
     mailingAddress?: Address;
+}
+
+export interface UploadAvatarResponse {
+    message: string;
+    profilePhotoId: string;
+    profilePhotoUrl?: string;
 }
 
 export interface UserDetailsResponse {

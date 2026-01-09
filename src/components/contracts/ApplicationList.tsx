@@ -9,6 +9,7 @@ import {
     MoreVertical,
     User,
     Calendar,
+    Trophy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,14 +36,16 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { RejectDialog } from "./RejectDialog";
 import { Can } from "@/components/auth/Can";
 import { PermissionName } from "@/lib/constants/permission-names";
 import { cn } from "@/lib/utils";
-import type {
-    Application,
+import {
     ApplicationStatus,
-    Contract,
+    ContractStatus,
+    getVendorDisplayName,
 } from "@/lib/types/contracts";
+import type { Application, Contract } from "@/lib/types/contracts";
 import { StatusBadge } from "../common";
 
 interface ApplicationListProps {
@@ -50,16 +53,19 @@ interface ApplicationListProps {
     applications: Application[];
     isLoading?: boolean;
     onAccept?: (applicationId: string) => Promise<void>;
-    onReject?: (applicationId: string) => Promise<void>;
+    onReject?: (applicationId: string, reason?: string) => Promise<void>;
+    onAward?: (applicationId: string) => Promise<void>;
     onViewDetails?: (applicationId: string) => void;
     className?: string;
 }
 
 export function ApplicationList({
+    contract,
     applications,
     isLoading = false,
     onAccept,
     onReject,
+    onAward,
     onViewDetails,
     className,
 }: ApplicationListProps) {
@@ -68,9 +74,13 @@ export function ApplicationList({
     );
     const [acceptDialogOpen, setAcceptDialogOpen] = useState(false);
     const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+    const [awardDialogOpen, setAwardDialogOpen] = useState(false);
     const [selectedApplicationId, setSelectedApplicationId] = useState<
         string | null
     >(null);
+
+    // Contract must be Open to award
+    const isOpen = contract.status === ContractStatus.OPEN;
 
     const filteredApplications =
         statusFilter === "all"
@@ -85,10 +95,18 @@ export function ApplicationList({
         }
     };
 
-    const handleReject = async () => {
+    const handleReject = async (reason?: string) => {
         if (selectedApplicationId && onReject) {
-            await onReject(selectedApplicationId);
+            await onReject(selectedApplicationId, reason);
             setRejectDialogOpen(false);
+            setSelectedApplicationId(null);
+        }
+    };
+
+    const handleAward = async () => {
+        if (selectedApplicationId && onAward) {
+            await onAward(selectedApplicationId);
+            setAwardDialogOpen(false);
             setSelectedApplicationId(null);
         }
     };
@@ -101,6 +119,11 @@ export function ApplicationList({
     const openRejectDialog = (applicationId: string) => {
         setSelectedApplicationId(applicationId);
         setRejectDialogOpen(true);
+    };
+
+    const openAwardDialog = (applicationId: string) => {
+        setSelectedApplicationId(applicationId);
+        setAwardDialogOpen(true);
     };
 
     if (isLoading) {
@@ -138,7 +161,8 @@ export function ApplicationList({
                             <SelectItem value="all">All Statuses</SelectItem>
                             <SelectItem value="Submitted">Submitted</SelectItem>
                             <SelectItem value="Reviewed">Reviewed</SelectItem>
-                            <SelectItem value="Accepted">Accepted</SelectItem>
+                            <SelectItem value="Accepted">In Review</SelectItem>
+                            <SelectItem value="Awarded">Awarded</SelectItem>
                             <SelectItem value="Rejected">Rejected</SelectItem>
                             <SelectItem value="Withdrawn">Withdrawn</SelectItem>
                             <SelectItem value="Cancelled">Cancelled</SelectItem>
@@ -174,121 +198,177 @@ export function ApplicationList({
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {filteredApplications.map((application) => (
-                                    <TableRow key={application._id}>
-                                        <TableCell>
-                                            <div className="flex items-center gap-2">
-                                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                                                    <User className="h-4 w-4 text-primary" />
+                                {filteredApplications.map((application) => {
+                                    const isWinner =
+                                        contract.awardedApplicationId ===
+                                        application._id;
+                                    return (
+                                        <TableRow
+                                            key={application._id}
+                                            className={cn(
+                                                isWinner &&
+                                                    "bg-amber-50 dark:bg-amber-950/30 border-l-4 border-l-amber-500"
+                                            )}
+                                        >
+                                            <TableCell>
+                                                <div className="flex items-center gap-2">
+                                                    {isWinner ? (
+                                                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/50">
+                                                            <Trophy className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                                                            <User className="h-4 w-4 text-primary" />
+                                                        </div>
+                                                    )}
+                                                    <div>
+                                                        <div className="flex items-center gap-2">
+                                                            <p className="font-medium">
+                                                                {getVendorDisplayName(
+                                                                    application.vendor
+                                                                )}
+                                                            </p>
+                                                            {isWinner && (
+                                                                <span className="inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-900/50 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+                                                                    Winner
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {application.vendor
+                                                                ?.email || ""}
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <p className="font-medium">
-                                                        {typeof application.vendor ===
-                                                        "object"
-                                                            ? `${application.vendor.firstName} ${application.vendor.lastName}`
-                                                            : "Unknown Vendor"}
-                                                    </p>
-                                                    <p className="text-xs text-muted-foreground">
-                                                        {typeof application.vendor ===
-                                                        "object"
-                                                            ? application.vendor
-                                                                  .email
-                                                            : ""}
-                                                    </p>
+                                            </TableCell>
+                                            <TableCell>
+                                                <StatusBadge
+                                                    type="application"
+                                                    status={application.status}
+                                                    showIcon={false}
+                                                />
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                                    <Calendar className="h-3 w-3" />
+                                                    {formatDistanceToNow(
+                                                        new Date(
+                                                            application.applicationDate ||
+                                                                application.createdAt
+                                                        ),
+                                                        {
+                                                            addSuffix: true,
+                                                        }
+                                                    )}
                                                 </div>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <StatusBadge
-                                                type="application"
-                                                status={application.status}
-                                                showIcon={false}
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                                <Calendar className="h-3 w-3" />
-                                                {formatDistanceToNow(
-                                                    new Date(
-                                                        application.applicationDate ||
-                                                            application.submittedAt ||
-                                                            application.createdAt
-                                                    ),
+                                            </TableCell>
+                                            <TableCell>
+                                                <p className="max-w-md truncate text-sm">
                                                     {
-                                                        addSuffix: true,
+                                                        application.proposalDetails
                                                     }
-                                                )}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <p className="max-w-md truncate text-sm">
-                                                {application.proposalDetails}
-                                            </p>
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <div className="flex justify-end gap-2">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() =>
-                                                        onViewDetails?.(
-                                                            application._id
-                                                        )
-                                                    }
-                                                >
-                                                    <Eye className="h-4 w-4" />
-                                                </Button>
-                                                <Can
-                                                    anyOf={[
-                                                        PermissionName.CONTRACT_MANAGE_APPLICATIONS,
-                                                    ]}
-                                                >
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger
-                                                            asChild
-                                                        >
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
+                                                </p>
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <div className="flex justify-end gap-2">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() =>
+                                                            onViewDetails?.(
+                                                                application._id
+                                                            )
+                                                        }
+                                                    >
+                                                        <Eye className="h-4 w-4" />
+                                                    </Button>
+                                                    <Can
+                                                        anyOf={[
+                                                            PermissionName.CONTRACT_MANAGE_APPLICATIONS,
+                                                            PermissionName.CONTRACT_APPROVE,
+                                                        ]}
+                                                    >
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger
+                                                                asChild
                                                             >
-                                                                <MoreVertical className="h-4 w-4" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            {application.status ===
-                                                                "Submitted" ||
-                                                            application.status ===
-                                                                "Reviewed" ? (
-                                                                <>
-                                                                    <DropdownMenuItem
-                                                                        onClick={() =>
-                                                                            openAcceptDialog(
-                                                                                application._id
-                                                                            )
-                                                                        }
-                                                                    >
-                                                                        <CheckCircle className="mr-2 h-4 w-4" />
-                                                                        Accept
-                                                                    </DropdownMenuItem>
-                                                                    <DropdownMenuItem
-                                                                        onClick={() =>
-                                                                            openRejectDialog(
-                                                                                application._id
-                                                                            )
-                                                                        }
-                                                                    >
-                                                                        <XCircle className="mr-2 h-4 w-4" />
-                                                                        Reject
-                                                                    </DropdownMenuItem>
-                                                                </>
-                                                            ) : null}
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </Can>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                >
+                                                                    <MoreVertical className="h-4 w-4" />
+                                                                </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end">
+                                                                {/* Award Contract - requires Open contract and appropriate application status */}
+                                                                {isOpen &&
+                                                                    onAward &&
+                                                                    (application.status ===
+                                                                        ApplicationStatus.SUBMITTED ||
+                                                                        application.status ===
+                                                                            ApplicationStatus.REVIEWED ||
+                                                                        application.status ===
+                                                                            ApplicationStatus.ACCEPTED) && (
+                                                                        <Can
+                                                                            anyOf={[
+                                                                                PermissionName.CONTRACT_APPROVE,
+                                                                            ]}
+                                                                        >
+                                                                            <DropdownMenuItem
+                                                                                onClick={() =>
+                                                                                    openAwardDialog(
+                                                                                        application._id
+                                                                                    )
+                                                                                }
+                                                                            >
+                                                                                <Trophy className="mr-2 h-4 w-4 text-amber-500" />
+                                                                                Award
+                                                                                Contract
+                                                                            </DropdownMenuItem>
+                                                                        </Can>
+                                                                    )}
+                                                                {/* Accept/Reject - review workflow requires CONTRACT_APPROVE */}
+                                                                <Can
+                                                                    anyOf={[
+                                                                        PermissionName.CONTRACT_APPROVE,
+                                                                    ]}
+                                                                >
+                                                                    {(application.status ===
+                                                                        ApplicationStatus.SUBMITTED ||
+                                                                        application.status ===
+                                                                            ApplicationStatus.REVIEWED) && (
+                                                                        <>
+                                                                            <DropdownMenuItem
+                                                                                onClick={() =>
+                                                                                    openAcceptDialog(
+                                                                                        application._id
+                                                                                    )
+                                                                                }
+                                                                            >
+                                                                                <CheckCircle className="mr-2 h-4 w-4" />
+                                                                                Accept
+                                                                            </DropdownMenuItem>
+                                                                            <DropdownMenuItem
+                                                                                onClick={() =>
+                                                                                    openRejectDialog(
+                                                                                        application._id
+                                                                                    )
+                                                                                }
+                                                                            >
+                                                                                <XCircle className="mr-2 h-4 w-4" />
+                                                                                Reject
+                                                                            </DropdownMenuItem>
+                                                                        </>
+                                                                    )}
+                                                                </Can>
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                    </Can>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
                             </TableBody>
                         </Table>
                     </div>
@@ -305,13 +385,19 @@ export function ApplicationList({
             />
 
             {/* Reject Dialog */}
-            <ConfirmDialog
+            <RejectDialog
                 open={rejectDialogOpen}
                 onOpenChange={setRejectDialogOpen}
-                title="Reject Application"
-                description="Are you sure you want to reject this application? This action will notify the vendor."
                 onConfirm={handleReject}
-                variant="destructive"
+            />
+
+            {/* Award Dialog */}
+            <ConfirmDialog
+                open={awardDialogOpen}
+                onOpenChange={setAwardDialogOpen}
+                title="Award Contract"
+                description="Are you sure you want to award this contract to the selected vendor? This action will close the contract and notify all applicants of the outcome."
+                onConfirm={handleAward}
             />
         </Card>
     );

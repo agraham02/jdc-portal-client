@@ -16,6 +16,7 @@ import {
     AccountInfoSection,
     EmployeeSection,
     VendorSection,
+    AvatarUpload,
     type ProfileFormData,
     type PasswordFormData,
 } from "@/components/profile";
@@ -51,6 +52,8 @@ export default function ProfilePage() {
             lastName: user?.lastName || "",
             contactEmail: user?.contactEmail || "",
             contactPhone: user?.contactPhone || "",
+            physicalAddress: user?.physicalAddress || undefined,
+            mailingAddress: user?.mailingAddress || undefined,
         }),
         [user]
     );
@@ -62,6 +65,8 @@ export default function ProfilePage() {
                 lastName: data.lastName,
                 contactEmail: data.contactEmail || undefined,
                 contactPhone: data.contactPhone || undefined,
+                physicalAddress: data.physicalAddress,
+                mailingAddress: data.mailingAddress,
             });
             apiToast.success("Profile updated successfully");
             await refresh();
@@ -147,11 +152,17 @@ export default function ProfilePage() {
                 </p>
             </div>
 
+            {/* Avatar Upload */}
+            <AvatarUpload
+                profilePhotoUrl={user.profilePhotoUrl}
+                firstName={user.firstName}
+                lastName={user.lastName}
+                onAvatarChange={refresh}
+            />
+
             {/* General Information */}
             <GeneralInfoSection
                 defaultValues={profileDefaultValues}
-                physicalAddress={user.physicalAddress}
-                mailingAddress={user.mailingAddress}
                 onSubmit={handleProfileSubmit}
                 isSubmitting={false}
             />

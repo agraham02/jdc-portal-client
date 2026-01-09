@@ -34,9 +34,15 @@ export const PermissionName = Object.freeze({
     CONTRACT_UPDATE: "contract:update",
     CONTRACT_DELETE: "contract:delete",
     CONTRACT_PUBLISH: "contract:publish",
-    CONTRACT_AWARD: "contract:award",
+    // NOTE: CONTRACT_APPROVE intentionally consolidates legacy CONTRACT_AWARD and
+    // CONTRACT_REVIEW_APPLICATIONS permissions. It represents the final approval
+    // authority for awarding and closing contracts (including final decisions on
+    // applications), not day-to-day application triage. If more granular control
+    // is required for principle-of-least-privilege scenarios, introduce additional
+    // dedicated permissions rather than overloading this one.
+    CONTRACT_APPROVE: "contract:approve",
     CONTRACT_APPLY: "contract:apply",
-    CONTRACT_REVIEW_APPLICATIONS: "contract:review_applications",
+    CONTRACT_REJECT: "contract:reject",
     CONTRACT_MANAGE_APPLICATIONS: "contract:manage_applications",
     APPLICATION_WITHDRAW: "application:withdraw",
 

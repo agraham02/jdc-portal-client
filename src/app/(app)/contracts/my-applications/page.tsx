@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import { Eye, Calendar, FileText } from "lucide-react";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { AccessDenied } from "@/components/auth/AccessDenied";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -24,7 +25,15 @@ import {
 } from "@/components/ui/select";
 import { ApplicationsService } from "@/lib/services/contracts";
 import { PermissionName as P } from "@/lib/constants/permission-names";
-import type { ApplicationStatus, ApplicationListResponse } from "@/lib/types/contracts";
+import { useAuth } from "@/lib/contexts/auth-context";
+import { AccountType } from "@/lib/types/auth";
+import {
+    ApplicationStatus,
+    type ApplicationListResponse,
+    getContractId,
+    getContractTitle,
+    getContractStatus,
+} from "@/lib/types/contracts";
 import { useNotificationsCtx } from "@/lib/contexts/notifications-context";
 import {
     handleContractNotification,
@@ -35,13 +44,25 @@ import {
 import { NotificationType } from "@/lib/types/notifications";
 import { StatusBadge } from "@/components/common";
 import { usePaginatedApi } from "@/lib/hooks/useApi";
+import { ConfirmDialog } from "@/components/contracts/ConfirmDialog";
 
 export default function MyApplicationsPage() {
     const router = useRouter();
     const { notifications } = useNotificationsCtx();
+    const { accountType, hasPermission } = useAuth();
     const [statusFilter, setStatusFilter] = useState<ApplicationStatus | "all">(
         "all"
     );
+    const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
+    const [selectedWithdraw, setSelectedWithdraw] = useState<{
+        applicationId: string;
+        contractId: string;
+    } | null>(null);
+
+    // Only vendors and admins (with SYSTEM_ADMIN) should access this page
+    const isVendor = accountType === AccountType.VENDOR;
+    const isAdmin = hasPermission(P.SYSTEM_ADMIN);
+    const canAccessPage = isVendor || isAdmin;
 
     // Fetch applications with SWR
     const {
@@ -50,7 +71,7 @@ export default function MyApplicationsPage() {
         isLoading,
         mutate: revalidate,
     } = usePaginatedApi<ApplicationListResponse>(
-        "/contracts/my-applications",
+        "/contract-applications/my-applications",
         statusFilter === "all" ? {} : { status: statusFilter }
     );
 
@@ -81,16 +102,23 @@ export default function MyApplicationsPage() {
         }
     }, [notifications, revalidate]);
 
-    async function handleWithdraw(applicationId: string, contractId: string) {
+    function openWithdrawDialog(applicationId: string, contractId: string) {
+        setSelectedWithdraw({ applicationId, contractId });
+        setWithdrawDialogOpen(true);
+    }
+
+    async function handleWithdraw() {
+        if (!selectedWithdraw) return;
         try {
             await ApplicationsService.withdrawApplication(
-                contractId,
-                applicationId
+                selectedWithdraw.applicationId
             );
             showContractActionSuccess(
                 "Application Withdrawn",
                 "Your application has been withdrawn successfully"
             );
+            setWithdrawDialogOpen(false);
+            setSelectedWithdraw(null);
             // Revalidate the cache to refresh the list
             await revalidate();
         } catch (err) {
@@ -102,17 +130,31 @@ export default function MyApplicationsPage() {
         }
     }
 
-    function handleViewContract(contractId: string) {
-        router.push(`/contracts/${contractId}`);
+    function handleViewApplication(applicationId: string) {
+        router.push(`/contracts/applications/${applicationId}`);
     }
 
     // Since we're filtering by status in the API call, no need for client-side filtering
     const filteredApplications = applications;
 
-    const errorMessage = error instanceof Error ? error.message : error ? "Failed to load applications" : undefined;
+    const errorMessage =
+        error instanceof Error
+            ? error.message
+            : error
+            ? "Failed to load applications"
+            : undefined;
+
+    // Block access for employees (non-vendors, non-admins)
+    if (!canAccessPage) {
+        return (
+            <ProtectedRoute requireAuth>
+                <AccessDenied />
+            </ProtectedRoute>
+        );
+    }
 
     return (
-        <ProtectedRoute anyOf={[P.CONTRACT_APPLY]}>
+        <ProtectedRoute requireAuth>
             <main className="container mx-auto space-y-6 py-6">
                 <div className="flex items-center justify-between">
                     <div>
@@ -223,15 +265,25 @@ export default function MyApplicationsPage() {
                                                     <TableCell>
                                                         <div>
                                                             <p className="font-medium">
-                                                                Contract
+                                                                {getContractTitle(
+                                                                    application
+                                                                )}
                                                             </p>
-                                                            {application.contractId && (
-                                                                <p className="text-xs text-muted-foreground">
-                                                                    ID:{" "}
-                                                                    {application.contractId.slice(
-                                                                        -8
-                                                                    )}
-                                                                </p>
+                                                            {getContractStatus(
+                                                                application
+                                                            ) && (
+                                                                <StatusBadge
+                                                                    type="contract"
+                                                                    status={
+                                                                        getContractStatus(
+                                                                            application
+                                                                        )!
+                                                                    }
+                                                                    showIcon={
+                                                                        false
+                                                                    }
+                                                                    className="mt-1"
+                                                                />
                                                             )}
                                                         </div>
                                                     </TableCell>
@@ -250,7 +302,6 @@ export default function MyApplicationsPage() {
                                                             {formatDistanceToNow(
                                                                 new Date(
                                                                     application.applicationDate ||
-                                                                        application.submittedAt ||
                                                                         application.createdAt
                                                                 ),
                                                                 {
@@ -273,24 +324,27 @@ export default function MyApplicationsPage() {
                                                                 variant="ghost"
                                                                 size="icon"
                                                                 onClick={() =>
-                                                                    handleViewContract(
-                                                                        application.contractId
+                                                                    handleViewApplication(
+                                                                        application._id
                                                                     )
                                                                 }
+                                                                title="View Application Details"
                                                             >
                                                                 <Eye className="h-4 w-4" />
                                                             </Button>
                                                             {(application.status ===
-                                                                "Submitted" ||
+                                                                ApplicationStatus.SUBMITTED ||
                                                                 application.status ===
-                                                                    "Reviewed") && (
+                                                                    ApplicationStatus.REVIEWED) && (
                                                                 <Button
                                                                     variant="ghost"
                                                                     size="sm"
                                                                     onClick={() =>
-                                                                        handleWithdraw(
+                                                                        openWithdrawDialog(
                                                                             application._id,
-                                                                            application.contractId
+                                                                            getContractId(
+                                                                                application
+                                                                            )
                                                                         )
                                                                     }
                                                                 >
@@ -308,6 +362,16 @@ export default function MyApplicationsPage() {
                         )}
                     </CardContent>
                 </Card>
+
+                {/* Withdraw Confirmation Dialog */}
+                <ConfirmDialog
+                    open={withdrawDialogOpen}
+                    onOpenChange={setWithdrawDialogOpen}
+                    title="Withdraw Application"
+                    description="Are you sure you want to withdraw this application? This action cannot be undone."
+                    onConfirm={handleWithdraw}
+                    variant="destructive"
+                />
             </main>
         </ProtectedRoute>
     );

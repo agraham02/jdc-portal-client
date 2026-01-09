@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import {
     EmployeeService,
     type EmployeeWithUser,
@@ -19,27 +26,93 @@ import {
     type UpdateVendorDto,
 } from "@/lib/services/vendor";
 import type { Address } from "@/lib/types/auth";
+import { UserStatus } from "@/lib/types/auth";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { PhoneInput } from "../ui/phone-input";
 import { AddressForm, DateInput, ServicesInput, StatusBadge } from ".";
+import { AuthService } from "@/lib/services/auth";
+import { useAuthz } from "@/lib/authz/useAuthz";
+import { PermissionName as P } from "@/lib/constants/permission-names";
 
 type EntityType = "user" | "employee" | "vendor";
 
-type Props = {
+type Props = Readonly<{
     entityType: EntityType;
     id: string;
     canUpdate?: boolean;
-};
+}>;
 
 export function EntityDetail({ entityType, id, canUpdate }: Props) {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [editing, setEditing] = useState(false);
+    const [resending, setResending] = useState(false);
+    const { hasAny } = useAuthz();
+    const canResendActivation = hasAny([P.EMPLOYEE_CREATE, P.EMPLOYEE_UPDATE]);
     const [data, setData] = useState<EmployeeWithUser | VendorWithUser | null>(
         null
     );
     const [form, setForm] = useState<Record<string, unknown>>({});
+    const [allEmployees, setAllEmployees] = useState<EmployeeWithUser[]>([]);
+
+    // Status options available for employees (managers/admins can set these)
+    const employeeStatusOptions = useMemo(
+        () => [
+            { value: UserStatus.ACTIVE, label: "Active" },
+            { value: UserStatus.INACTIVE, label: "Inactive" },
+            { value: UserStatus.ONBOARDING, label: "Onboarding" },
+            { value: UserStatus.TERMINATED, label: "Terminated" },
+        ],
+        []
+    );
+
+    // Filtered list of potential managers (exclude current employee)
+    const managerOptions = useMemo(() => {
+        return allEmployees
+            .filter((emp) => emp._id !== id)
+            .filter((emp) => emp.userId?.status === UserStatus.ACTIVE)
+            .map((emp) => ({
+                value: emp._id,
+                label:
+                    `${emp.userId?.firstName ?? ""} ${
+                        emp.userId?.lastName ?? ""
+                    }`.trim() ||
+                    emp.userId?.email ||
+                    "Unknown",
+            }));
+    }, [allEmployees, id]);
+
+    // Get current manager name for display
+    const currentManagerName = useMemo(() => {
+        const managerId = form.managerId as string;
+        if (!managerId) return "No Manager";
+        const manager = allEmployees.find((emp) => emp._id === managerId);
+        if (!manager) return "Unknown Manager";
+        return (
+            `${manager.userId?.firstName ?? ""} ${
+                manager.userId?.lastName ?? ""
+            }`.trim() ||
+            manager.userId?.email ||
+            "Unknown"
+        );
+    }, [form.managerId, allEmployees]);
+
+    // Load employees list for manager selection (only for employee entity type)
+    useEffect(() => {
+        if (entityType !== "employee") return;
+
+        async function loadEmployees() {
+            try {
+                const resp = await EmployeeService.getEmployees({ limit: 100 });
+                setAllEmployees(resp.data);
+            } catch {
+                // Silently fail - manager selection just won't be available
+                console.warn("Failed to load employees for manager selection");
+            }
+        }
+        loadEmployees();
+    }, [entityType]);
 
     useEffect(() => {
         let cancelled = false;
@@ -68,6 +141,8 @@ export function EntityDetail({ entityType, id, canUpdate }: Props) {
                         hireDate: employee.hireDate
                             ? new Date(employee.hireDate)
                             : null,
+                        status: employee.userId?.status ?? UserStatus.ACTIVE,
+                        managerId: employee.managerId ?? "",
                     });
                 } else if (entityType === "vendor") {
                     const vendor = resp as VendorWithUser;
@@ -119,6 +194,8 @@ export function EntityDetail({ entityType, id, canUpdate }: Props) {
                     hireDate: form.hireDate
                         ? (form.hireDate as Date).toISOString()
                         : undefined,
+                    status: form.status as UserStatus | undefined,
+                    managerId: (form.managerId as string) || undefined,
                 };
                 await EmployeeService.updateEmployee(id, updateData);
             } else if (entityType === "vendor") {
@@ -159,6 +236,8 @@ export function EntityDetail({ entityType, id, canUpdate }: Props) {
                 hireDate: employee.hireDate
                     ? new Date(employee.hireDate)
                     : null,
+                status: employee.userId?.status ?? UserStatus.ACTIVE,
+                managerId: employee.managerId ?? "",
             });
         } else if (data && entityType === "vendor") {
             const vendor = data as VendorWithUser;
@@ -175,6 +254,32 @@ export function EntityDetail({ entityType, id, canUpdate }: Props) {
             });
         }
     };
+
+    // Handler to resend activation email for pending/onboarding employees
+    const onResendActivation = async () => {
+        if (!data?.userId?._id) return;
+        setResending(true);
+        try {
+            await AuthService.resendActivation(data.userId._id);
+            toast.success("Activation email sent");
+        } catch (e) {
+            toast.error(
+                (e as Error)?.message || "Failed to send activation email"
+            );
+        } finally {
+            setResending(false);
+        }
+    };
+
+    // Check if resend activation should be shown (pending/onboarding employee)
+    const showResendActivation = useMemo(() => {
+        if (entityType !== "employee") return false;
+        if (!canResendActivation) return false;
+        const status = data?.userId?.status;
+        return (
+            status === UserStatus.PENDING || status === UserStatus.ONBOARDING
+        );
+    }, [entityType, canResendActivation, data?.userId?.status]);
 
     if (loading)
         return (
@@ -206,11 +311,22 @@ export function EntityDetail({ entityType, id, canUpdate }: Props) {
                     </h1>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <span>ID: {id}</span>
-                        {user && <StatusBadge type="user" status={user.status} />}
+                        {user && (
+                            <StatusBadge type="user" status={user.status} />
+                        )}
                     </div>
                 </div>
                 {canUpdate && (
                     <div className="flex gap-2">
+                        {showResendActivation && (
+                            <Button
+                                variant="outline"
+                                onClick={onResendActivation}
+                                disabled={resending}
+                            >
+                                {resending ? "Sending..." : "Resend Activation"}
+                            </Button>
+                        )}
                         {editing ? (
                             <>
                                 <Button onClick={onSave}>Save Changes</Button>
@@ -249,7 +365,7 @@ export function EntityDetail({ entityType, id, canUpdate }: Props) {
                         <Input
                             value={
                                 data.createdAt
-                                    ? format(new Date(data.createdAt), "PPP")
+                                    ? format(new Date(data.createdAt), "PPpp")
                                     : "N/A"
                             }
                             disabled
@@ -260,7 +376,7 @@ export function EntityDetail({ entityType, id, canUpdate }: Props) {
                         <Input
                             value={
                                 data.updatedAt
-                                    ? format(new Date(data.updatedAt), "PPP")
+                                    ? format(new Date(data.updatedAt), "PPpp")
                                     : "N/A"
                             }
                             disabled
@@ -319,6 +435,69 @@ export function EntityDetail({ entityType, id, canUpdate }: Props) {
                         // onChange={(date) => onChange("hireDate", date)}
                         // disabled={!editing}
                         />
+                        <div>
+                            <Label htmlFor="status">Status</Label>
+                            <Select
+                                value={
+                                    (form.status as string) ?? UserStatus.ACTIVE
+                                }
+                                onValueChange={(value) =>
+                                    onChange("status", value)
+                                }
+                                disabled={!editing}
+                            >
+                                <SelectTrigger id="status">
+                                    <SelectValue placeholder="Select status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {employeeStatusOptions.map((option) => (
+                                        <SelectItem
+                                            key={option.value}
+                                            value={option.value}
+                                        >
+                                            {option.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div>
+                            <Label htmlFor="managerId">Manager</Label>
+                            {editing ? (
+                                <Select
+                                    value={(form.managerId as string) ?? ""}
+                                    onValueChange={(value) =>
+                                        onChange(
+                                            "managerId",
+                                            value === "none" ? "" : value
+                                        )
+                                    }
+                                >
+                                    <SelectTrigger id="managerId">
+                                        <SelectValue placeholder="Select manager" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="none">
+                                            No Manager
+                                        </SelectItem>
+                                        {managerOptions.map((option) => (
+                                            <SelectItem
+                                                key={option.value}
+                                                value={option.value}
+                                            >
+                                                {option.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            ) : (
+                                <Input
+                                    id="managerId"
+                                    value={currentManagerName}
+                                    disabled
+                                />
+                            )}
+                        </div>
                     </div>
                 </Card>
             )}

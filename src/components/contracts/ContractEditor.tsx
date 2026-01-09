@@ -24,10 +24,15 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form";
-import { CreateContractDto, RequiredDocument } from "@/lib/types/contracts";
-import { PlusIcon, TrashIcon } from "lucide-react";
-import { useState } from "react";
-import { FileUpload } from "../common";
+import {
+    CreateContractDto,
+    RequiredDocument,
+    FileDocument,
+    getDocumentFilename,
+} from "@/lib/types/contracts";
+import { FileUpload } from "@/components/common/FileUpload";
+import { PlusIcon, TrashIcon, FileText, Download } from "lucide-react";
+import { useState, useEffect } from "react";
 
 // Common currencies
 const CURRENCIES = [
@@ -85,6 +90,21 @@ const contractSchema = z.object({
 
 type ContractFormData = z.infer<typeof contractSchema>;
 
+type RequiredDocumentWithClientId = RequiredDocument & { clientId: string };
+
+function createClientId(): string {
+    const cryptoObj = globalThis.crypto;
+    if (
+        cryptoObj &&
+        "randomUUID" in cryptoObj &&
+        typeof cryptoObj.randomUUID === "function"
+    ) {
+        return cryptoObj.randomUUID();
+    }
+    // Fallback: Math.random() is safe for UI component keys (no cryptographic security needed)
+    return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
 interface ContractEditorProps {
     initialData?: Partial<CreateContractDto>;
     onSubmit: (data: CreateContractDto) => Promise<void>;
@@ -93,7 +113,18 @@ interface ContractEditorProps {
     submitLabel?: string;
     className?: string;
     files?: File[];
-    setFiles?: (files: File[]) => void;
+    onFilesChange?: (files: File[]) => void;
+    /** Existing documents for edit mode */
+    existingDocuments?: FileDocument[];
+    /** Callback when user removes an existing document */
+    onRemoveDocument?: (documentId: string) => Promise<void>;
+    /** Callback to download an existing document */
+    onDownloadDocument?: (
+        documentId: string,
+        filename: string
+    ) => Promise<void>;
+    /** Whether we're in edit mode (affects deadline validation) */
+    isEditMode?: boolean;
 }
 
 export function ContractEditor({
@@ -104,14 +135,43 @@ export function ContractEditor({
     submitLabel = "Create Contract",
     className,
     files = [],
-    setFiles = () => {},
-}: ContractEditorProps) {
-    const [requiredDocs, setRequiredDocs] = useState<RequiredDocument[]>(
-        initialData?.requiredDocuments || []
+    onFilesChange,
+    existingDocuments = [],
+    onRemoveDocument,
+    onDownloadDocument,
+    isEditMode = false,
+}: Readonly<ContractEditorProps>) {
+    const [requiredDocs, setRequiredDocs] = useState<
+        RequiredDocumentWithClientId[]
+    >(
+        (initialData?.requiredDocuments || []).map((d) => ({
+            ...d,
+            clientId: createClientId(),
+        }))
     );
+    const [removingDocId, setRemovingDocId] = useState<string | null>(null);
+
+    // Sync requiredDocs when initialData changes (e.g., from auto-fill)
+    useEffect(() => {
+        if (initialData?.requiredDocuments) {
+            setRequiredDocs(
+                initialData.requiredDocuments.map((d) => ({
+                    ...d,
+                    clientId: createClientId(),
+                }))
+            );
+        }
+    }, [initialData?.requiredDocuments]);
+
+    // Create schema dynamically based on edit mode
+    const dynamicSchema = isEditMode
+        ? contractSchema.extend({
+              deadline: z.string().optional().nullable(),
+          })
+        : contractSchema;
 
     const form = useForm<ContractFormData>({
-        resolver: zodResolver(contractSchema),
+        resolver: zodResolver(dynamicSchema),
         defaultValues: {
             title: initialData?.title || "",
             description: initialData?.description || "",
@@ -138,7 +198,13 @@ export function ContractEditor({
                 : undefined,
             requiresResponsiveSupport: data.requiresResponsiveSupport ?? false,
             requiredDocuments:
-                requiredDocs.length > 0 ? requiredDocs : undefined,
+                requiredDocs.length > 0
+                    ? requiredDocs.map(({ ...doc }) => ({
+                          name: doc.name,
+                          description: doc.description,
+                          required: doc.required,
+                      }))
+                    : undefined,
         };
 
         await onSubmit(dto);
@@ -151,7 +217,12 @@ export function ContractEditor({
         }
         setRequiredDocs([
             ...requiredDocs,
-            { name: "", description: "", required: true },
+            {
+                name: "",
+                description: "",
+                required: true,
+                clientId: createClientId(),
+            },
         ]);
     }
 
@@ -244,19 +315,35 @@ export function ContractEditor({
                                         <FormLabel>Budget (Optional)</FormLabel>
                                         <FormControl>
                                             <Input
-                                                type="number"
+                                                type="text"
+                                                inputMode="numeric"
                                                 placeholder="50000"
-                                                {...field}
-                                                value={field.value || ""}
-                                                onChange={(e) =>
-                                                    field.onChange(
-                                                        e.target.value
-                                                            ? parseFloat(
-                                                                  e.target.value
-                                                              )
-                                                            : undefined
-                                                    )
+                                                value={
+                                                    field.value !== undefined &&
+                                                    field.value !== null
+                                                        ? String(field.value)
+                                                        : ""
                                                 }
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    // Allow empty value (clearing the field)
+                                                    if (val === "") {
+                                                        field.onChange(null);
+                                                        return;
+                                                    }
+                                                    // Only allow numeric characters
+                                                    if (
+                                                        !/^\d*\.?\d*$/.test(val)
+                                                    ) {
+                                                        return;
+                                                    }
+                                                    // Parse as number for form state
+                                                    const num = Number(val);
+                                                    if (!Number.isNaN(num)) {
+                                                        field.onChange(num);
+                                                    }
+                                                }}
+                                                onBlur={field.onBlur}
                                                 disabled={isSubmitting}
                                             />
                                         </FormControl>
@@ -389,20 +476,27 @@ export function ContractEditor({
                         ) : (
                             <div className="space-y-4">
                                 {requiredDocs.map((doc, index) => (
-                                    <Card key={index} className="border-2">
+                                    <Card
+                                        key={doc.clientId}
+                                        className="border-2"
+                                    >
                                         <CardContent className="pt-6">
                                             <div className="space-y-4">
                                                 <div className="flex items-start gap-4">
                                                     <div className="flex-1 space-y-4">
                                                         {/* Document Name */}
                                                         <div className="space-y-2">
-                                                            <label className="text-sm font-medium">
+                                                            <label
+                                                                className="text-sm font-medium"
+                                                                htmlFor={`required-doc-name-${doc.clientId}`}
+                                                            >
                                                                 Document Name{" "}
                                                                 <span className="text-destructive">
                                                                     *
                                                                 </span>
                                                             </label>
                                                             <Input
+                                                                id={`required-doc-name-${doc.clientId}`}
                                                                 placeholder="e.g., Business License"
                                                                 value={doc.name}
                                                                 onChange={(e) =>
@@ -421,11 +515,15 @@ export function ContractEditor({
 
                                                         {/* Document Description */}
                                                         <div className="space-y-2">
-                                                            <label className="text-sm font-medium">
+                                                            <label
+                                                                className="text-sm font-medium"
+                                                                htmlFor={`required-doc-description-${doc.clientId}`}
+                                                            >
                                                                 Description
                                                                 (Optional)
                                                             </label>
                                                             <Textarea
+                                                                id={`required-doc-description-${doc.clientId}`}
                                                                 placeholder="Provide details about this document requirement..."
                                                                 rows={2}
                                                                 value={
@@ -449,6 +547,7 @@ export function ContractEditor({
                                                         {/* Required Checkbox */}
                                                         <div className="flex items-center space-x-2">
                                                             <Switch
+                                                                id={`required-doc-required-${doc.clientId}`}
                                                                 checked={
                                                                     doc.required
                                                                 }
@@ -465,7 +564,10 @@ export function ContractEditor({
                                                                     isSubmitting
                                                                 }
                                                             />
-                                                            <label className="text-sm font-medium">
+                                                            <label
+                                                                className="text-sm font-medium"
+                                                                htmlFor={`required-doc-required-${doc.clientId}`}
+                                                            >
                                                                 Required
                                                                 (vendors must
                                                                 upload this)
@@ -498,6 +600,7 @@ export function ContractEditor({
                     </CardContent>
                 </Card>
 
+                {/* Supporting Documents */}
                 <Card>
                     <CardHeader>
                         <CardTitle>Supporting Documents (Optional)</CardTitle>
@@ -506,31 +609,114 @@ export function ContractEditor({
                             and download. Maximum 5 files, 5MB each.
                         </p>
                     </CardHeader>
-                    <CardContent>
-                        <FileUpload
-                            acceptedFileTypes={[
-                                ".pdf",
-                                ".doc",
-                                ".docx",
-                                ".xls",
-                                ".xlsx",
-                                ".png",
-                                ".jpg",
-                                ".jpeg",
-                            ]}
-                            maxFiles={5}
-                            maxFileSizeMB={5}
-                            disabled={isSubmitting}
-                            uploadingFiles={files.map((file) => ({
-                                file,
-                                progress: 0,
-                            }))}
-                            onUploadingFilesChange={(uploadingFiles) =>
-                                setFiles(uploadingFiles.map((uf) => uf.file))
-                            }
-                            showUploadButton={true}
-                            uploadButtonText="Select Files"
-                        />
+                    <CardContent className="space-y-4">
+                        {/* Existing Documents (Edit Mode) */}
+                        {existingDocuments.length > 0 && (
+                            <div className="space-y-2">
+                                <p className="text-sm font-medium">
+                                    Existing Documents
+                                </p>
+                                <div className="space-y-2">
+                                    {existingDocuments.map((doc) => (
+                                        <div
+                                            key={doc._id}
+                                            className="flex items-center gap-2 rounded-md border p-3"
+                                        >
+                                            <FileText className="h-4 w-4 text-muted-foreground" />
+                                            <span className="flex-1 truncate text-sm">
+                                                {getDocumentFilename(doc)}
+                                            </span>
+                                            <span className="text-xs text-muted-foreground">
+                                                {(doc.size / 1024).toFixed(1)}{" "}
+                                                KB
+                                            </span>
+                                            {onDownloadDocument && (
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() =>
+                                                        onDownloadDocument(
+                                                            doc._id,
+                                                            getDocumentFilename(
+                                                                doc
+                                                            )
+                                                        )
+                                                    }
+                                                    disabled={isSubmitting}
+                                                >
+                                                    <Download className="h-4 w-4" />
+                                                </Button>
+                                            )}
+                                            {onRemoveDocument && (
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={async () => {
+                                                        setRemovingDocId(
+                                                            doc._id
+                                                        );
+                                                        try {
+                                                            await onRemoveDocument(
+                                                                doc._id
+                                                            );
+                                                        } finally {
+                                                            setRemovingDocId(
+                                                                null
+                                                            );
+                                                        }
+                                                    }}
+                                                    disabled={
+                                                        isSubmitting ||
+                                                        removingDocId ===
+                                                            doc._id
+                                                    }
+                                                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                >
+                                                    <TrashIcon className="h-4 w-4" />
+                                                </Button>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Upload New Documents */}
+                        <div className="space-y-2">
+                            {existingDocuments.length > 0 && (
+                                <p className="text-sm font-medium">
+                                    Add New Documents
+                                </p>
+                            )}
+                            <FileUpload
+                                acceptedFileTypes={[
+                                    ".pdf",
+                                    ".doc",
+                                    ".docx",
+                                    ".xls",
+                                    ".xlsx",
+                                    ".png",
+                                    ".jpg",
+                                    ".jpeg",
+                                ]}
+                                maxFiles={5}
+                                maxFileSizeMB={5}
+                                disabled={isSubmitting}
+                                uploadingFiles={files.map((file) => ({
+                                    file,
+                                    progress: 0,
+                                }))}
+                                onUploadingFilesChange={(uploadingFiles) =>
+                                    onFilesChange?.(
+                                        uploadingFiles.map((uf) => uf.file)
+                                    )
+                                }
+                                showUploadButton={true}
+                                uploadButtonText="Select Files"
+                            />
+                        </div>
                     </CardContent>
                 </Card>
 

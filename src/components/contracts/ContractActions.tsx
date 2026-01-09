@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Contract, ContractStatus } from "@/lib/types/contracts";
 import { Can } from "@/components/auth/Can";
 import { PermissionName as P } from "@/lib/constants/permission-names";
+import { useAuth } from "@/lib/contexts/auth-context";
+import { AccountType } from "@/lib/types/auth";
 import {
     EditIcon,
     SendIcon,
@@ -34,16 +36,22 @@ export function ContractActions({
     onDelete,
     onApply,
 }: ContractActionsProps) {
+    const { accountType, hasPermission } = useAuth();
     const isDraft = contract.status === ContractStatus.DRAFT;
     const isOpen = contract.status === ContractStatus.OPEN;
     const isAwarded = contract.status === ContractStatus.AWARDED;
+
+    // Apply button should only be visible to vendors OR admins (SYSTEM_ADMIN)
+    const isVendor = accountType === AccountType.VENDOR;
+    const isAdmin = hasPermission(P.SYSTEM_ADMIN);
+    const canApply = isVendor || isAdmin;
 
     return (
         <div className="flex flex-wrap gap-3">
             {/* Edit (for staff, only if draft) */}
             <Can anyOf={[P.CONTRACT_UPDATE]}>
                 {isDraft && (
-                    <Link href={`/app/contracts/${contract._id}/edit`}>
+                    <Link href={`/contracts/${contract._id}/edit`}>
                         <Button variant="outline" disabled={isLoading}>
                             <EditIcon className="mr-2 h-4 w-4" />
                             Edit Contract
@@ -77,7 +85,7 @@ export function ContractActions({
             </Can>
 
             {/* Award (for staff, only if open and onAward provided) */}
-            <Can anyOf={[P.CONTRACT_AWARD]}>
+            <Can anyOf={[P.CONTRACT_APPROVE]}>
                 {isOpen && onAward && (
                     <Button onClick={onAward} disabled={isLoading}>
                         <TrophyIcon className="mr-2 h-4 w-4" />
@@ -100,27 +108,29 @@ export function ContractActions({
                 )}
             </Can>
 
-            {/* Apply (for vendors, only if open) */}
-            <Can anyOf={[P.CONTRACT_APPLY]}>
-                {isOpen && onApply && (
-                    <Button onClick={onApply} disabled={isLoading}>
-                        <CheckCircleIcon className="mr-2 h-4 w-4" />
-                        Apply to Contract
-                    </Button>
-                )}
-            </Can>
+            {/* Apply (for vendors or admins only, if open) */}
+            {canApply && (
+                <Can anyOf={[P.CONTRACT_APPLY]}>
+                    {isOpen && onApply && (
+                        <Button onClick={onApply} disabled={isLoading}>
+                            <CheckCircleIcon className="mr-2 h-4 w-4" />
+                            Apply to Contract
+                        </Button>
+                    )}
+                </Can>
+            )}
 
-            {/* View/Manage Applications (for staff with permission) */}
-            <Can anyOf={[P.CONTRACT_REVIEW_APPLICATIONS]}>
+            {/* View/Manage Applications - scroll to applications section */}
+            <Can anyOf={[P.CONTRACT_MANAGE_APPLICATIONS]}>
                 {(isOpen || isAwarded) && (
-                    <Link href={`/app/contracts/${contract._id}/applications`}>
+                    <a href="#applications">
                         <Button variant="outline" disabled={isLoading}>
                             <FileTextIcon className="mr-2 h-4 w-4" />
                             {isAwarded
                                 ? "View Applications"
                                 : "Review Applications"}
                         </Button>
-                    </Link>
+                    </a>
                 )}
             </Can>
         </div>

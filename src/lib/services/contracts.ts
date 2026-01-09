@@ -18,6 +18,7 @@ import type {
     CreateInternalNoteDto,
     ContractFilterParams,
     ApplicationFilterParams,
+    VendorApplicationFilterParams,
     InternalNoteFilterParams,
     ApplicationResponse,
     ContractResponse,
@@ -39,7 +40,11 @@ export class ContractsService {
     ): Promise<ContractListResponse> {
         const queryParams = new URLSearchParams();
         if (params?.page) queryParams.append("page", params.page.toString());
-        if (params?.limit) queryParams.append("limit", params.limit.toString());
+        if (params?.limit) {
+            // Cap limit at 100 to match backend max
+            const limit = Math.min(params.limit, 100);
+            queryParams.append("limit", limit.toString());
+        }
         if (params?.status) queryParams.append("status", params.status);
         if (params?.search) queryParams.append("search", params.search);
         if (params?.createdBy)
@@ -48,6 +53,19 @@ export class ContractsService {
         const query = queryParams.toString();
         return apiClient.get<ContractListResponse>(
             `/contracts${query ? `?${query}` : ""}`
+        );
+    }
+
+    /**
+     * List active/open contracts (public endpoint - no auth required)
+     * This is suitable for vendors to see contracts they can apply to.
+     */
+    static async listActiveContracts(): Promise<{
+        data: Contract[];
+        total: number;
+    }> {
+        return apiClient.get<{ data: Contract[]; total: number }>(
+            "/contracts/active"
         );
     }
 
@@ -119,7 +137,7 @@ export class ContractsService {
     }
 
     /**
-     * Close a contract (Open → Closed, stops accepting applications)
+     * Close a contract (Open → Closed, terminal state - no more applications)
      */
     static async closeContract(id: string): Promise<ContractResponse> {
         return apiClient.patch<ContractResponse>(`/contracts/${id}/close`, {});
@@ -152,7 +170,7 @@ export class ContractsService {
     ): Promise<DocumentsUploadResponse> {
         const formData = new FormData();
         files.forEach((file) => {
-            formData.append("files[]", file);
+            formData.append("files", file);
         });
         return apiClient.postFormData<DocumentsUploadResponse>(
             `/contracts/${id}/documents`,
@@ -187,81 +205,124 @@ export class ContractsService {
             `/contracts/${id}/documents/${fileId}`
         );
     }
+
+    /**
+     * Get a secure download URL for a contract document
+     * @param contractId Contract ID
+     * @param documentId Document ID
+     * @returns Download URL with expiration info
+     */
+    static async getDocumentDownloadUrl(
+        contractId: string,
+        documentId: string
+    ): Promise<{ downloadUrl: string; filename: string; expiresAt: string }> {
+        return apiClient.get<{
+            downloadUrl: string;
+            filename: string;
+            expiresAt: string;
+        }>(`/contracts/${contractId}/documents/${documentId}/download`);
+    }
+
+    /**
+     * Download a contract document as blob via streaming endpoint
+     * @param contractId Contract ID
+     * @param documentId Document ID
+     * @returns File blob
+     */
+    static async downloadDocumentAsBlob(
+        contractId: string,
+        documentId: string
+    ): Promise<Blob> {
+        return apiClient.getBlob(
+            `/contracts/${contractId}/documents/${documentId}/stream`
+        );
+    }
+
+    /**
+     * Helper method to trigger file download in browser
+     * @param contractId Contract ID
+     * @param documentId Document ID
+     * @param filename Filename for download
+     */
+    static async triggerDocumentDownload(
+        contractId: string,
+        documentId: string,
+        filename: string
+    ): Promise<void> {
+        const blob = await this.downloadDocumentAsBlob(contractId, documentId);
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+    }
 }
 
 // ============================================================================
-// Applications
+// Applications (uses new /contract-applications endpoints)
 // ============================================================================
 
 export class ApplicationsService {
     /**
      * Submit an application to a contract
      * @param contractId Contract ID
-     * @param data Application details (includes proposalDetails, bidValue, and document names)
-     * @param documents Map of document names to their File objects
+     * @param data Application details (includes proposal and proposedBudget)
+     * @param files Optional files to upload with the application
      */
     static async submitApplication(
         contractId: string,
         data: ApplyToContractDto,
-        documents: Map<string, File[]>
+        files?: File[]
     ): Promise<ApplicationResponse> {
         const formData = new FormData();
-        formData.append("proposalDetails", data.proposalDetails);
-        if (data.bidValue !== undefined) {
-            formData.append("bidValue", data.bidValue.toString());
+        formData.append("contractId", contractId);
+        if (data.proposal) {
+            formData.append("proposal", data.proposal);
+        }
+        if (data.proposedBudget !== undefined) {
+            formData.append("proposedBudget", data.proposedBudget.toString());
         }
 
-        // Add document names array for backend validation
-        const documentNames: string[] = [];
-        documents.forEach((files, docName) => {
-            if (files.length > 0) {
-                documentNames.push(docName);
-            }
-        });
-        documentNames.forEach((name) => {
-            formData.append("documents", name);
-        });
-
-        // Add all files
-        documents.forEach((files) => {
+        // Add files if provided
+        if (files && files.length > 0) {
             files.forEach((file) => {
                 formData.append("files", file);
             });
-        });
+        }
 
         return apiClient.postFormData<ApplicationResponse>(
-            `/contracts/${contractId}/apply`,
+            `/contract-applications`,
             formData
         );
     }
 
     /**
-     * List applications for a contract
+     * List applications for a contract (admin/staff view)
      */
     static async listApplications(
         contractId: string,
         params?: ApplicationFilterParams
     ): Promise<ApplicationListResponse> {
         const queryParams = new URLSearchParams();
+        queryParams.append("contractId", contractId);
         if (params?.page) queryParams.append("page", params.page.toString());
         if (params?.limit) queryParams.append("limit", params.limit.toString());
         if (params?.status) queryParams.append("status", params.status);
 
-        const query = queryParams.toString();
         return apiClient.get<ApplicationListResponse>(
-            `/contracts/${contractId}/applications${query ? `?${query}` : ""}`
+            `/contract-applications?${queryParams.toString()}`
         );
     }
 
     /**
-     * Get a specific application
+     * Get a specific application by ID
      */
-    static async getApplication(
-        contractId: string,
-        applicationId: string
-    ): Promise<Application> {
+    static async getApplication(applicationId: string): Promise<Application> {
         return apiClient.get<Application>(
-            `/contracts/${contractId}/applications/${applicationId}`
+            `/contract-applications/${applicationId}`
         );
     }
 
@@ -269,12 +330,11 @@ export class ApplicationsService {
      * Update application status (staff only)
      */
     static async updateApplicationStatus(
-        contractId: string,
         applicationId: string,
         data: UpdateApplicationStatusDto
     ): Promise<ApplicationResponse> {
         return apiClient.patch<ApplicationResponse>(
-            `/contracts/${contractId}/applications/${applicationId}/status`,
+            `/contract-applications/${applicationId}/status`,
             data
         );
     }
@@ -283,11 +343,10 @@ export class ApplicationsService {
      * Withdraw an application (vendor self-service)
      */
     static async withdrawApplication(
-        contractId: string,
         applicationId: string
     ): Promise<ApplicationResponse> {
         return apiClient.post<ApplicationResponse>(
-            `/contracts/${contractId}/applications/${applicationId}/withdraw`,
+            `/contract-applications/${applicationId}/withdraw`,
             {}
         );
     }
@@ -296,41 +355,57 @@ export class ApplicationsService {
      * Cancel an application (admin only, requires reason)
      */
     static async cancelApplication(
-        contractId: string,
         applicationId: string,
         reason: string
     ): Promise<ApplicationResponse> {
         return apiClient.post<ApplicationResponse>(
-            `/contracts/${contractId}/applications/${applicationId}/cancel`,
+            `/contract-applications/${applicationId}/cancel`,
             { reason }
         );
     }
 
     /**
-     * Check if vendor has already applied to a contract
+     * Check if current vendor has already applied to a contract
+     * Returns application info including whether resubmission is allowed
      */
-    static async checkApplication(
-        contractId: string
-    ): Promise<{ hasApplied: boolean; applicationId?: string }> {
-        return apiClient.get<{ hasApplied: boolean; applicationId?: string }>(
-            `/contracts/${contractId}/check-application`
-        );
+    static async checkApplication(contractId: string): Promise<{
+        hasApplication: boolean;
+        application?: {
+            _id: string;
+            status: string;
+            applicationDate: string;
+            proposalDetails?: string;
+            canResubmit: boolean;
+        } | null;
+    }> {
+        return apiClient.get<{
+            hasApplication: boolean;
+            application?: {
+                _id: string;
+                status: string;
+                applicationDate: string;
+                proposalDetails?: string;
+                canResubmit: boolean;
+            } | null;
+        }>(`/contract-applications/check/${contractId}`);
     }
 
     /**
      * Get vendor's own applications (across all contracts)
      */
     static async getMyApplications(
-        params?: ApplicationFilterParams
+        params?: VendorApplicationFilterParams
     ): Promise<ApplicationListResponse> {
         const queryParams = new URLSearchParams();
         if (params?.page) queryParams.append("page", params.page.toString());
         if (params?.limit) queryParams.append("limit", params.limit.toString());
         if (params?.status) queryParams.append("status", params.status);
+        if (params?.contractId)
+            queryParams.append("contractId", params.contractId);
 
         const query = queryParams.toString();
         return apiClient.get<ApplicationListResponse>(
-            `/contracts/my-applications${query ? `?${query}` : ""}`
+            `/contract-applications/my-applications${query ? `?${query}` : ""}`
         );
     }
 
@@ -347,32 +422,85 @@ export class ApplicationsService {
 
         const query = queryParams.toString();
         return apiClient.get<ApplicationListResponse>(
-            `/contracts/applications-inbox${query ? `?${query}` : ""}`
+            `/contract-applications/inbox${query ? `?${query}` : ""}`
+        );
+    }
+
+    /**
+     * Upload additional documents to an existing application
+     */
+    static async uploadApplicationDocuments(
+        applicationId: string,
+        files: File[]
+    ): Promise<DocumentsUploadResponse> {
+        const formData = new FormData();
+        files.forEach((file) => {
+            formData.append("files", file);
+        });
+        return apiClient.postFormData<DocumentsUploadResponse>(
+            `/contract-applications/${applicationId}/documents`,
+            formData
+        );
+    }
+
+    /**
+     * Get view URL for an application document (opens inline in browser)
+     */
+    static async getApplicationDocumentViewUrl(
+        applicationId: string,
+        documentId: string
+    ): Promise<{ url: string }> {
+        return apiClient.get<{ url: string }>(
+            `/contract-applications/${applicationId}/documents/${documentId}/view`
+        );
+    }
+
+    /**
+     * Get download URL for an application document (forces download)
+     */
+    static async getApplicationDocumentDownloadUrl(
+        applicationId: string,
+        documentId: string
+    ): Promise<{ url: string }> {
+        return apiClient.get<{ url: string }>(
+            `/contract-applications/${applicationId}/documents/${documentId}/download`
+        );
+    }
+
+    /**
+     * Delete a document from an application (only if status is Submitted)
+     */
+    static async deleteApplicationDocument(
+        applicationId: string,
+        documentId: string
+    ): Promise<{ message: string }> {
+        return apiClient.delete<{ message: string }>(
+            `/contract-applications/${applicationId}/documents/${documentId}`
         );
     }
 }
 
 // ============================================================================
-// Internal Notes
+// Contract Internal Notes (uses /internal-notes endpoints)
 // ============================================================================
 
-export class InternalNotesService {
+export class ContractNotesService {
     /**
-     * List internal notes for a contract
+     * List internal notes for a contract or application
      */
     static async listNotes(
-        contractId: string,
-        params?: InternalNoteFilterParams
+        params: InternalNoteFilterParams
     ): Promise<InternalNoteListResponse> {
         const queryParams = new URLSearchParams();
-        if (params?.page) queryParams.append("page", params.page.toString());
-        if (params?.limit) queryParams.append("limit", params.limit.toString());
-        if (params?.applicationId)
+        if (params.contractId)
+            queryParams.append("contractId", params.contractId);
+        if (params.applicationId)
             queryParams.append("applicationId", params.applicationId);
+        if (params.page) queryParams.append("page", params.page.toString());
+        if (params.limit) queryParams.append("limit", params.limit.toString());
 
-        const query = queryParams.toString();
         return apiClient.get<InternalNoteListResponse>(
-            `/contracts/${contractId}/notes${query ? `?${query}` : ""}`
+            `/internal-notes?${queryParams.toString()}`
         );
     }
 
@@ -380,24 +508,17 @@ export class InternalNotesService {
      * Create an internal note
      */
     static async createNote(
-        contractId: string,
-        data: CreateInternalNoteDto
+        data: CreateInternalNoteDto & { contractId: string }
     ): Promise<InternalNoteResponse> {
-        return apiClient.post<InternalNoteResponse>(
-            `/contracts/${contractId}/notes`,
-            data
-        );
+        return apiClient.post<InternalNoteResponse>(`/internal-notes`, data);
     }
 
     /**
      * Delete an internal note (author only)
      */
-    static async deleteNote(
-        contractId: string,
-        noteId: string
-    ): Promise<{ message: string }> {
+    static async deleteNote(noteId: string): Promise<{ message: string }> {
         return apiClient.delete<{ message: string }>(
-            `/contracts/${contractId}/notes/${noteId}`
+            `/internal-notes/${noteId}`
         );
     }
 }

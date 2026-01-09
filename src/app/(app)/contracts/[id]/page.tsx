@@ -14,7 +14,7 @@ import {
 import {
     ContractsService,
     ApplicationsService,
-    InternalNotesService,
+    ContractNotesService,
 } from "@/lib/services/contracts";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 import type {
@@ -22,7 +22,7 @@ import type {
     ApplicationListResponse,
     InternalNoteListResponse,
 } from "@/lib/types/contracts";
-import { ApplicationStatus } from "@/lib/types/contracts";
+import { ReviewStatus, ContractStatus } from "@/lib/types/contracts";
 import { useNotificationsCtx } from "@/lib/contexts/notifications-context";
 import { useAuthz } from "@/lib/authz/useAuthz";
 import {
@@ -40,6 +40,7 @@ export default function ContractDetailsPage() {
     const { notifications } = useNotificationsCtx();
     const { hasAny } = useAuthz();
     const canReadNotes = hasAny([P.INTERNAL_NOTE_READ]);
+    const canReadApplications = hasAny([P.CONTRACT_READ_ALL]);
 
     // Fetch contract details with SWR
     const {
@@ -54,7 +55,10 @@ export default function ContractDetailsPage() {
         data: applicationsResponse,
         isLoading: loadingApplications,
         mutate: revalidateApplications,
-    } = useApi<ApplicationListResponse>(`/contracts/${params.id}/applications`);
+    } = useConditionalApi<ApplicationListResponse>(
+        `/contract-applications?contractId=${params.id}`,
+        canReadApplications
+    );
 
     // Fetch internal notes (only if user has permission)
     const {
@@ -62,7 +66,7 @@ export default function ContractDetailsPage() {
         isLoading: loadingNotes,
         mutate: revalidateNotes,
     } = useConditionalApi<InternalNoteListResponse>(
-        `/contracts/${params.id}/notes`,
+        `/internal-notes?contractId=${params.id}`,
         canReadNotes
     );
 
@@ -75,12 +79,24 @@ export default function ContractDetailsPage() {
 
     // Helper to revalidate all data
     const loadContractData = useCallback(async () => {
-        await Promise.all([
-            revalidateContract(),
-            revalidateApplications(),
-            revalidateNotes(),
-        ]);
-    }, [revalidateContract, revalidateApplications, revalidateNotes]);
+        const tasks: Array<Promise<unknown>> = [revalidateContract()];
+
+        if (canReadApplications) {
+            tasks.push(revalidateApplications());
+        }
+
+        if (canReadNotes) {
+            tasks.push(revalidateNotes());
+        }
+
+        await Promise.all(tasks);
+    }, [
+        revalidateContract,
+        revalidateApplications,
+        revalidateNotes,
+        canReadApplications,
+        canReadNotes,
+    ]);
 
     useEffect(() => {
         loadContractData();
@@ -138,6 +154,13 @@ export default function ContractDetailsPage() {
 
     async function handleAward(applicationId: string) {
         if (!contract) return;
+        const latest = await ContractsService.getContract(contract._id);
+
+        if (latest.status !== ContractStatus.OPEN) {
+            apiToast.error("This contract is no longer accepting awards");
+            await loadContractData();
+            return;
+        }
         try {
             await ContractsService.awardContract(contract._id, {
                 applicationId,
@@ -162,34 +185,11 @@ export default function ContractDetailsPage() {
         }
     }
 
-    async function handleApply(
-        proposalDetails: string,
-        documents: Map<string, File[]>,
-        bidValue?: number
-    ) {
-        if (!contract) return;
-        try {
-            await ApplicationsService.submitApplication(
-                contract._id,
-                { proposalDetails, bidValue },
-                documents
-            );
-            apiToast.success(successMessages.applications.submitted);
-            await loadContractData();
-        } catch (error) {
-            apiToast.error(errorMessages.applications.submit, error);
-            setActionError(error);
-            throw error; // Re-throw so dialog can handle it
-        }
-    }
-
     async function handleAcceptApplication(applicationId: string) {
         try {
-            await ApplicationsService.updateApplicationStatus(
-                params.id,
-                applicationId,
-                { status: ApplicationStatus.ACCEPTED }
-            );
+            await ApplicationsService.updateApplicationStatus(applicationId, {
+                status: ReviewStatus.ACCEPTED,
+            });
             apiToast.success(successMessages.applications.statusUpdated);
             await loadContractData();
         } catch (error) {
@@ -198,24 +198,31 @@ export default function ContractDetailsPage() {
         }
     }
 
-    async function handleRejectApplication(applicationId: string) {
+    async function handleRejectApplication(
+        applicationId: string,
+        reason?: string
+    ) {
         try {
-            await ApplicationsService.updateApplicationStatus(
-                params.id,
-                applicationId,
-                { status: ApplicationStatus.REJECTED }
-            );
+            await ApplicationsService.updateApplicationStatus(applicationId, {
+                status: ReviewStatus.REJECTED,
+                comments: reason,
+            });
             apiToast.success(successMessages.applications.statusUpdated);
             await loadContractData();
         } catch (error) {
             apiToast.error(errorMessages.applications.updateStatus, error);
             setActionError(error);
         }
+    }
+
+    function handleViewApplication(applicationId: string) {
+        router.push(`/contracts/applications/${applicationId}`);
     }
 
     async function handleCreateNote(content: string, applicationId?: string) {
         try {
-            await InternalNotesService.createNote(params.id, {
+            await ContractNotesService.createNote({
+                contractId: params.id,
                 content,
                 applicationId,
             });
@@ -229,7 +236,7 @@ export default function ContractDetailsPage() {
 
     async function handleDeleteNote(noteId: string) {
         try {
-            await InternalNotesService.deleteNote(params.id, noteId);
+            await ContractNotesService.deleteNote(noteId);
             apiToast.success("Note deleted successfully");
             await loadContractData();
         } catch (error) {
@@ -319,25 +326,24 @@ export default function ContractDetailsPage() {
                         contract={contract}
                         onPublish={handlePublish}
                         onClose={handleClose}
-                        onAward={handleAward}
                         onDelete={handleDelete}
-                        onApply={handleApply}
                     />
 
-                    <ApplicationList
-                        contract={contract}
-                        applications={applications}
-                        onAccept={handleAcceptApplication}
-                        onReject={handleRejectApplication}
-                        onViewDetails={(id) => {
-                            // TODO: Implement application detail or page
-                            console.log("View application:", id);
-                        }}
-                    />
+                    {canReadApplications && (
+                        <section id="applications">
+                            <ApplicationList
+                                contract={contract}
+                                applications={applications}
+                                onAccept={handleAcceptApplication}
+                                onReject={handleRejectApplication}
+                                onAward={handleAward}
+                                onViewDetails={handleViewApplication}
+                            />
+                        </section>
+                    )}
 
                     {canReadNotes && (
                         <InternalNotes
-                            contractId={params.id}
                             notes={notes}
                             onCreate={handleCreateNote}
                             onDelete={handleDeleteNote}

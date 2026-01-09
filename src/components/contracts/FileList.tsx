@@ -1,6 +1,7 @@
 "use client";
 
-import { FileDocument } from "@/lib/types/contracts";
+import { useState } from "react";
+import { FileDocument, getDocumentFilename } from "@/lib/types/contracts";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -11,12 +12,15 @@ import {
     ImageIcon,
     FileSpreadsheetIcon,
     FileCodeIcon,
+    EyeIcon,
+    Loader2Icon,
 } from "lucide-react";
 import { formatBytes } from "@/lib/utils/formatters";
 import { format } from "date-fns";
 
 interface FileListProps {
     files: FileDocument[];
+    onView?: (file: FileDocument) => void;
     onDownload?: (file: FileDocument) => void;
     onDelete?: (file: FileDocument) => void;
     showDelete?: boolean;
@@ -40,11 +44,24 @@ function getFileIcon(mimetype: string) {
 
 export function FileList({
     files,
+    onView,
     onDownload,
     onDelete,
     showDelete = false,
     className,
 }: FileListProps) {
+    const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+    const handleDownload = async (file: FileDocument) => {
+        if (!onDownload) return;
+        setDownloadingId(file._id);
+        try {
+            await onDownload(file);
+        } finally {
+            setDownloadingId(null);
+        }
+    };
+
     if (files.length === 0) {
         return (
             <div className="text-sm text-muted-foreground italic">
@@ -58,50 +75,90 @@ export function FileList({
             <div className="space-y-2">
                 {files.map((file) => {
                     const Icon = getFileIcon(file.mimetype);
+                    const filename = getDocumentFilename(file);
                     return (
                         <Card
                             key={file._id}
-                            className="flex items-center justify-between p-3 hover:bg-accent/50 transition-colors"
+                            className="group flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 hover:shadow-md transition-all gap-3"
                         >
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                                <Icon className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium truncate">
-                                        {file.filename}
+                            <div className="flex items-center gap-4 flex-1 min-w-0 overflow-hidden">
+                                <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-primary/10 flex-shrink-0">
+                                    <Icon className="h-5 w-5 text-primary" />
+                                </div>
+                                <div className="flex-1 min-w-0 overflow-hidden">
+                                    <p
+                                        className="text-sm font-medium truncate mb-1"
+                                        title={filename}
+                                    >
+                                        {filename}
                                     </p>
                                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                         <span>{formatBytes(file.size)}</span>
-                                        <span>•</span>
-                                        <span>
-                                            {format(
-                                                new Date(file.updatedAt),
-                                                "MMM d, yyyy"
-                                            )}
-                                        </span>
+                                        {file.createdAt && (
+                                            <>
+                                                <span>•</span>
+                                                <span>
+                                                    {format(
+                                                        new Date(
+                                                            file.createdAt
+                                                        ),
+                                                        "MMM d, yyyy"
+                                                    )}
+                                                </span>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                                {onView && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => onView(file)}
+                                        className="gap-2"
+                                        aria-label={`View ${filename}`}
+                                    >
+                                        <EyeIcon className="h-4 w-4" />
+                                        <span className="hidden sm:inline">
+                                            View
+                                        </span>
+                                    </Button>
+                                )}
                                 {onDownload && (
                                     <Button
-                                        variant="ghost"
+                                        variant="outline"
                                         size="sm"
-                                        onClick={() => onDownload(file)}
-                                        title="Download"
+                                        onClick={() => handleDownload(file)}
+                                        className="gap-2"
+                                        disabled={downloadingId === file._id}
+                                        aria-label={`Download ${filename}`}
                                     >
-                                        <DownloadIcon className="h-4 w-4" />
+                                        {downloadingId === file._id ? (
+                                            <Loader2Icon className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                            <DownloadIcon className="h-4 w-4" />
+                                        )}
+                                        <span className="hidden sm:inline">
+                                            {downloadingId === file._id
+                                                ? "Downloading"
+                                                : "Download"}
+                                        </span>
                                     </Button>
                                 )}
                                 {showDelete && onDelete && (
                                     <Button
-                                        variant="ghost"
+                                        variant="outline"
                                         size="sm"
                                         onClick={() => onDelete(file)}
-                                        title="Delete"
-                                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                        className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20"
+                                        aria-label={`Delete ${filename}`}
                                     >
                                         <Trash2Icon className="h-4 w-4" />
+                                        <span className="hidden sm:inline">
+                                            Delete
+                                        </span>
                                     </Button>
                                 )}
                             </div>

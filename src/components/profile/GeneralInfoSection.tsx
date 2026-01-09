@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,10 +9,24 @@ import { Separator } from "@/components/ui/separator";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { AddressForm } from "@/components/common";
 import { User as UserIcon } from "lucide-react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import type { Address } from "@/lib/types/auth";
+
+// Address schema for validation
+const addressSchema = z.object({
+    line1: z.string().min(1, "Address line 1 is required"),
+    line2: z.string().optional(),
+    city: z.string().min(1, "City is required"),
+    state: z
+        .string()
+        .length(2, "State must be 2 characters")
+        .regex(/^[A-Z]{2}$/, "State must be uppercase letters"),
+    zip: z
+        .string()
+        .min(5, "ZIP code must be at least 5 characters")
+        .regex(/^[A-Za-z0-9\s-]+$/, "Invalid ZIP code format"),
+});
 
 const profileSchema = z.object({
     firstName: z.string().min(1, "First name is required"),
@@ -22,36 +37,41 @@ const profileSchema = z.object({
         .optional()
         .or(z.literal("")),
     contactPhone: z.string().optional(),
+    physicalAddress: addressSchema.optional(),
+    mailingAddress: addressSchema.optional(),
 });
 
 export type ProfileFormData = z.infer<typeof profileSchema>;
 
 interface GeneralInfoSectionProps {
     defaultValues: ProfileFormData;
-    physicalAddress?: Address;
-    mailingAddress?: Address;
     onSubmit: (data: ProfileFormData) => Promise<void>;
     isSubmitting: boolean;
 }
 
 export function GeneralInfoSection({
     defaultValues,
-    physicalAddress,
-    mailingAddress,
     onSubmit,
     isSubmitting,
 }: GeneralInfoSectionProps) {
+    const methods = useForm<ProfileFormData>({
+        resolver: zodResolver(profileSchema),
+        defaultValues,
+        mode: "onBlur",
+    });
+
     const {
         register,
         handleSubmit,
         formState: { errors, isDirty },
         reset,
         control,
-    } = useForm<ProfileFormData>({
-        resolver: zodResolver(profileSchema),
-        defaultValues,
-        mode: "onBlur",
-    });
+    } = methods;
+
+    // Keep nested address fields in sync when parent defaultValues change
+    useEffect(() => {
+        reset(defaultValues);
+    }, [defaultValues, reset]);
 
     return (
         <Card className="p-6">
@@ -134,37 +154,30 @@ export function GeneralInfoSection({
                     />
                 </div>
 
-                {/* Addresses - Read Only */}
-                {(physicalAddress || mailingAddress) && (
-                    <>
+                {/* Addresses - Editable */}
+                <Separator />
+                <FormProvider {...methods}>
+                    <div className="space-y-6">
+                        <h3 className="text-lg font-medium">Addresses</h3>
+                        <p className="text-sm text-muted-foreground -mt-4">
+                            Update your physical and mailing addresses
+                        </p>
+
+                        <AddressForm
+                            prefix="physicalAddress"
+                            title="Physical Address"
+                            idPrefix="physical"
+                        />
+
                         <Separator />
-                        <div className="space-y-6">
-                            <h3 className="text-lg font-medium">Addresses</h3>
-                            {physicalAddress && (
-                                <AddressForm
-                                    label="Physical Address"
-                                    value={physicalAddress}
-                                    disabled
-                                    idPrefix="physical"
-                                />
-                            )}
-                            {mailingAddress && (
-                                <>
-                                    <Separator />
-                                    <AddressForm
-                                        label="Mailing Address"
-                                        value={mailingAddress}
-                                        disabled
-                                        idPrefix="mailing"
-                                    />
-                                </>
-                            )}
-                            <p className="text-xs text-muted-foreground">
-                                Contact support to update your addresses.
-                            </p>
-                        </div>
-                    </>
-                )}
+
+                        <AddressForm
+                            prefix="mailingAddress"
+                            title="Mailing Address"
+                            idPrefix="mailing"
+                        />
+                    </div>
+                </FormProvider>
 
                 <Separator />
 

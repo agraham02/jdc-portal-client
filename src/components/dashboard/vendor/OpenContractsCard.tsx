@@ -7,19 +7,16 @@ import { Button } from "@/components/ui/button";
 import { ExternalLink, Briefcase } from "lucide-react";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
-import { ContractStatus, type Contract } from "@/lib/types/contracts";
+import type { Contract } from "@/lib/types/contracts";
 
 /**
  * OpenContractsCard shows currently open contracts vendors can apply to
  */
 export function OpenContractsCard() {
     const { data, error } = useSWR("/open-contracts", async () => {
-        const result = await ContractsService.listContracts({
-            limit: 5,
-            page: 1,
-            status: ContractStatus.OPEN,
-        });
-        return result.data || [];
+        // Use the public active contracts endpoint (no special permissions needed)
+        const response = await ContractsService.listActiveContracts();
+        return response.data || [];
     });
 
     const isLoading = !data;
@@ -55,7 +52,7 @@ export function OpenContractsCard() {
                         >
                             <div className="flex-1 space-y-1">
                                 <Link
-                                    href={`/contracts/public/${contract._id}`}
+                                    href={`/contracts/${contract._id}`}
                                     className="font-medium hover:underline"
                                 >
                                     {contract.title}
@@ -73,9 +70,7 @@ export function OpenContractsCard() {
                                 )}
                             </div>
                             <Button variant="outline" size="sm" asChild>
-                                <Link
-                                    href={`/contracts/public/${contract._id}`}
-                                >
+                                <Link href={`/contracts/${contract._id}`}>
                                     View
                                 </Link>
                             </Button>

@@ -243,23 +243,13 @@ export function EmployeesTable() {
                                   }
                               },
                               hidden: (employee: EmployeeWithUser) => {
-                                  // Only show for pending accounts whose activation likely expired (older than 7 days)
-                                  if (
-                                      !(
-                                          employee.userId.status ===
-                                              UserStatus.PENDING ||
-                                          employee.userId.status ===
-                                              UserStatus.ONBOARDING
-                                      )
-                                  )
-                                      return true;
-                                  const created = employee.userId.createdAt
-                                      ? new Date(employee.userId.createdAt)
-                                      : null;
-                                  if (!created) return true;
-                                  const ageMs = Date.now() - created.getTime();
-                                  const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-                                  return ageMs <= sevenDaysMs;
+                                  // Show for pending/onboarding accounts (activation not yet complete)
+                                  return !(
+                                      employee.userId.status ===
+                                          UserStatus.PENDING ||
+                                      employee.userId.status ===
+                                          UserStatus.ONBOARDING
+                                  );
                               },
                           },
                       ]

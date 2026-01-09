@@ -21,16 +21,16 @@ Implement the foundational components for the Contracts & Applications feature, 
 **Added:**
 
 -   `CONTRACT_PUBLISH` - Permission to publish draft contracts
--   `CONTRACT_AWARD` - Permission to award contracts to vendors
--   `CONTRACT_REVIEW_APPLICATIONS` - Permission to review applications
+-   `CONTRACT_APPROVE` - Permission to review/award/close contracts
+-   `CONTRACT_REJECT` - Permission to reject contracts (reserved for future use)
 -   `CONTRACT_MANAGE_APPLICATIONS` - Permission to manage (cancel) applications
 -   `APPLICATION_WITHDRAW` - Permission to withdraw own applications
--   `INTERNAL_NOTE_UPDATE` - Permission to update internal notes
+-   `INTERNAL_NOTE_DELETE` - Permission to delete internal notes
 
 **Removed:**
 
--   `CONTRACT_APPROVE` (incorrect, not in API)
--   `CONTRACT_REJECT` (incorrect, not in API)
+-   `CONTRACT_AWARD` (deprecated; replaced by `CONTRACT_APPROVE`)
+-   `CONTRACT_REVIEW_APPLICATIONS` (deprecated; review workflow uses `CONTRACT_APPROVE`)
 
 ---
 
