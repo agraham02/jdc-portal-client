@@ -84,7 +84,7 @@ export const AuthService = {
     requestAccountDeletion() {
         return apiClient.delete<{ message: string }>("/auth/me", {});
     },
-    updateProfile(data: UpdateProfileDto) {
+    updateProfile(data: Partial<UpdateProfileDto>) {
         return apiClient.patch<{ message: string }>("/auth/me", data);
     },
     refreshToken() {

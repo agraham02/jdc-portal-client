@@ -496,11 +496,7 @@ export class ContractNotesService {
             queryParams.append("contractId", params.contractId);
         if (params.applicationId)
             queryParams.append("applicationId", params.applicationId);
-        if (params.page)
-            queryParams.append(
-                "offset",
-                ((params.page - 1) * (params.limit || 10)).toString()
-            );
+        if (params.page) queryParams.append("page", params.page.toString());
         if (params.limit) queryParams.append("limit", params.limit.toString());
 
         return apiClient.get<InternalNoteListResponse>(

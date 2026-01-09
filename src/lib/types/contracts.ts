@@ -92,7 +92,7 @@ export interface ContractMinimal {
 /**
  * @deprecated Use UserMinimal instead
  */
-export interface User extends UserMinimal {}
+export type User = UserMinimal;
 
 /**
  * @deprecated Use VendorMinimal instead

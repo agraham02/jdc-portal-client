@@ -194,7 +194,7 @@ export function EntityDetail({ entityType, id, canUpdate }: Props) {
                     hireDate: form.hireDate
                         ? (form.hireDate as Date).toISOString()
                         : undefined,
-                    status: form.status as string | undefined,
+                    status: form.status as UserStatus | undefined,
                     managerId: (form.managerId as string) || undefined,
                 };
                 await EmployeeService.updateEmployee(id, updateData);

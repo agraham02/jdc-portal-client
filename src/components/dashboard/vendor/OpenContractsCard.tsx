@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ExternalLink, Briefcase } from "lucide-react";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
-import { ContractStatus, type Contract } from "@/lib/types/contracts";
+import type { Contract } from "@/lib/types/contracts";
 
 /**
  * OpenContractsCard shows currently open contracts vendors can apply to

@@ -17,7 +17,8 @@ export function formatDate(
     try {
         const dateObj = typeof date === "string" ? parseISO(date) : date;
         return format(dateObj, formatStr);
-    } catch {
+    } catch (error) {
+        console.error("Date parsing failed:", error);
         return "—";
     }
 }

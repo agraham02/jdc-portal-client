@@ -101,6 +101,7 @@ function createClientId(): string {
     ) {
         return cryptoObj.randomUUID();
     }
+    // Fallback: Math.random() is safe for UI component keys (no cryptographic security needed)
     return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
@@ -140,7 +141,9 @@ export function ContractEditor({
     onDownloadDocument,
     isEditMode = false,
 }: Readonly<ContractEditorProps>) {
-    const [requiredDocs, setRequiredDocs] = useState<RequiredDocumentWithClientId[]>(
+    const [requiredDocs, setRequiredDocs] = useState<
+        RequiredDocumentWithClientId[]
+    >(
         (initialData?.requiredDocuments || []).map((d) => ({
             ...d,
             clientId: createClientId(),
@@ -196,7 +199,11 @@ export function ContractEditor({
             requiresResponsiveSupport: data.requiresResponsiveSupport ?? false,
             requiredDocuments:
                 requiredDocs.length > 0
-                    ? requiredDocs.map(({ clientId: _clientId, ...doc }) => doc)
+                    ? requiredDocs.map(({ ...doc }) => ({
+                          name: doc.name,
+                          description: doc.description,
+                          required: doc.required,
+                      }))
                     : undefined,
         };
 
@@ -469,7 +476,10 @@ export function ContractEditor({
                         ) : (
                             <div className="space-y-4">
                                 {requiredDocs.map((doc, index) => (
-                                    <Card key={doc.clientId} className="border-2">
+                                    <Card
+                                        key={doc.clientId}
+                                        className="border-2"
+                                    >
                                         <CardContent className="pt-6">
                                             <div className="space-y-4">
                                                 <div className="flex items-start gap-4">

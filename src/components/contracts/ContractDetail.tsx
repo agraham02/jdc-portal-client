@@ -124,9 +124,27 @@ export function ContractDetail({
                 file._id
             );
             const url = globalThis.URL.createObjectURL(blob);
-            globalThis.open(url, "_blank");
-            // Clean up after a delay to ensure the new tab has loaded the blob
-            setTimeout(() => globalThis.URL.revokeObjectURL(url), 1000);
+            const newWindow = globalThis.open(url, "_blank");
+
+            // Clean up blob URL after sufficient delay to ensure the new tab has loaded
+            // Use a longer timeout (3s) to account for slower networks or heavy documents
+            const timeoutId = setTimeout(
+                () => globalThis.URL.revokeObjectURL(url),
+                3000
+            );
+
+            // If the new window closes, clean up immediately
+            if (newWindow) {
+                const unloadHandler = () => {
+                    clearTimeout(timeoutId);
+                    globalThis.URL.revokeObjectURL(url);
+                };
+                try {
+                    newWindow.addEventListener("unload", unloadHandler);
+                } catch {
+                    // Cross-origin or popup blocked; rely on timeout
+                }
+            }
         } catch {
             toast.error("Failed to open document");
         }

@@ -11,7 +11,6 @@ import { User as UserIcon } from "lucide-react";
 import { useForm, Controller, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import type { Address } from "@/lib/types/auth";
 
 // Address schema for validation
 const addressSchema = z.object({
