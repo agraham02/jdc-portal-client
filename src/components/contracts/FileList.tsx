@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { FileDocument, getDocumentFilename } from "@/lib/types/contracts";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -12,6 +13,7 @@ import {
     FileSpreadsheetIcon,
     FileCodeIcon,
     EyeIcon,
+    Loader2Icon,
 } from "lucide-react";
 import { formatBytes } from "@/lib/utils/formatters";
 import { format } from "date-fns";
@@ -48,6 +50,18 @@ export function FileList({
     showDelete = false,
     className,
 }: FileListProps) {
+    const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+    const handleDownload = async (file: FileDocument) => {
+        if (!onDownload) return;
+        setDownloadingId(file._id);
+        try {
+            await onDownload(file);
+        } finally {
+            setDownloadingId(null);
+        }
+    };
+
     if (files.length === 0) {
         return (
             <div className="text-sm text-muted-foreground italic">
@@ -104,6 +118,7 @@ export function FileList({
                                         size="sm"
                                         onClick={() => onView(file)}
                                         className="gap-2"
+                                        aria-label={`View ${filename}`}
                                     >
                                         <EyeIcon className="h-4 w-4" />
                                         <span className="hidden sm:inline">
@@ -115,12 +130,20 @@ export function FileList({
                                     <Button
                                         variant="outline"
                                         size="sm"
-                                        onClick={() => onDownload(file)}
+                                        onClick={() => handleDownload(file)}
                                         className="gap-2"
+                                        disabled={downloadingId === file._id}
+                                        aria-label={`Download ${filename}`}
                                     >
-                                        <DownloadIcon className="h-4 w-4" />
+                                        {downloadingId === file._id ? (
+                                            <Loader2Icon className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                            <DownloadIcon className="h-4 w-4" />
+                                        )}
                                         <span className="hidden sm:inline">
-                                            Download
+                                            {downloadingId === file._id
+                                                ? "Downloading"
+                                                : "Download"}
                                         </span>
                                     </Button>
                                 )}
@@ -130,6 +153,7 @@ export function FileList({
                                         size="sm"
                                         onClick={() => onDelete(file)}
                                         className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20"
+                                        aria-label={`Delete ${filename}`}
                                     >
                                         <Trash2Icon className="h-4 w-4" />
                                         <span className="hidden sm:inline">

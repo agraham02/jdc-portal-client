@@ -113,6 +113,11 @@ export function AvatarUpload({
 
     const displayUrl = previewUrl || profilePhotoUrl;
     const hasAvatar = !!displayUrl;
+    const uploadButtonLabel = isUploading
+        ? "Uploading..."
+        : hasAvatar
+        ? "Change Photo"
+        : "Upload Photo";
 
     return (
         <Card className="p-6">
@@ -169,14 +174,12 @@ export function AvatarUpload({
                             {isUploading ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Uploading...
+                                    {uploadButtonLabel}
                                 </>
                             ) : (
                                 <>
                                     <Upload className="mr-2 h-4 w-4" />
-                                    {hasAvatar
-                                        ? "Change Photo"
-                                        : "Upload Photo"}
+                                    {uploadButtonLabel}
                                 </>
                             )}
                         </Button>

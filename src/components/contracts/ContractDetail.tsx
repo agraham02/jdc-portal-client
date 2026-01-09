@@ -112,8 +112,8 @@ export function ContractDetail({
                 filename
             );
             toast.success("Download started");
-        } catch {
-            toast.error("Failed to download document");
+        } catch (err) {
+            apiToast.error("Failed to download document", err);
         }
     }
 
@@ -145,8 +145,8 @@ export function ContractDetail({
                     // Cross-origin or popup blocked; rely on timeout
                 }
             }
-        } catch {
-            toast.error("Failed to open document");
+        } catch (err) {
+            apiToast.error("Failed to open document", err);
         }
     }
 

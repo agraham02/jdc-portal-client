@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
     FileUpload,
@@ -36,7 +37,6 @@ import {
 import { useApi } from "@/lib/hooks/useApi";
 import { formatCurrency } from "@/lib/utils/formatters";
 import { apiToast } from "@/lib/utils/toast-helpers";
-import { toast } from "sonner";
 import {
     ContractStatus,
     getDocumentFilename,
@@ -165,10 +165,24 @@ export default function ApplyToContractPage() {
                 file._id
             );
             const url = globalThis.URL.createObjectURL(blob);
-            globalThis.open(url, "_blank");
-            setTimeout(() => globalThis.URL.revokeObjectURL(url), 1000);
-        } catch {
-            toast.error("Failed to open document");
+            const newWindow = globalThis.open(url, "_blank");
+
+            const timeoutId = globalThis.setTimeout(() => {
+                globalThis.URL.revokeObjectURL(url);
+            }, 3000);
+
+            if (newWindow) {
+                try {
+                    newWindow.addEventListener("unload", () => {
+                        globalThis.clearTimeout(timeoutId);
+                        globalThis.URL.revokeObjectURL(url);
+                    });
+                } catch {
+                    // Cross-origin tab; rely on timeout
+                }
+            }
+        } catch (err) {
+            apiToast.error("Failed to open document", err);
         }
     }
 
@@ -179,34 +193,102 @@ export default function ApplyToContractPage() {
                 fileId,
                 filename
             );
-        } catch {
-            toast.error("Failed to download document");
+        } catch (err) {
+            apiToast.error("Failed to download document", err);
         }
     }
 
     async function onSubmitForm(data: FormData) {
         const errors: string[] = [];
 
-        // Validate required documents have files
-        for (const doc of requiredDocs) {
-            const files = documentUploads.get(doc.name) || [];
-            if (files.length === 0) {
+        const FALLBACK_ALLOWED_TYPES = [
+            "application/pdf",
+            "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "image/jpeg",
+            "image/png",
+            "image/gif",
+        ];
+        const FALLBACK_MAX_MB = 5;
+
+        type DocRequirement = {
+            name: string;
+            required?: boolean;
+            acceptedTypes?: string[];
+            maxSizeMB?: number;
+            maxSizeMb?: number;
+        };
+
+        const contractDocs: DocRequirement[] =
+            contract?.requiredDocuments || [];
+        const docMap = new Map(contractDocs.map((doc) => [doc.name, doc]));
+
+        const validateDoc = (
+            doc: DocRequirement,
+            uploads: UploadingFileMetadata[]
+        ) => {
+            const acceptedTypes =
+                (doc.acceptedTypes && doc.acceptedTypes.length > 0
+                    ? doc.acceptedTypes
+                    : FALLBACK_ALLOWED_TYPES) || FALLBACK_ALLOWED_TYPES;
+            const maxSizeMb = doc.maxSizeMB ?? doc.maxSizeMb ?? FALLBACK_MAX_MB;
+
+            if (doc.required && uploads.length === 0) {
                 errors.push(`${doc.name} is required`);
+                return;
             }
-        }
+
+            uploads.forEach((upload) => {
+                const file = upload.file;
+                if (!acceptedTypes.includes(file.type)) {
+                    errors.push(`${doc.name}: unsupported file type`);
+                }
+                if (file.size > maxSizeMb * 1024 * 1024) {
+                    errors.push(`${doc.name}: file exceeds ${maxSizeMb}MB`);
+                }
+            });
+        };
+
+        contractDocs.forEach((doc) => {
+            validateDoc(doc, documentUploads.get(doc.name) || []);
+        });
+
+        // Validate any uploads for documents not defined on the contract (defensive)
+        documentUploads.forEach((uploads, docName) => {
+            if (!docMap.has(docName)) {
+                validateDoc({ name: docName, required: false }, uploads);
+            }
+        });
 
         if (errors.length > 0) {
             setValidationErrors(errors);
             return;
         }
 
+        setValidationErrors([]);
+
         setIsSubmitting(true);
         try {
+            // Re-check application status to avoid race conditions on resubmit
+            const latestCheck = await ApplicationsService.checkApplication(
+                params.id
+            );
+            if (
+                latestCheck.hasApplication &&
+                latestCheck.application &&
+                !latestCheck.application.canResubmit
+            ) {
+                apiToast.error(
+                    "You already have an active application for this contract"
+                );
+                setIsSubmitting(false);
+                return;
+            }
+
             const proposedBudget = data.proposedBudget
                 ? Number.parseFloat(data.proposedBudget)
                 : undefined;
 
-            // Flatten the Map<string, UploadingFileMetadata[]> to File[]
             const files: File[] = [];
             documentUploads.forEach((uploadingFiles) => {
                 files.push(...uploadingFiles.map((uf) => uf.file));
@@ -243,9 +325,10 @@ export default function ApplyToContractPage() {
         return (
             <ProtectedRoute requireAuth>
                 <main className="container mx-auto max-w-4xl space-y-6 py-6">
-                    <div className="animate-pulse space-y-4">
-                        <div className="h-8 w-48 rounded bg-muted" />
-                        <div className="h-96 rounded-lg bg-muted" />
+                    <div className="space-y-4">
+                        <Skeleton className="h-8 w-48" />
+                        <Skeleton className="h-10 w-32" />
+                        <Skeleton className="h-80 w-full" />
                     </div>
                 </main>
             </ProtectedRoute>

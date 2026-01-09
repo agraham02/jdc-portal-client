@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -66,6 +67,11 @@ export function GeneralInfoSection({
         reset,
         control,
     } = methods;
+
+    // Keep nested address fields in sync when parent defaultValues change
+    useEffect(() => {
+        reset(defaultValues);
+    }, [defaultValues, reset]);
 
     return (
         <Card className="p-6">

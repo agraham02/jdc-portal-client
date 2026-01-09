@@ -22,7 +22,7 @@ import type {
     ApplicationListResponse,
     InternalNoteListResponse,
 } from "@/lib/types/contracts";
-import { ReviewStatus } from "@/lib/types/contracts";
+import { ReviewStatus, ContractStatus } from "@/lib/types/contracts";
 import { useNotificationsCtx } from "@/lib/contexts/notifications-context";
 import { useAuthz } from "@/lib/authz/useAuthz";
 import {
@@ -154,6 +154,13 @@ export default function ContractDetailsPage() {
 
     async function handleAward(applicationId: string) {
         if (!contract) return;
+        const latest = await ContractsService.getContract(contract._id);
+
+        if (latest.status !== ContractStatus.OPEN) {
+            apiToast.error("This contract is no longer accepting awards");
+            await loadContractData();
+            return;
+        }
         try {
             await ContractsService.awardContract(contract._id, {
                 applicationId,

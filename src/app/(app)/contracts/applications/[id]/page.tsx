@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { format } from "date-fns";
 import {
@@ -81,7 +81,7 @@ function getRejectionReason(
 export default function ApplicationDetailsPage() {
     const params = useParams<{ id: string }>();
     const router = useRouter();
-    const { accountType, hasPermission } = useAuth();
+    const { accountType, hasPermission, user } = useAuth();
 
     const [application, setApplication] = useState<Application | null>(null);
     const [loading, setLoading] = useState(true);
@@ -100,6 +100,14 @@ export default function ApplicationDetailsPage() {
     const isAdmin = hasPermission(P.SYSTEM_ADMIN);
     const canManageApplications = hasPermission(P.CONTRACT_MANAGE_APPLICATIONS);
 
+    const canViewApplication = useMemo(() => {
+        if (isAdmin || canManageApplications) return true;
+        if (isVendor && user && application) {
+            return application.userId === user._id;
+        }
+        return false;
+    }, [application, canManageApplications, isAdmin, isVendor, user]);
+
     const loadApplication = useCallback(async () => {
         try {
             setLoading(true);
@@ -116,6 +124,14 @@ export default function ApplicationDetailsPage() {
 
     useEffect(() => {
         loadApplication();
+    }, [loadApplication]);
+
+    // Periodically refresh to avoid stale status when viewed for long sessions
+    useEffect(() => {
+        const interval = window.setInterval(() => {
+            loadApplication();
+        }, 15000);
+        return () => window.clearInterval(interval);
     }, [loadApplication]);
 
     async function handleViewDocument(doc: FileDocument) {
@@ -208,6 +224,12 @@ export default function ApplicationDetailsPage() {
         if (!application) return;
         const contractId = getContractId(application);
         if (!contractId) return;
+
+        if (!isContractOpen) {
+            apiToast.error("This contract is no longer accepting awards");
+            setAwardDialogOpen(false);
+            return;
+        }
         try {
             setActionLoading(true);
             await ContractsService.awardContract(contractId, {
@@ -307,6 +329,40 @@ export default function ApplicationDetailsPage() {
                                 className="mt-4"
                             >
                                 Go Back
+                            </Button>
+                        </CardContent>
+                    </Card>
+                </main>
+            </ProtectedRoute>
+        );
+    }
+
+    if (!canViewApplication) {
+        return (
+            <ProtectedRoute requireAuth>
+                <main className="container mx-auto max-w-4xl space-y-6 py-6">
+                    <Button
+                        variant="ghost"
+                        onClick={() => router.back()}
+                        className="mb-4"
+                    >
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Back
+                    </Button>
+                    <Card className="border-destructive">
+                        <CardContent className="py-8 text-center">
+                            <p className="text-destructive">
+                                You do not have permission to view this
+                                application.
+                            </p>
+                            <Button
+                                variant="outline"
+                                onClick={() =>
+                                    router.push("/contracts/my-applications")
+                                }
+                                className="mt-4"
+                            >
+                                Go to My Applications
                             </Button>
                         </CardContent>
                     </Card>
