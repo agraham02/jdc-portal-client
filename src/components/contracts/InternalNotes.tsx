@@ -188,9 +188,9 @@ export function InternalNotes({
                                                 </div>
                                                 <div>
                                                     <p className="text-sm font-medium">
-                                                        {typeof note.author ===
+                                                        {typeof note.createdBy ===
                                                         "object"
-                                                            ? `${note.author.firstName} ${note.author.lastName}`
+                                                            ? `${note.createdBy.firstName} ${note.createdBy.lastName}`
                                                             : "Unknown User"}
                                                     </p>
                                                     <p className="text-xs text-muted-foreground">

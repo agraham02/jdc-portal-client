@@ -25,10 +25,12 @@ export function MyApplicationsCard() {
                 (a: Application) => a.status === ApplicationStatus.SUBMITTED
             ).length,
             inReview: apps.filter(
-                (a: Application) => a.status === ApplicationStatus.REVIEWED
+                (a: Application) =>
+                    a.status === ApplicationStatus.REVIEWED ||
+                    a.status === ApplicationStatus.ACCEPTED
             ).length,
-            accepted: apps.filter(
-                (a: Application) => a.status === ApplicationStatus.ACCEPTED
+            awarded: apps.filter(
+                (a: Application) => a.status === ApplicationStatus.AWARDED
             ).length,
             rejected: apps.filter(
                 (a: Application) => a.status === ApplicationStatus.REJECTED
@@ -88,10 +90,10 @@ export function MyApplicationsCard() {
                         </div>
                         <div className="rounded-lg border p-3 bg-green-50 dark:bg-green-950">
                             <p className="text-xs text-green-700 dark:text-green-300">
-                                Accepted
+                                Awarded
                             </p>
                             <p className="text-lg font-semibold text-green-900 dark:text-green-100">
-                                {data?.accepted || 0}
+                                {data?.awarded || 0}
                             </p>
                         </div>
                         <div className="rounded-lg border p-3 bg-red-50 dark:bg-red-950">

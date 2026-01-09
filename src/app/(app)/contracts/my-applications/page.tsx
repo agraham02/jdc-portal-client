@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import { Eye, Calendar, FileText } from "lucide-react";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { AccessDenied } from "@/components/auth/AccessDenied";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -24,9 +25,14 @@ import {
 } from "@/components/ui/select";
 import { ApplicationsService } from "@/lib/services/contracts";
 import { PermissionName as P } from "@/lib/constants/permission-names";
-import type {
+import { useAuth } from "@/lib/contexts/auth-context";
+import { AccountType } from "@/lib/types/auth";
+import {
     ApplicationStatus,
-    ApplicationListResponse,
+    type ApplicationListResponse,
+    getContractId,
+    getContractTitle,
+    getContractStatus,
 } from "@/lib/types/contracts";
 import { useNotificationsCtx } from "@/lib/contexts/notifications-context";
 import {
@@ -43,6 +49,7 @@ import { ConfirmDialog } from "@/components/contracts/ConfirmDialog";
 export default function MyApplicationsPage() {
     const router = useRouter();
     const { notifications } = useNotificationsCtx();
+    const { accountType, hasPermission } = useAuth();
     const [statusFilter, setStatusFilter] = useState<ApplicationStatus | "all">(
         "all"
     );
@@ -51,6 +58,11 @@ export default function MyApplicationsPage() {
         applicationId: string;
         contractId: string;
     } | null>(null);
+
+    // Only vendors and admins (with SYSTEM_ADMIN) should access this page
+    const isVendor = accountType === AccountType.VENDOR;
+    const isAdmin = hasPermission(P.SYSTEM_ADMIN);
+    const canAccessPage = isVendor || isAdmin;
 
     // Fetch applications with SWR
     const {
@@ -118,8 +130,8 @@ export default function MyApplicationsPage() {
         }
     }
 
-    function handleViewContract(contractId: string) {
-        router.push(`/contracts/${contractId}`);
+    function handleViewApplication(applicationId: string) {
+        router.push(`/contracts/applications/${applicationId}`);
     }
 
     // Since we're filtering by status in the API call, no need for client-side filtering
@@ -132,8 +144,17 @@ export default function MyApplicationsPage() {
             ? "Failed to load applications"
             : undefined;
 
+    // Block access for employees (non-vendors, non-admins)
+    if (!canAccessPage) {
+        return (
+            <ProtectedRoute requireAuth>
+                <AccessDenied />
+            </ProtectedRoute>
+        );
+    }
+
     return (
-        <ProtectedRoute anyOf={[P.CONTRACT_APPLY]}>
+        <ProtectedRoute requireAuth>
             <main className="container mx-auto space-y-6 py-6">
                 <div className="flex items-center justify-between">
                     <div>
@@ -244,20 +265,19 @@ export default function MyApplicationsPage() {
                                                     <TableCell>
                                                         <div>
                                                             <p className="font-medium">
-                                                                {application
-                                                                    .contract
-                                                                    ?.title ||
-                                                                    "Unknown Contract"}
+                                                                {getContractTitle(
+                                                                    application
+                                                                )}
                                                             </p>
-                                                            {application
-                                                                .contract
-                                                                ?.status && (
+                                                            {getContractStatus(
+                                                                application
+                                                            ) && (
                                                                 <StatusBadge
                                                                     type="contract"
                                                                     status={
-                                                                        application
-                                                                            .contract
-                                                                            .status
+                                                                        getContractStatus(
+                                                                            application
+                                                                        )!
                                                                     }
                                                                     showIcon={
                                                                         false
@@ -304,24 +324,27 @@ export default function MyApplicationsPage() {
                                                                 variant="ghost"
                                                                 size="icon"
                                                                 onClick={() =>
-                                                                    handleViewContract(
-                                                                        application.contractId
+                                                                    handleViewApplication(
+                                                                        application._id
                                                                     )
                                                                 }
+                                                                title="View Application Details"
                                                             >
                                                                 <Eye className="h-4 w-4" />
                                                             </Button>
                                                             {(application.status ===
-                                                                "Submitted" ||
+                                                                ApplicationStatus.SUBMITTED ||
                                                                 application.status ===
-                                                                    "Reviewed") && (
+                                                                    ApplicationStatus.REVIEWED) && (
                                                                 <Button
                                                                     variant="ghost"
                                                                     size="sm"
                                                                     onClick={() =>
                                                                         openWithdrawDialog(
                                                                             application._id,
-                                                                            application.contractId
+                                                                            getContractId(
+                                                                                application
+                                                                            )
                                                                         )
                                                                     }
                                                                 >

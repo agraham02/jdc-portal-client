@@ -135,7 +135,7 @@ Document list with download/delete actions.
 ```tsx
 <FileList
     files={contract.documents}
-    onDownload={(file) => downloadFile(file._id, file.filename)}
+    onDownload={(file) => downloadFile(file._id, getDocumentFilename(file))}
     onDelete={(file) => deleteFile(file._id)}
     showDelete={isDraft}
 />
@@ -260,16 +260,15 @@ const { data: applications } = await ApplicationsService.listApplications(
 );
 
 // Update application status (staff)
-await ApplicationsService.updateApplicationStatus(contractId, applicationId, {
+await ApplicationsService.updateApplicationStatus(applicationId, {
     status: ApplicationStatus.REVIEWED,
 });
 
 // Withdraw application (vendor)
-await ApplicationsService.withdrawApplication(contractId, applicationId);
+await ApplicationsService.withdrawApplication(applicationId);
 
 // Cancel application (admin)
 await ApplicationsService.cancelApplication(
-    contractId,
     applicationId,
     "Vendor did not meet requirements"
 );
@@ -281,29 +280,26 @@ const { data: myApps } = await ApplicationsService.getMyApplications();
 const { data: inbox } = await ApplicationsService.getApplicationsInbox();
 ```
 
-### InternalNotesService
+### ContractNotesService
 
 ```typescript
-import { InternalNotesService } from "@/lib/services/contracts";
+import { ContractNotesService } from "@/lib/services/contracts";
 
 // List notes for a contract
-const { data: notes } = await InternalNotesService.listNotes(contractId, {
-    applicationId: appId, // Optional filter
+const notes = await ContractNotesService.listNotes({
+    contractId,
+    page: 1,
+    limit: 20,
 });
 
 // Create note
-const { note } = await InternalNotesService.createNote(contractId, {
+const { note } = await ContractNotesService.createNote({
+    contractId,
     content: "Vendor has strong references",
-    applicationId: appId, // Optional
-});
-
-// Update note
-await InternalNotesService.updateNote(contractId, noteId, {
-    content: "Updated note content",
 });
 
 // Delete note
-await InternalNotesService.deleteNote(contractId, noteId);
+await ContractNotesService.deleteNote(note._id);
 ```
 
 ## Permissions
@@ -318,18 +314,17 @@ P.CONTRACT_READ_ALL; // Read all contracts
 P.CONTRACT_UPDATE; // Update contracts
 P.CONTRACT_DELETE; // Delete contracts
 P.CONTRACT_PUBLISH; // Publish contracts (Draft → Open)
-P.CONTRACT_AWARD; // Award contracts
+P.CONTRACT_APPROVE; // Review/award/close contracts
+P.CONTRACT_REJECT; // Reject contracts (reserved for future use)
 P.CONTRACT_APPLY; // Apply to contracts (vendor)
 
 // Application management
-P.CONTRACT_REVIEW_APPLICATIONS; // Review applications
 P.CONTRACT_MANAGE_APPLICATIONS; // Manage (cancel) applications
 P.APPLICATION_WITHDRAW; // Withdraw own applications
 
 // Internal notes
 P.INTERNAL_NOTE_CREATE; // Create notes
 P.INTERNAL_NOTE_READ; // Read notes
-P.INTERNAL_NOTE_UPDATE; // Update own notes
 P.INTERNAL_NOTE_DELETE; // Delete own notes
 ```
 
@@ -364,6 +359,7 @@ CONTRACT_FILE_VALIDATION.allowedTypes; // PDF, DOCX, XLSX, TXT, images, ZIP
 
 -   `/contracts` - List all contracts
 -   `/contracts/[id]` - Contract details
+-   `/contracts/[id]/apply` - Apply to a contract (vendor)
 -   `/contracts/new` - Create new contract
 -   `/contracts/[id]/edit` - Edit draft contract
 -   `/contracts/my-applications` - Vendor's applications

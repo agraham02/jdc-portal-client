@@ -40,7 +40,11 @@ export class ContractsService {
     ): Promise<ContractListResponse> {
         const queryParams = new URLSearchParams();
         if (params?.page) queryParams.append("page", params.page.toString());
-        if (params?.limit) queryParams.append("limit", params.limit.toString());
+        if (params?.limit) {
+            // Cap limit at 100 to match backend max
+            const limit = Math.min(params.limit, 100);
+            queryParams.append("limit", limit.toString());
+        }
         if (params?.status) queryParams.append("status", params.status);
         if (params?.search) queryParams.append("search", params.search);
         if (params?.createdBy)
@@ -49,6 +53,19 @@ export class ContractsService {
         const query = queryParams.toString();
         return apiClient.get<ContractListResponse>(
             `/contracts${query ? `?${query}` : ""}`
+        );
+    }
+
+    /**
+     * List active/open contracts (public endpoint - no auth required)
+     * This is suitable for vendors to see contracts they can apply to.
+     */
+    static async listActiveContracts(): Promise<{
+        data: Contract[];
+        total: number;
+    }> {
+        return apiClient.get<{ data: Contract[]; total: number }>(
+            "/contracts/active"
         );
     }
 
@@ -153,7 +170,7 @@ export class ContractsService {
     ): Promise<DocumentsUploadResponse> {
         const formData = new FormData();
         files.forEach((file) => {
-            formData.append("files[]", file);
+            formData.append("files", file);
         });
         return apiClient.postFormData<DocumentsUploadResponse>(
             `/contracts/${id}/documents`,
@@ -349,18 +366,27 @@ export class ApplicationsService {
 
     /**
      * Check if current vendor has already applied to a contract
+     * Returns application info including whether resubmission is allowed
      */
-    static async checkApplication(
-        contractId: string
-    ): Promise<{
-        hasApplied: boolean;
-        applicationId?: string;
-        status?: string;
+    static async checkApplication(contractId: string): Promise<{
+        hasApplication: boolean;
+        application?: {
+            _id: string;
+            status: string;
+            applicationDate: string;
+            proposalDetails?: string;
+            canResubmit: boolean;
+        } | null;
     }> {
         return apiClient.get<{
-            hasApplied: boolean;
-            applicationId?: string;
-            status?: string;
+            hasApplication: boolean;
+            application?: {
+                _id: string;
+                status: string;
+                applicationDate: string;
+                proposalDetails?: string;
+                canResubmit: boolean;
+            } | null;
         }>(`/contract-applications/check/${contractId}`);
     }
 
@@ -418,17 +444,25 @@ export class ApplicationsService {
     }
 
     /**
-     * Get download URL for an application document
+     * Get view URL for an application document (opens inline in browser)
+     */
+    static async getApplicationDocumentViewUrl(
+        applicationId: string,
+        documentId: string
+    ): Promise<{ url: string }> {
+        return apiClient.get<{ url: string }>(
+            `/contract-applications/${applicationId}/documents/${documentId}/view`
+        );
+    }
+
+    /**
+     * Get download URL for an application document (forces download)
      */
     static async getApplicationDocumentDownloadUrl(
         applicationId: string,
         documentId: string
-    ): Promise<{ downloadUrl: string; filename: string; expiresAt: string }> {
-        return apiClient.get<{
-            downloadUrl: string;
-            filename: string;
-            expiresAt: string;
-        }>(
+    ): Promise<{ url: string }> {
+        return apiClient.get<{ url: string }>(
             `/contract-applications/${applicationId}/documents/${documentId}/download`
         );
     }

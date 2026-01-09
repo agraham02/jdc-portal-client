@@ -34,9 +34,9 @@ export const PermissionName = Object.freeze({
     CONTRACT_UPDATE: "contract:update",
     CONTRACT_DELETE: "contract:delete",
     CONTRACT_PUBLISH: "contract:publish",
-    CONTRACT_AWARD: "contract:award",
+    CONTRACT_APPROVE: "contract:approve", // For awarding contracts and closing
     CONTRACT_APPLY: "contract:apply",
-    CONTRACT_REVIEW_APPLICATIONS: "contract:review_applications",
+    CONTRACT_REJECT: "contract:reject",
     CONTRACT_MANAGE_APPLICATIONS: "contract:manage_applications",
     APPLICATION_WITHDRAW: "application:withdraw",
 

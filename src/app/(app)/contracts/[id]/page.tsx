@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
@@ -10,7 +10,6 @@ import {
     ContractDetail,
     ApplicationList,
     InternalNotes,
-    ApplicationDetailSheet,
 } from "@/components/contracts";
 import {
     ContractsService,
@@ -20,11 +19,10 @@ import {
 import { PermissionName as P } from "@/lib/constants/permission-names";
 import type {
     Contract,
-    Application,
     ApplicationListResponse,
     InternalNoteListResponse,
 } from "@/lib/types/contracts";
-import { ApplicationStatus } from "@/lib/types/contracts";
+import { ReviewStatus } from "@/lib/types/contracts";
 import { useNotificationsCtx } from "@/lib/contexts/notifications-context";
 import { useAuthz } from "@/lib/authz/useAuthz";
 import {
@@ -42,11 +40,7 @@ export default function ContractDetailsPage() {
     const { notifications } = useNotificationsCtx();
     const { hasAny } = useAuthz();
     const canReadNotes = hasAny([P.INTERNAL_NOTE_READ]);
-
-    // Application detail sheet state
-    const [selectedApplication, setSelectedApplication] =
-        useState<Application | null>(null);
-    const [applicationSheetOpen, setApplicationSheetOpen] = useState(false);
+    const canReadApplications = hasAny([P.CONTRACT_READ_ALL]);
 
     // Fetch contract details with SWR
     const {
@@ -61,8 +55,9 @@ export default function ContractDetailsPage() {
         data: applicationsResponse,
         isLoading: loadingApplications,
         mutate: revalidateApplications,
-    } = useApi<ApplicationListResponse>(
-        `/contract-applications?contractId=${params.id}`
+    } = useConditionalApi<ApplicationListResponse>(
+        `/contract-applications?contractId=${params.id}`,
+        canReadApplications
     );
 
     // Fetch internal notes (only if user has permission)
@@ -84,12 +79,24 @@ export default function ContractDetailsPage() {
 
     // Helper to revalidate all data
     const loadContractData = useCallback(async () => {
-        await Promise.all([
-            revalidateContract(),
-            revalidateApplications(),
-            revalidateNotes(),
-        ]);
-    }, [revalidateContract, revalidateApplications, revalidateNotes]);
+        const tasks: Array<Promise<unknown>> = [revalidateContract()];
+
+        if (canReadApplications) {
+            tasks.push(revalidateApplications());
+        }
+
+        if (canReadNotes) {
+            tasks.push(revalidateNotes());
+        }
+
+        await Promise.all(tasks);
+    }, [
+        revalidateContract,
+        revalidateApplications,
+        revalidateNotes,
+        canReadApplications,
+        canReadNotes,
+    ]);
 
     useEffect(() => {
         loadContractData();
@@ -148,15 +155,7 @@ export default function ContractDetailsPage() {
     async function handleAward(applicationId: string) {
         if (!contract) return;
         try {
-            // Find the application to get vendorId
-            const application = applications.find(
-                (app) => app._id === applicationId
-            );
-            if (!application) {
-                throw new Error("Application not found");
-            }
             await ContractsService.awardContract(contract._id, {
-                vendorId: application.vendorId,
                 applicationId,
             });
             apiToast.success(successMessages.contracts.awarded);
@@ -179,36 +178,10 @@ export default function ContractDetailsPage() {
         }
     }
 
-    async function handleApply(
-        proposal: string,
-        documents: Map<string, File[]>,
-        proposedBudget?: number
-    ) {
-        if (!contract) return;
-        try {
-            // Flatten the Map<string, File[]> to File[]
-            const files: File[] = [];
-            documents.forEach((fileList) => {
-                files.push(...fileList);
-            });
-            await ApplicationsService.submitApplication(
-                contract._id,
-                { proposal, proposedBudget },
-                files
-            );
-            apiToast.success(successMessages.applications.submitted);
-            await loadContractData();
-        } catch (error) {
-            apiToast.error(errorMessages.applications.submit, error);
-            setActionError(error);
-            throw error; // Re-throw so dialog can handle it
-        }
-    }
-
     async function handleAcceptApplication(applicationId: string) {
         try {
             await ApplicationsService.updateApplicationStatus(applicationId, {
-                status: ApplicationStatus.ACCEPTED,
+                status: ReviewStatus.ACCEPTED,
             });
             apiToast.success(successMessages.applications.statusUpdated);
             await loadContractData();
@@ -218,10 +191,14 @@ export default function ContractDetailsPage() {
         }
     }
 
-    async function handleRejectApplication(applicationId: string) {
+    async function handleRejectApplication(
+        applicationId: string,
+        reason?: string
+    ) {
         try {
             await ApplicationsService.updateApplicationStatus(applicationId, {
-                status: ApplicationStatus.REJECTED,
+                status: ReviewStatus.REJECTED,
+                comments: reason,
             });
             apiToast.success(successMessages.applications.statusUpdated);
             await loadContractData();
@@ -232,13 +209,7 @@ export default function ContractDetailsPage() {
     }
 
     function handleViewApplication(applicationId: string) {
-        const application = applications.find(
-            (app) => app._id === applicationId
-        );
-        if (application) {
-            setSelectedApplication(application);
-            setApplicationSheetOpen(true);
-        }
+        router.push(`/contracts/applications/${applicationId}`);
     }
 
     async function handleCreateNote(content: string, applicationId?: string) {
@@ -349,19 +320,20 @@ export default function ContractDetailsPage() {
                         onPublish={handlePublish}
                         onClose={handleClose}
                         onDelete={handleDelete}
-                        onApply={handleApply}
                     />
 
-                    <section id="applications">
-                        <ApplicationList
-                            contract={contract}
-                            applications={applications}
-                            onAccept={handleAcceptApplication}
-                            onReject={handleRejectApplication}
-                            onAward={handleAward}
-                            onViewDetails={handleViewApplication}
-                        />
-                    </section>
+                    {canReadApplications && (
+                        <section id="applications">
+                            <ApplicationList
+                                contract={contract}
+                                applications={applications}
+                                onAccept={handleAcceptApplication}
+                                onReject={handleRejectApplication}
+                                onAward={handleAward}
+                                onViewDetails={handleViewApplication}
+                            />
+                        </section>
+                    )}
 
                     {canReadNotes && (
                         <InternalNotes
@@ -370,17 +342,6 @@ export default function ContractDetailsPage() {
                             onDelete={handleDeleteNote}
                         />
                     )}
-
-                    {/* Application Detail Sheet */}
-                    <ApplicationDetailSheet
-                        application={selectedApplication}
-                        isWinner={
-                            contract.awardedApplicationId ===
-                            selectedApplication?._id
-                        }
-                        open={applicationSheetOpen}
-                        onOpenChange={setApplicationSheetOpen}
-                    />
                 </main>
             </ContractErrorBoundary>
         </ProtectedRoute>

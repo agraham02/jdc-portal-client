@@ -36,14 +36,16 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { RejectDialog } from "./RejectDialog";
 import { Can } from "@/components/auth/Can";
 import { PermissionName } from "@/lib/constants/permission-names";
 import { cn } from "@/lib/utils";
-import type {
-    Application,
+import {
     ApplicationStatus,
-    Contract,
+    ContractStatus,
+    getVendorDisplayName,
 } from "@/lib/types/contracts";
+import type { Application, Contract } from "@/lib/types/contracts";
 import { StatusBadge } from "../common";
 
 interface ApplicationListProps {
@@ -51,7 +53,7 @@ interface ApplicationListProps {
     applications: Application[];
     isLoading?: boolean;
     onAccept?: (applicationId: string) => Promise<void>;
-    onReject?: (applicationId: string) => Promise<void>;
+    onReject?: (applicationId: string, reason?: string) => Promise<void>;
     onAward?: (applicationId: string) => Promise<void>;
     onViewDetails?: (applicationId: string) => void;
     className?: string;
@@ -78,7 +80,7 @@ export function ApplicationList({
     >(null);
 
     // Contract must be Open to award
-    const isOpen = contract.status === "Open";
+    const isOpen = contract.status === ContractStatus.OPEN;
 
     const filteredApplications =
         statusFilter === "all"
@@ -93,9 +95,9 @@ export function ApplicationList({
         }
     };
 
-    const handleReject = async () => {
+    const handleReject = async (reason?: string) => {
         if (selectedApplicationId && onReject) {
-            await onReject(selectedApplicationId);
+            await onReject(selectedApplicationId, reason);
             setRejectDialogOpen(false);
             setSelectedApplicationId(null);
         }
@@ -159,7 +161,8 @@ export function ApplicationList({
                             <SelectItem value="all">All Statuses</SelectItem>
                             <SelectItem value="Submitted">Submitted</SelectItem>
                             <SelectItem value="Reviewed">Reviewed</SelectItem>
-                            <SelectItem value="Accepted">Accepted</SelectItem>
+                            <SelectItem value="Accepted">In Review</SelectItem>
+                            <SelectItem value="Awarded">Awarded</SelectItem>
                             <SelectItem value="Rejected">Rejected</SelectItem>
                             <SelectItem value="Withdrawn">Withdrawn</SelectItem>
                             <SelectItem value="Cancelled">Cancelled</SelectItem>
@@ -221,10 +224,9 @@ export function ApplicationList({
                                                     <div>
                                                         <div className="flex items-center gap-2">
                                                             <p className="font-medium">
-                                                                {typeof application.vendor ===
-                                                                "object"
-                                                                    ? `${application.vendor.firstName} ${application.vendor.lastName}`
-                                                                    : "Unknown Vendor"}
+                                                                {getVendorDisplayName(
+                                                                    application.vendor
+                                                                )}
                                                             </p>
                                                             {isWinner && (
                                                                 <span className="inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-900/50 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
@@ -233,12 +235,8 @@ export function ApplicationList({
                                                             )}
                                                         </div>
                                                         <p className="text-xs text-muted-foreground">
-                                                            {typeof application.vendor ===
-                                                            "object"
-                                                                ? application
-                                                                      .vendor
-                                                                      .email
-                                                                : ""}
+                                                            {application.vendor
+                                                                ?.email || ""}
                                                         </p>
                                                     </div>
                                                 </div>
@@ -287,7 +285,7 @@ export function ApplicationList({
                                                     <Can
                                                         anyOf={[
                                                             PermissionName.CONTRACT_MANAGE_APPLICATIONS,
-                                                            PermissionName.CONTRACT_AWARD,
+                                                            PermissionName.CONTRACT_APPROVE,
                                                         ]}
                                                     >
                                                         <DropdownMenu>
@@ -306,14 +304,14 @@ export function ApplicationList({
                                                                 {isOpen &&
                                                                     onAward &&
                                                                     (application.status ===
-                                                                        "Submitted" ||
+                                                                        ApplicationStatus.SUBMITTED ||
                                                                         application.status ===
-                                                                            "Reviewed" ||
+                                                                            ApplicationStatus.REVIEWED ||
                                                                         application.status ===
-                                                                            "Accepted") && (
+                                                                            ApplicationStatus.ACCEPTED) && (
                                                                         <Can
                                                                             anyOf={[
-                                                                                PermissionName.CONTRACT_AWARD,
+                                                                                PermissionName.CONTRACT_APPROVE,
                                                                             ]}
                                                                         >
                                                                             <DropdownMenuItem
@@ -329,16 +327,16 @@ export function ApplicationList({
                                                                             </DropdownMenuItem>
                                                                         </Can>
                                                                     )}
-                                                                {/* Accept/Reject - for managing applications */}
+                                                                {/* Accept/Reject - review workflow requires CONTRACT_APPROVE */}
                                                                 <Can
                                                                     anyOf={[
-                                                                        PermissionName.CONTRACT_MANAGE_APPLICATIONS,
+                                                                        PermissionName.CONTRACT_APPROVE,
                                                                     ]}
                                                                 >
                                                                     {(application.status ===
-                                                                        "Submitted" ||
+                                                                        ApplicationStatus.SUBMITTED ||
                                                                         application.status ===
-                                                                            "Reviewed") && (
+                                                                            ApplicationStatus.REVIEWED) && (
                                                                         <>
                                                                             <DropdownMenuItem
                                                                                 onClick={() =>
@@ -387,13 +385,10 @@ export function ApplicationList({
             />
 
             {/* Reject Dialog */}
-            <ConfirmDialog
+            <RejectDialog
                 open={rejectDialogOpen}
                 onOpenChange={setRejectDialogOpen}
-                title="Reject Application"
-                description="Are you sure you want to reject this application? This action will notify the vendor."
                 onConfirm={handleReject}
-                variant="destructive"
             />
 
             {/* Award Dialog */}

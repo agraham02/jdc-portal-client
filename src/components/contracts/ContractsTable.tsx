@@ -32,6 +32,7 @@ export function ContractsTable() {
     const { hasAny } = useAuthz();
     const { notifications } = useNotificationsCtx();
     const canRead = hasAny([P.CONTRACT_READ, P.CONTRACT_READ_ALL]);
+    const canReadAll = hasAny([P.CONTRACT_READ_ALL]);
     const canUpdate = hasAny([P.CONTRACT_UPDATE]);
     const canPublish = hasAny([P.CONTRACT_PUBLISH]);
     const canDelete = hasAny([P.CONTRACT_DELETE]);
@@ -41,8 +42,11 @@ export function ContractsTable() {
     const [contracts, setContracts] = useState<Contract[]>([]);
     const [totalContracts, setTotalContracts] = useState(0);
 
-    const filterDefinitions = useMemo<GenericTableConfig<Contract>["filters"]>(
-        () => [
+    // Only show status filter if user can see all contracts
+    const filterDefinitions = useMemo<
+        GenericTableConfig<Contract>["filters"]
+    >(() => {
+        const filters: GenericTableConfig<Contract>["filters"] = [
             {
                 key: "search",
                 label: "Search",
@@ -50,7 +54,10 @@ export function ContractsTable() {
                 placeholder: "Search contracts...",
                 className: "w-64",
             },
-            {
+        ];
+        // Only users with CONTRACT_READ_ALL can filter by status
+        if (canReadAll) {
+            filters.push({
                 key: "status",
                 label: "Status",
                 type: "select",
@@ -61,10 +68,10 @@ export function ContractsTable() {
                     { value: ContractStatus.CLOSED, label: "Closed" },
                     { value: ContractStatus.AWARDED, label: "Awarded" },
                 ],
-            },
-        ],
-        []
-    );
+            });
+        }
+        return filters;
+    }, [canReadAll]);
 
     const tableState = useTableState<Contract>({
         filters: filterDefinitions,

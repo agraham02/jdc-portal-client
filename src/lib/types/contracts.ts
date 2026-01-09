@@ -19,10 +19,21 @@ export enum ContractStatus {
 export enum ApplicationStatus {
     SUBMITTED = "Submitted",
     REVIEWED = "Reviewed",
-    ACCEPTED = "Accepted",
+    ACCEPTED = "Accepted", // Application passed review, in consideration
     REJECTED = "Rejected",
     WITHDRAWN = "Withdrawn",
     CANCELLED = "Cancelled",
+    AWARDED = "Awarded", // This application won the contract
+}
+
+/**
+ * Review status values that can be set via updateApplicationStatus API
+ * This is a subset of ApplicationStatus - only these values are valid for status updates
+ */
+export enum ReviewStatus {
+    REVIEWED = "Reviewed",
+    ACCEPTED = "Accepted",
+    REJECTED = "Rejected",
 }
 
 // ============================================================================
@@ -37,14 +48,18 @@ export interface RequiredDocument {
 
 export interface FileDocument {
     _id: string;
-    filename: string;
+    originalName: string; // Matches backend FILE_PUBLIC_FIELDS
+    filename?: string; // Legacy field - prefer originalName
     mimetype: string;
     size: number;
     createdAt: string; // ISO date string from timestamps
     updatedAt?: string;
 }
 
-export interface User {
+/**
+ * Minimal user info returned from populated fields
+ */
+export interface UserMinimal {
     _id: string;
     firstName?: string;
     lastName?: string;
@@ -52,35 +67,68 @@ export interface User {
     email: string;
 }
 
-export interface Vendor extends User {
+/**
+ * Minimal vendor info returned from populated fields
+ * Vendors have different fields than regular users
+ */
+export interface VendorMinimal {
+    _id: string;
+    companyName?: string;
+    contactName?: string;
+    servicesOffered?: string;
+    email?: string;
+}
+
+/**
+ * Minimal contract info when populated in applications
+ */
+export interface ContractMinimal {
+    _id: string;
+    title: string;
+    status: ContractStatus;
+    deadline?: string;
+}
+
+/**
+ * @deprecated Use UserMinimal instead
+ */
+export interface User extends UserMinimal {}
+
+/**
+ * @deprecated Use VendorMinimal instead
+ */
+export interface Vendor extends UserMinimal {
     companyName?: string;
     phoneNumber?: string;
 }
 
 export interface Application {
     _id: string;
-    contractId: string;
+    /**
+     * Contract ID - may be a string or populated ContractMinimal object
+     * Use getContractId() helper to safely extract the ID
+     */
+    contractId: string | ContractMinimal;
     vendorId: string;
     userId: string; // The user who submitted the application
-    vendor?: Vendor;
-    user?: User; // Populated user info
-    contract?: {
-        _id: string;
-        title: string;
-        status: ContractStatus;
-        deadline?: string;
-    };
+    vendor?: VendorMinimal;
+    user?: UserMinimal; // Populated user info
+    /**
+     * @deprecated Use contractId when it's populated instead
+     * Backend populates contractId directly, not a separate contract field
+     */
+    contract?: ContractMinimal;
     proposalDetails?: string; // Proposal text (matches API)
     proposedBudget?: number; // The vendor's proposed budget
     status: ApplicationStatus;
     documents: FileDocument[];
     applicationDate: string; // ISO date string - when application was submitted (matches API)
     statusHistory: ApplicationStatusHistory[];
-    reviewedAt?: string | null;
-    acceptedAt?: string | null;
-    rejectedAt?: string | null;
+    // Withdrawal tracking (vendor-initiated)
     withdrawnAt?: string | null;
     withdrawnBy?: string | null;
+    withdrawalReason?: string | null;
+    // Cancellation tracking (admin-initiated)
     cancelledAt?: string | null;
     cancelledBy?: string | null;
     cancellationReason?: string | null;
@@ -125,8 +173,7 @@ export interface InternalNote {
     contractId: string;
     applicationId?: string | null;
     content: string;
-    author: User;
-    authorId: string;
+    createdBy: User; // API returns createdBy, not author
     createdAt: string;
     updatedAt: string;
 }
@@ -161,13 +208,18 @@ export interface ApplyToContractDto {
     // Documents are uploaded via multipart/form-data, not JSON
 }
 
+/**
+ * DTO for updating application status
+ * Only ReviewStatus values are valid for status updates
+ */
 export interface UpdateApplicationStatusDto {
-    status: ApplicationStatus;
+    status: ReviewStatus;
+    /** Optional comments for the status change (e.g., rejection reason) */
+    comments?: string;
 }
 
 export interface AwardContractDto {
-    vendorId: string; // Award contract to this vendor
-    applicationId?: string; // Optional: specific application ID (for reference)
+    applicationId: string; // Award contract to the vendor who submitted this application
 }
 
 export interface CreateInternalNoteDto {
@@ -296,3 +348,97 @@ export const APPLICATION_FILE_VALIDATION = {
 
 // Export as FILE_VALIDATION_RULES for backwards compatibility
 export const FILE_VALIDATION_RULES = CONTRACT_FILE_VALIDATION;
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+/**
+ * Type guard to check if contractId is a populated ContractMinimal object
+ */
+export function isPopulatedContract(
+    contractId: string | ContractMinimal | undefined | null
+): contractId is ContractMinimal {
+    return (
+        typeof contractId === "object" &&
+        contractId !== null &&
+        "_id" in contractId
+    );
+}
+
+/**
+ * Safely extract the contract ID from an application
+ * Handles both string IDs and populated ContractMinimal objects
+ */
+export function getContractId(application: Application): string {
+    if (isPopulatedContract(application.contractId)) {
+        return application.contractId._id;
+    }
+    // Handle legacy contract field if contractId is not populated
+    if (
+        typeof application.contractId === "string" &&
+        application.contractId === "" &&
+        application.contract
+    ) {
+        return application.contract._id;
+    }
+    return application.contractId as string;
+}
+
+/**
+ * Get the contract title from an application
+ * Handles both populated contractId and legacy contract field
+ */
+export function getContractTitle(application: Application): string {
+    if (isPopulatedContract(application.contractId)) {
+        return application.contractId.title;
+    }
+    if (application.contract?.title) {
+        return application.contract.title;
+    }
+    return "Unknown Contract";
+}
+
+/**
+ * Get the contract status from an application
+ * Handles both populated contractId and legacy contract field
+ */
+export function getContractStatus(
+    application: Application
+): ContractStatus | undefined {
+    if (isPopulatedContract(application.contractId)) {
+        return application.contractId.status;
+    }
+    return application.contract?.status;
+}
+
+/**
+ * Get the contract deadline from an application
+ */
+export function getContractDeadline(
+    application: Application
+): string | undefined {
+    if (isPopulatedContract(application.contractId)) {
+        return application.contractId.deadline;
+    }
+    return application.contract?.deadline;
+}
+
+/**
+ * Get the display name for a vendor
+ * Handles VendorMinimal with companyName/contactName
+ */
+export function getVendorDisplayName(
+    vendor: VendorMinimal | undefined
+): string {
+    if (!vendor) return "Unknown Vendor";
+    return vendor.companyName || vendor.contactName || "Unknown Vendor";
+}
+
+/**
+ * Get the filename from a FileDocument
+ * Handles both originalName and legacy filename field
+ */
+export function getDocumentFilename(doc: FileDocument): string {
+    return doc.originalName || doc.filename || "Unknown File";
+}

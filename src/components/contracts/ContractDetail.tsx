@@ -1,14 +1,19 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { FileList } from "./FileList";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { ApplyDialog } from "./ApplyDialog";
-import { Contract, ContractStatus, FileDocument } from "@/lib/types/contracts";
+import {
+    Contract,
+    ContractStatus,
+    FileDocument,
+    getDocumentFilename,
+} from "@/lib/types/contracts";
 import { Can } from "@/components/auth/Can";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 import { formatCurrency } from "@/lib/utils/formatters";
@@ -38,11 +43,6 @@ interface ContractDetailProps {
     onPublish?: () => Promise<void>;
     onClose?: () => Promise<void>;
     onDelete?: () => Promise<void>;
-    onApply?: (
-        proposal: string,
-        documents: Map<string, File[]>,
-        proposedBudget?: number
-    ) => Promise<void>;
     showActions?: boolean;
     className?: string;
 }
@@ -52,10 +52,10 @@ export function ContractDetail({
     onPublish,
     onClose,
     onDelete,
-    onApply,
     showActions = true,
     className,
 }: ContractDetailProps) {
+    const router = useRouter();
     const [confirmDialog, setConfirmDialog] = useState<{
         open: boolean;
         title: string;
@@ -69,7 +69,6 @@ export function ContractDetail({
         action: async () => {},
     });
     const [isLoading, setIsLoading] = useState(false);
-    const [showApplyDialog, setShowApplyDialog] = useState(false);
     const { setError, clearError } = useErrorState();
 
     const isDraft = contract.status === ContractStatus.DRAFT;
@@ -124,29 +123,12 @@ export function ContractDetail({
                 contract._id,
                 file._id
             );
-            const url = window.URL.createObjectURL(blob);
-            window.open(url, "_blank");
+            const url = globalThis.URL.createObjectURL(blob);
+            globalThis.open(url, "_blank");
             // Clean up after a delay to ensure the new tab has loaded the blob
-            setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+            setTimeout(() => globalThis.URL.revokeObjectURL(url), 1000);
         } catch {
             toast.error("Failed to open document");
-        }
-    }
-
-    async function handleApply(
-        proposal: string,
-        documents: Map<string, File[]>,
-        proposedBudget?: number
-    ) {
-        if (onApply) {
-            try {
-                clearError();
-                await onApply(proposal, documents, proposedBudget);
-                setShowApplyDialog(false);
-            } catch (err) {
-                setError(err);
-                throw err; // Re-throw for dialog to handle
-            }
         }
     }
 
@@ -213,7 +195,7 @@ export function ContractDetail({
 
                                 {/* Close */}
                                 {isOpen && onClose && (
-                                    <Can anyOf={[P.CONTRACT_UPDATE]}>
+                                    <Can anyOf={[P.CONTRACT_APPROVE]}>
                                         <Button
                                             variant="outline"
                                             onClick={() =>
@@ -232,12 +214,14 @@ export function ContractDetail({
                                 )}
 
                                 {/* Apply - shown for vendors when contract is open */}
-                                {isOpen && onApply && (
+                                {isOpen && (
                                     <Can anyOf={[P.CONTRACT_APPLY]}>
                                         <Button
                                             variant="default"
                                             onClick={() =>
-                                                setShowApplyDialog(true)
+                                                router.push(
+                                                    `/contracts/${contract._id}/apply`
+                                                )
                                             }
                                             disabled={isLoading}
                                         >
@@ -431,31 +415,29 @@ export function ContractDetail({
                             </CardHeader>
                             <CardContent>
                                 <ul className="space-y-3">
-                                    {contract.requiredDocuments.map(
-                                        (doc, index) => (
-                                            <li
-                                                key={index}
-                                                className="flex items-start gap-2"
-                                            >
-                                                <CheckCircleIcon className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                                                <div className="flex-1">
-                                                    <p className="font-medium">
-                                                        {doc.name}
-                                                        {doc.required && (
-                                                            <span className="text-destructive ml-1">
-                                                                *
-                                                            </span>
-                                                        )}
-                                                    </p>
-                                                    {doc.description && (
-                                                        <p className="text-sm text-muted-foreground">
-                                                            {doc.description}
-                                                        </p>
+                                    {contract.requiredDocuments.map((doc) => (
+                                        <li
+                                            key={doc.name}
+                                            className="flex items-start gap-2"
+                                        >
+                                            <CheckCircleIcon className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                                            <div className="flex-1">
+                                                <p className="font-medium">
+                                                    {doc.name}
+                                                    {doc.required && (
+                                                        <span className="text-destructive ml-1">
+                                                            *
+                                                        </span>
                                                     )}
-                                                </div>
-                                            </li>
-                                        )
-                                    )}
+                                                </p>
+                                                {doc.description && (
+                                                    <p className="text-sm text-muted-foreground">
+                                                        {doc.description}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </li>
+                                    ))}
                                 </ul>
                             </CardContent>
                         </Card>
@@ -472,7 +454,10 @@ export function ContractDetail({
                                 files={contract.documents}
                                 onView={handleViewDocument}
                                 onDownload={(file) =>
-                                    handleDownload(file._id, file.filename)
+                                    handleDownload(
+                                        file._id,
+                                        getDocumentFilename(file)
+                                    )
                                 }
                             />
                         </CardContent>
@@ -492,17 +477,6 @@ export function ContractDetail({
                 variant={confirmDialog.variant}
                 loading={isLoading}
             />
-
-            {/* Apply Dialog */}
-            {onApply && (
-                <ApplyDialog
-                    open={showApplyDialog}
-                    onOpenChange={setShowApplyDialog}
-                    contract={contract}
-                    onSubmit={handleApply}
-                    isLoading={isLoading}
-                />
-            )}
         </>
     );
 }
