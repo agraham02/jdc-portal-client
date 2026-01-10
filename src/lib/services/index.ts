@@ -4,6 +4,6 @@ export * from "./employee";
 export * from "./vendor";
 export * from "./rbac";
 export * from "./contracts";
-export * from "./notifications";
+export * from "./broadcast";
 export * from "./internal-notes";
 export * from "./user";

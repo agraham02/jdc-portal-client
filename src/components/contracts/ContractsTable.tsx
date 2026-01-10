@@ -20,17 +20,10 @@ import { Can } from "../auth/Can";
 import { Button } from "../ui/button";
 import Link from "next/link";
 import { Plus, FileText } from "lucide-react";
-import { useNotificationsCtx } from "@/lib/contexts/notifications-context";
-import {
-    handleContractNotification,
-    isContractNotification,
-} from "@/lib/utils/contract-notifications";
-import { NotificationType } from "@/lib/types/notifications";
 
 export function ContractsTable() {
     const router = useRouter();
     const { hasAny } = useAuthz();
-    const { notifications } = useNotificationsCtx();
     const canRead = hasAny([P.CONTRACT_READ, P.CONTRACT_READ_ALL]);
     const canReadAll = hasAny([P.CONTRACT_READ_ALL]);
     const canUpdate = hasAny([P.CONTRACT_UPDATE]);
@@ -133,26 +126,17 @@ export function ContractsTable() {
         loadContracts();
     }, [loadContracts]);
 
-    // Listen for contract-related notifications and refresh
+    // Polling for near real-time updates (every 30 seconds)
+    // Novu handles notification delivery; this ensures data freshness
     useEffect(() => {
-        const latestNotification = notifications[0];
-        if (
-            !latestNotification ||
-            !isContractNotification(latestNotification.type)
-        ) {
-            return;
-        }
+        const intervalId = window.setInterval(() => {
+            void loadContracts();
+        }, 30000);
 
-        if (
-            latestNotification.type === NotificationType.CONTRACT_PUBLISHED ||
-            latestNotification.type === NotificationType.CONTRACT_AWARDED ||
-            latestNotification.type === NotificationType.CONTRACT_CREATED
-        ) {
-            handleContractNotification(latestNotification, {
-                onContractListUpdate: loadContracts,
-            });
-        }
-    }, [notifications, loadContracts]);
+        return () => {
+            window.clearInterval(intervalId);
+        };
+    }, [loadContracts]);
 
     const tableConfig: GenericTableConfig<Contract> = useMemo(() => {
         const handleOpen = async (contract: Contract) => {

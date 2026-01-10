@@ -23,12 +23,7 @@ import type {
     InternalNoteListResponse,
 } from "@/lib/types/contracts";
 import { ReviewStatus, ContractStatus } from "@/lib/types/contracts";
-import { useNotificationsCtx } from "@/lib/contexts/notifications-context";
 import { useAuthz } from "@/lib/authz/useAuthz";
-import {
-    handleContractNotification,
-    isContractNotification,
-} from "@/lib/utils/contract-notifications";
 import { useApi, useConditionalApi } from "@/lib/hooks/useApi";
 import { useErrorState } from "@/lib/hooks/useErrorState";
 import { apiToast } from "@/lib/utils/toast-helpers";
@@ -37,7 +32,6 @@ import { errorMessages, successMessages } from "@/lib/utils/error-messages";
 export default function ContractDetailsPage() {
     const params = useParams<{ id: string }>();
     const router = useRouter();
-    const { notifications } = useNotificationsCtx();
     const { hasAny } = useAuthz();
     const canReadNotes = hasAny([P.INTERNAL_NOTE_READ]);
     const canReadApplications = hasAny([P.CONTRACT_READ_ALL]);
@@ -102,31 +96,8 @@ export default function ContractDetailsPage() {
         loadContractData();
     }, [loadContractData]);
 
-    // Listen for contract-related notifications
-    useEffect(() => {
-        const latestNotification = notifications[0];
-        if (
-            !latestNotification ||
-            !isContractNotification(latestNotification.type)
-        ) {
-            return;
-        }
-
-        // Handle notification with callbacks to refresh data
-        handleContractNotification(latestNotification, {
-            onContractUpdate: (contractId) => {
-                if (contractId === params.id) {
-                    loadContractData();
-                }
-            },
-            onApplicationUpdate: () => {
-                loadContractData();
-            },
-            onApplicationListUpdate: () => {
-                loadContractData();
-            },
-        });
-    }, [notifications, params.id, loadContractData]);
+    // TODO: Add Novu notification listener for real-time contract updates
+    // This can be done using Novu's headless hooks when needed
 
     async function handlePublish() {
         if (!contract) return;

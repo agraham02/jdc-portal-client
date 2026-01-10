@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Building2 } from "lucide-react";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { useAuth } from "@/lib/contexts/auth-context";
-import { BellDropdown } from "@/components/notifications/BellDropdown";
+import { NovuInbox } from "@/components/notifications/NovuInbox";
 import { ThemeToggle } from "@/components/navigation/ThemeToggle";
 
 export default function AppLayout({ children }: { children: ReactNode }) {
@@ -31,7 +31,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                             <span className="font-semibold">JDC Portal</span>
                         </div>
                         <div className="ml-auto flex items-center gap-2">
-                            <BellDropdown />
+                            <NovuInbox />
                             <ThemeToggle />
                             <Button
                                 variant="destructive"

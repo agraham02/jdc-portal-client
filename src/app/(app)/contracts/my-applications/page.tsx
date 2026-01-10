@@ -34,21 +34,13 @@ import {
     getContractTitle,
     getContractStatus,
 } from "@/lib/types/contracts";
-import { useNotificationsCtx } from "@/lib/contexts/notifications-context";
-import {
-    handleContractNotification,
-    isContractNotification,
-    showContractActionSuccess,
-    showContractActionError,
-} from "@/lib/utils/contract-notifications";
-import { NotificationType } from "@/lib/types/notifications";
 import { StatusBadge } from "@/components/common";
 import { usePaginatedApi } from "@/lib/hooks/useApi";
 import { ConfirmDialog } from "@/components/contracts/ConfirmDialog";
+import { toast } from "sonner";
 
 export default function MyApplicationsPage() {
     const router = useRouter();
-    const { notifications } = useNotificationsCtx();
     const { accountType, hasPermission } = useAuth();
     const [statusFilter, setStatusFilter] = useState<ApplicationStatus | "all">(
         "all"
@@ -78,29 +70,17 @@ export default function MyApplicationsPage() {
     // Extract applications from response
     const applications = response?.data || [];
 
-    // Listen for application status change notifications
+    // Polling for near real-time updates (every 30 seconds)
+    // Novu handles notification delivery; this ensures data freshness
     useEffect(() => {
-        const latestNotification = notifications[0];
-        if (
-            !latestNotification ||
-            !isContractNotification(latestNotification.type)
-        ) {
-            return;
-        }
+        const intervalId = window.setInterval(() => {
+            void revalidate();
+        }, 30000);
 
-        // Refresh list when application status changes
-        if (
-            latestNotification.type === NotificationType.APPLICATION_ACCEPTED ||
-            latestNotification.type === NotificationType.APPLICATION_REJECTED ||
-            latestNotification.type ===
-                NotificationType.APPLICATION_CANCELLED ||
-            latestNotification.type === NotificationType.APPLICATION_WITHDRAWN
-        ) {
-            handleContractNotification(latestNotification, {
-                onApplicationListUpdate: () => revalidate(),
-            });
-        }
-    }, [notifications, revalidate]);
+        return () => {
+            window.clearInterval(intervalId);
+        };
+    }, [revalidate]);
 
     function openWithdrawDialog(applicationId: string, contractId: string) {
         setSelectedWithdraw({ applicationId, contractId });
@@ -113,10 +93,9 @@ export default function MyApplicationsPage() {
             await ApplicationsService.withdrawApplication(
                 selectedWithdraw.applicationId
             );
-            showContractActionSuccess(
-                "Application Withdrawn",
-                "Your application has been withdrawn successfully"
-            );
+            toast.success("Application Withdrawn", {
+                description: "Your application has been withdrawn successfully",
+            });
             setWithdrawDialogOpen(false);
             setSelectedWithdraw(null);
             // Revalidate the cache to refresh the list
@@ -126,7 +105,9 @@ export default function MyApplicationsPage() {
                 err instanceof Error
                     ? err.message
                     : "Failed to withdraw application";
-            showContractActionError("Withdraw Application", message);
+            toast.error("Withdraw Application Failed", {
+                description: message,
+            });
         }
     }
 
