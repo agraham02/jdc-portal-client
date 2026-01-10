@@ -13,10 +13,7 @@ import type {
     UpdateContractDto,
     FileDocument,
 } from "@/lib/types/contracts";
-import {
-    showContractActionSuccess,
-    showContractActionError,
-} from "@/lib/utils/contract-notifications";
+import { toast } from "sonner";
 
 export default function ContractEditPage() {
     const params = useParams<{ id: string }>();
@@ -64,17 +61,18 @@ export default function ContractEditPage() {
                 await ContractsService.uploadDocuments(params.id, files);
             }
 
-            showContractActionSuccess(
-                "Contract Updated",
-                "Contract has been updated successfully"
-            );
+            toast.success("Contract Updated", {
+                description: "Contract has been updated successfully",
+            });
             router.push(`/contracts/${params.id}`);
         } catch (err) {
             const message =
                 err instanceof Error
                     ? err.message
                     : "Failed to update contract";
-            showContractActionError("Update Contract", message);
+            toast.error("Update Contract Failed", {
+                description: message,
+            });
             setError(message);
             setIsSubmitting(false);
         }
@@ -86,16 +84,17 @@ export default function ContractEditPage() {
             setExistingDocuments((prev) =>
                 prev.filter((doc) => doc._id !== documentId)
             );
-            showContractActionSuccess(
-                "Document Removed",
-                "Document has been removed successfully"
-            );
+            toast.success("Document Removed", {
+                description: "Document has been removed successfully",
+            });
         } catch (err) {
             const message =
                 err instanceof Error
                     ? err.message
                     : "Failed to remove document";
-            showContractActionError("Remove Document", message);
+            toast.error("Remove Document Failed", {
+                description: message,
+            });
         }
     }
 
@@ -114,7 +113,9 @@ export default function ContractEditPage() {
                 err instanceof Error
                     ? err.message
                     : "Failed to download document";
-            showContractActionError("Download Document", message);
+            toast.error("Download Document Failed", {
+                description: message,
+            });
         }
     }
 

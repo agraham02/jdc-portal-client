@@ -20,17 +20,10 @@ import { Can } from "../auth/Can";
 import { Button } from "../ui/button";
 import Link from "next/link";
 import { Plus, FileText } from "lucide-react";
-import { useNotificationsCtx } from "@/lib/contexts/notifications-context";
-import {
-    handleContractNotification,
-    isContractNotification,
-} from "@/lib/utils/contract-notifications";
-import { NotificationType } from "@/lib/types/notifications";
 
 export function ContractsTable() {
     const router = useRouter();
     const { hasAny } = useAuthz();
-    const { notifications } = useNotificationsCtx();
     const canRead = hasAny([P.CONTRACT_READ, P.CONTRACT_READ_ALL]);
     const canReadAll = hasAny([P.CONTRACT_READ_ALL]);
     const canUpdate = hasAny([P.CONTRACT_UPDATE]);
@@ -133,26 +126,7 @@ export function ContractsTable() {
         loadContracts();
     }, [loadContracts]);
 
-    // Listen for contract-related notifications and refresh
-    useEffect(() => {
-        const latestNotification = notifications[0];
-        if (
-            !latestNotification ||
-            !isContractNotification(latestNotification.type)
-        ) {
-            return;
-        }
-
-        if (
-            latestNotification.type === NotificationType.CONTRACT_PUBLISHED ||
-            latestNotification.type === NotificationType.CONTRACT_AWARDED ||
-            latestNotification.type === NotificationType.CONTRACT_CREATED
-        ) {
-            handleContractNotification(latestNotification, {
-                onContractListUpdate: loadContracts,
-            });
-        }
-    }, [notifications, loadContracts]);
+    // TODO: Add Novu notification listener for real-time contract updates
 
     const tableConfig: GenericTableConfig<Contract> = useMemo(() => {
         const handleOpen = async (contract: Contract) => {
