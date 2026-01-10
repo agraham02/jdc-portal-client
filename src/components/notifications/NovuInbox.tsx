@@ -10,8 +10,7 @@ export function NovuInbox() {
 
     if (!user) return null;
 
-    const applicationIdentifier =
-        process.env.NEXT_PUBLIC_NOVU_APP_ID;
+    const applicationIdentifier = process.env.NEXT_PUBLIC_NOVU_APP_ID;
 
     if (!applicationIdentifier) {
         if (process.env.NODE_ENV === "development") {
@@ -28,15 +27,17 @@ export function NovuInbox() {
             subscriberId={user._id}
             appearance={{
                 variables: {
-                    colorBackground: "oklch(0.145 0 0)",
-                    colorForeground: "oklch(0.985 0 0)",
-                    colorPrimary: "oklch(0.922 0 0)",
-                    colorPrimaryForeground: "oklch(0.205 0 0)",
-                    colorSecondary: "oklch(0.269 0 0)",
-                    colorSecondaryForeground: "oklch(0.985 0 0)",
-                    colorNeutral: "oklch(0.708 0 0)",
-                    colorCounter: "oklch(0.704 0.191 22.216)",
-                    colorCounterForeground: "oklch(0.985 0 0)",
+                    colorBackground: "hsl(var(--background))",
+                    colorForeground: "hsl(var(--foreground))",
+                    colorPrimary: "hsl(var(--primary))",
+                    colorPrimaryForeground: "hsl(var(--primary-foreground))",
+                    colorSecondary: "hsl(var(--secondary))",
+                    colorSecondaryForeground:
+                        "hsl(var(--secondary-foreground))",
+                    colorNeutral: "hsl(var(--muted-foreground))",
+                    colorCounter: "hsl(var(--destructive))",
+                    colorCounterForeground:
+                        "hsl(var(--destructive-foreground))",
                     fontSize: "14px",
                 },
             }}

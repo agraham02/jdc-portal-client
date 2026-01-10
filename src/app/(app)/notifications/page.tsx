@@ -49,21 +49,24 @@ export default function NotificationsPage() {
                 <div className="bg-background border rounded-lg p-4 min-h-[600px]">
                     <Inbox
                         applicationIdentifier={applicationIdentifier}
-                        subscriber={user._id}
+                        subscriberId={user._id}
                         appearance={{
-                            elements: {
-                                root: "w-full",
-                                notification:
-                                    "hover:bg-muted/50 transition-colors cursor-pointer p-4 border-b border-border last:border-b-0",
-                                notificationSubject:
-                                    "font-medium text-foreground text-base",
-                                notificationBody:
-                                    "text-muted-foreground text-sm mt-1",
-                                notificationDate:
-                                    "text-xs text-muted-foreground",
+                            variables: {
+                                colorBackground: "hsl(var(--background))",
+                                colorForeground: "hsl(var(--foreground))",
+                                colorPrimary: "hsl(var(--primary))",
+                                colorPrimaryForeground:
+                                    "hsl(var(--primary-foreground))",
+                                colorSecondary: "hsl(var(--secondary))",
+                                colorSecondaryForeground:
+                                    "hsl(var(--secondary-foreground))",
+                                colorNeutral: "hsl(var(--muted-foreground))",
+                                colorCounter: "hsl(var(--destructive))",
+                                colorCounterForeground:
+                                    "hsl(var(--destructive-foreground))",
+                                fontSize: "14px",
                             },
                         }}
-                        open={true}
                         onNotificationClick={(notification) => {
                             const redirectUrl = notification.redirect?.url;
                             if (redirectUrl) {

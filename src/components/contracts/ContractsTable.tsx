@@ -126,7 +126,17 @@ export function ContractsTable() {
         loadContracts();
     }, [loadContracts]);
 
-    // TODO: Add Novu notification listener for real-time contract updates
+    // Polling for near real-time updates (every 30 seconds)
+    // Novu handles notification delivery; this ensures data freshness
+    useEffect(() => {
+        const intervalId = window.setInterval(() => {
+            void loadContracts();
+        }, 30000);
+
+        return () => {
+            window.clearInterval(intervalId);
+        };
+    }, [loadContracts]);
 
     const tableConfig: GenericTableConfig<Contract> = useMemo(() => {
         const handleOpen = async (contract: Contract) => {

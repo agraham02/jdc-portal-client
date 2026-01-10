@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import { Eye, Calendar, FileText } from "lucide-react";
@@ -70,7 +70,17 @@ export default function MyApplicationsPage() {
     // Extract applications from response
     const applications = response?.data || [];
 
-    // TODO: Add Novu notification listener for real-time application updates
+    // Polling for near real-time updates (every 30 seconds)
+    // Novu handles notification delivery; this ensures data freshness
+    useEffect(() => {
+        const intervalId = window.setInterval(() => {
+            void revalidate();
+        }, 30000);
+
+        return () => {
+            window.clearInterval(intervalId);
+        };
+    }, [revalidate]);
 
     function openWithdrawDialog(applicationId: string, contractId: string) {
         setSelectedWithdraw({ applicationId, contractId });

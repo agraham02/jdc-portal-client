@@ -23,8 +23,19 @@ export default function NotificationsBroadcastsPage() {
     const [submitting, setSubmitting] = useState(false);
 
     async function submitBroadcast() {
+        // Client-side validation
         if (!title.trim() || !message.trim()) {
             toast.error("Title and message are required");
+            return;
+        }
+
+        if (title.trim().length > 200) {
+            toast.error("Title must be 200 characters or less");
+            return;
+        }
+
+        if (message.trim().length > 2000) {
+            toast.error("Message must be 2000 characters or less");
             return;
         }
 
@@ -41,7 +52,8 @@ export default function NotificationsBroadcastsPage() {
                 targetRoles: targetRoles.length > 0 ? targetRoles : undefined,
             });
 
-            if (result.success) {
+            // Validate response structure
+            if (result && result.success) {
                 const targetDescription =
                     result.topics?.length === 1 &&
                     result.topics[0] === "all-users"
@@ -51,9 +63,15 @@ export default function NotificationsBroadcastsPage() {
                 setTitle("");
                 setMessage("");
                 setRoles("");
+            } else {
+                console.error("[Broadcast] Unexpected response:", result);
+                toast.error("Broadcast may not have been sent correctly");
             }
-        } catch {
-            toast.error("Failed to send broadcast");
+        } catch (error) {
+            console.error("[Broadcast] Failed to send:", error);
+            const message =
+                error instanceof Error ? error.message : "Unknown error";
+            toast.error(`Failed to send broadcast: ${message}`);
         } finally {
             setSubmitting(false);
         }
@@ -82,7 +100,12 @@ export default function NotificationsBroadcastsPage() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor="title">Title</Label>
+                            <div className="flex justify-between">
+                                <Label htmlFor="title">Title</Label>
+                                <span className="text-xs text-muted-foreground">
+                                    {title.length}/200
+                                </span>
+                            </div>
                             <Input
                                 id="title"
                                 placeholder="e.g., System Maintenance Notice"
@@ -94,7 +117,12 @@ export default function NotificationsBroadcastsPage() {
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="message">Message</Label>
+                            <div className="flex justify-between">
+                                <Label htmlFor="message">Message</Label>
+                                <span className="text-xs text-muted-foreground">
+                                    {message.length}/2000
+                                </span>
+                            </div>
                             <Textarea
                                 id="message"
                                 placeholder="Enter your announcement message..."
@@ -103,6 +131,7 @@ export default function NotificationsBroadcastsPage() {
                                 rows={5}
                                 maxLength={2000}
                                 disabled={submitting}
+                                className="resize-none"
                             />
                         </div>
 
