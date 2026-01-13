@@ -69,36 +69,27 @@ export default function HRUploadPage() {
 
         setSubmitting(true);
 
-        // Simulate progress updates since HrDocumentsService doesn't provide progress callbacks
-        const progressInterval = setInterval(() => {
-            setUploadingFiles((prev) =>
-                prev.map((uf) =>
-                    uf.file === file
-                        ? { ...uf, progress: Math.min(uf.progress + 10, 90) }
-                        : uf
-                )
-            );
-        }, 200);
-
         try {
-            await HrDocumentsService.uploadFile(file, {
-                description: description.trim() || undefined,
-                tags: tags
-                    ? tags
-                          .split(",")
-                          .map((t) => t.trim())
-                          .filter(Boolean)
-                    : undefined,
-                isPublic: isPublic,
-            });
-
-            clearInterval(progressInterval);
-
-            // Set progress to 100%
-            setUploadingFiles((prev) =>
-                prev.map((uf) =>
-                    uf.file === file ? { ...uf, progress: 100 } : uf
-                )
+            await HrDocumentsService.uploadFile(
+                file,
+                {
+                    description: description.trim() || undefined,
+                    tags: tags
+                        ? tags
+                              .split(",")
+                              .map((t) => t.trim())
+                              .filter(Boolean)
+                        : undefined,
+                    isPublic: isPublic,
+                },
+                // Real progress callback
+                (percent) => {
+                    setUploadingFiles((prev) =>
+                        prev.map((uf) =>
+                            uf.file === file ? { ...uf, progress: percent } : uf
+                        )
+                    );
+                }
             );
 
             toast.success("HR document uploaded successfully!");
@@ -111,8 +102,6 @@ export default function HRUploadPage() {
                 setIsPublic(false);
             }, 1000);
         } catch (err: unknown) {
-            clearInterval(progressInterval);
-
             // Set error state
             setUploadingFiles((prev) =>
                 prev.map((uf) =>
@@ -258,10 +247,10 @@ export default function HRUploadPage() {
                                                 Public Access
                                             </Label>
                                             <p className="text-sm text-muted-foreground">
-                                                Make this document visible to all
-                                                users. If disabled, only users
-                                                with FILE_READ permission can see
-                                                it.
+                                                Make this document visible to
+                                                all users. If disabled, only
+                                                users with FILE_READ permission
+                                                can see it.
                                             </p>
                                         </div>
                                         <Switch

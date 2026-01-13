@@ -22,7 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { HrDocumentsService } from "@/lib/services/file";
-import { HrLink, HRLinkCategory } from "@/lib/types/file";
+import { HrLink, HrCategoryRef, HrCategory } from "@/lib/types/file";
 import {
     ExternalLinkIcon,
     RefreshCcwIcon,
@@ -43,6 +43,7 @@ export function HrLinksTable() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [links, setLinks] = useState<HrLink[]>([]);
+    const [categories, setCategories] = useState<HrCategory[]>([]);
     const [total, setTotal] = useState(0);
     const [totalPages, setTotalPages] = useState(1);
     const [page, setPage] = useState(1);
@@ -50,26 +51,49 @@ export function HrLinksTable() {
     const [search, setSearch] = useState("");
     const [categoryFilter, setCategoryFilter] = useState<string>("all");
     const [activeFilter, setActiveFilter] = useState<string>("all");
-    const [sortBy, setSortBy] = useState("sortOrder");
-    const [sortOrder, setSortOrder] = useState<SortDir>("asc");
+    const [sortBy, setSortBy] = useState("createdAt");
+    const [sortOrder, setSortOrder] = useState<SortDir>("desc");
     const [createDialogOpen, setCreateDialogOpen] = useState(false);
     const [editingLink, setEditingLink] = useState<HrLink | null>(null);
+
+    // Load categories once on mount
+    useEffect(() => {
+        let cancelled = false;
+        const loadCategories = async () => {
+            try {
+                const res = await HrDocumentsService.getCategories({
+                    isActive: true,
+                    limit: 100,
+                });
+                if (!cancelled) setCategories(res.categories);
+            } catch (e) {
+                console.error("Failed to load categories:", e);
+            }
+        };
+        loadCategories();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     const load = async () => {
         setLoading(true);
         setError(null);
         try {
+            // Determine isActive filter value
+            let isActiveValue: boolean | undefined;
+            if (activeFilter === "active") {
+                isActiveValue = true;
+            } else if (activeFilter === "inactive") {
+                isActiveValue = false;
+            }
+
             const res = await HrDocumentsService.getLinks({
                 page,
                 limit,
                 search: search || undefined,
-                category: categoryFilter !== "all" ? categoryFilter : undefined,
-                isActive:
-                    activeFilter === "active"
-                        ? true
-                        : activeFilter === "inactive"
-                        ? false
-                        : undefined,
+                category: categoryFilter === "all" ? undefined : categoryFilter,
+                isActive: isActiveValue,
                 sortBy,
                 sortOrder,
             });
@@ -125,21 +149,38 @@ export function HrLinksTable() {
         }
     };
 
-    const getCategoryBadgeColor = (category: HRLinkCategory) => {
-        switch (category) {
-            case HRLinkCategory.PAYROLL:
-                return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
-            case HRLinkCategory.BENEFITS:
-                return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
-            case HRLinkCategory.TRAINING:
-                return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
-            case HRLinkCategory.POLICY:
-                return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200";
-            case HRLinkCategory.DIRECTORY:
-                return "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200";
-            default:
-                return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200";
+    /** Extract category name from populated object or fallback to string */
+    const getCategoryName = (category: HrCategoryRef | string): string => {
+        if (typeof category === "object" && category !== null) {
+            return category.name;
         }
+        return String(category);
+    };
+
+    /** Generate consistent badge color based on category name hash */
+    const getCategoryBadgeColor = (
+        category: HrCategoryRef | string
+    ): string => {
+        const name = getCategoryName(category);
+        const colorPalette = [
+            "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+            "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+            "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+            "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
+            "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200",
+            "bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200",
+            "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200",
+            "bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200",
+        ];
+        // Simple hash to get consistent color per category
+        let hash = 0;
+        for (let i = 0; i < name.length; i++) {
+            const codePoint = name.codePointAt(i);
+            if (codePoint !== undefined) {
+                hash = codePoint + ((hash << 5) - hash);
+            }
+        }
+        return colorPalette[Math.abs(hash) % colorPalette.length];
     };
 
     return (
@@ -173,24 +214,11 @@ export function HrLinksTable() {
                                 <SelectItem value="all">
                                     All Categories
                                 </SelectItem>
-                                <SelectItem value={HRLinkCategory.PAYROLL}>
-                                    Payroll
-                                </SelectItem>
-                                <SelectItem value={HRLinkCategory.BENEFITS}>
-                                    Benefits
-                                </SelectItem>
-                                <SelectItem value={HRLinkCategory.TRAINING}>
-                                    Training
-                                </SelectItem>
-                                <SelectItem value={HRLinkCategory.POLICY}>
-                                    Policy
-                                </SelectItem>
-                                <SelectItem value={HRLinkCategory.DIRECTORY}>
-                                    Directory
-                                </SelectItem>
-                                <SelectItem value={HRLinkCategory.OTHER}>
-                                    Other
-                                </SelectItem>
+                                {categories.map((cat) => (
+                                    <SelectItem key={cat._id} value={cat._id}>
+                                        {cat.name}
+                                    </SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                         <Select
@@ -217,7 +245,7 @@ export function HrLinksTable() {
                             value={`${limit}`}
                             onValueChange={(v) => {
                                 setPage(1);
-                                setLimit(parseInt(v, 10));
+                                setLimit(Number.parseInt(v, 10));
                             }}
                         >
                             <SelectTrigger className="w-[120px]">
@@ -306,7 +334,7 @@ export function HrLinksTable() {
                     <TableBody>
                         {loading &&
                             Array.from({ length: 5 }).map((_, i) => (
-                                <TableRow key={i}>
+                                <TableRow key={`skeleton-${String(i)}`}>
                                     <TableCell colSpan={6}>
                                         <Skeleton className="h-6 w-full" />
                                     </TableCell>
@@ -366,7 +394,7 @@ export function HrLinksTable() {
                                                 link.category
                                             )}
                                         >
-                                            {link.category}
+                                            {getCategoryName(link.category)}
                                         </Badge>
                                     </TableCell>
                                     <TableCell>
@@ -438,6 +466,7 @@ export function HrLinksTable() {
                                                     )
                                                 }
                                                 title="Open link"
+                                                aria-label={`Open ${link.title} in new tab`}
                                                 className="h-8 w-8 p-0"
                                             >
                                                 <ExternalLinkIcon className="h-4 w-4" />
@@ -450,6 +479,7 @@ export function HrLinksTable() {
                                                         setEditingLink(link)
                                                     }
                                                     title="Edit link"
+                                                    aria-label={`Edit ${link.title}`}
                                                     className="h-8 w-8 p-0"
                                                 >
                                                     <PencilIcon className="h-4 w-4" />
@@ -464,6 +494,11 @@ export function HrLinksTable() {
                                                         link.isActive
                                                             ? "Deactivate link"
                                                             : "Activate link"
+                                                    }
+                                                    aria-label={
+                                                        link.isActive
+                                                            ? `Deactivate ${link.title}`
+                                                            : `Activate ${link.title}`
                                                     }
                                                     className="h-8 px-2"
                                                 >
@@ -480,6 +515,7 @@ export function HrLinksTable() {
                                                         onDelete(link)
                                                     }
                                                     title="Delete link"
+                                                    aria-label={`Delete ${link.title}`}
                                                     className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
                                                 >
                                                     <Trash2Icon className="h-4 w-4" />

@@ -334,6 +334,101 @@ class ApiClient {
         delete headers["Content-Type"];
         return this.request<T>("POST", path, formData, { ...options, headers });
     }
+
+    /**
+     * Upload FormData with real progress tracking using XMLHttpRequest
+     * @param path - API endpoint path
+     * @param formData - FormData to upload
+     * @param onProgress - Callback for upload progress (0-100)
+     * @param options - Request options
+     */
+    postFormDataWithProgress<T>(
+        path: string,
+        formData: FormData,
+        onProgress?: (percent: number) => void,
+        options?: RequestOptions
+    ): Promise<T> {
+        return new Promise((resolve, reject) => {
+            const url = `${this.baseUrl}${path}`;
+            const xhr = new XMLHttpRequest();
+
+            // Track upload progress
+            xhr.upload.addEventListener("progress", (e) => {
+                if (e.lengthComputable && onProgress) {
+                    const percent = (e.loaded / e.total) * 100;
+                    onProgress(percent);
+                }
+            });
+
+            xhr.addEventListener("load", () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    try {
+                        const data = JSON.parse(xhr.responseText) as T;
+                        resolve(data);
+                    } catch {
+                        reject(new Error("Invalid response from server"));
+                    }
+                } else if (xhr.status === 401 && !options?.skipAuthRetry) {
+                    // Handle 401 - attempt token refresh
+                    AuthService.refreshToken()
+                        .then(({ accessToken }) => {
+                            session.setAccessToken(accessToken);
+                            // Retry with new token
+                            this.postFormDataWithProgress<T>(
+                                path,
+                                formData,
+                                onProgress,
+                                { ...options, skipAuthRetry: true }
+                            )
+                                .then(resolve)
+                                .catch(reject);
+                        })
+                        .catch(() => {
+                            session.clear();
+                            reject(
+                                new Error(
+                                    "Session expired. Please log in again."
+                                )
+                            );
+                        });
+                } else {
+                    // Parse error response
+                    try {
+                        const errorBody = JSON.parse(xhr.responseText);
+                        const message =
+                            errorBody?.message ||
+                            `Upload failed: ${xhr.status}`;
+                        reject(new Error(message));
+                    } catch {
+                        reject(new Error(`Upload failed: ${xhr.statusText}`));
+                    }
+                }
+            });
+
+            xhr.addEventListener("error", () => {
+                reject(new Error("Network error during upload"));
+            });
+
+            xhr.addEventListener("abort", () => {
+                reject(new Error("Upload cancelled"));
+            });
+
+            xhr.open("POST", url);
+            xhr.withCredentials = true;
+            xhr.setRequestHeader(
+                "x-device-fingerprint",
+                this.deviceFingerprint
+            );
+
+            const token = session.getAccessToken();
+            if (token) {
+                xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+            }
+
+            xhr.send(formData);
+        });
+    }
+
     patch<T>(path: string, body?: unknown, options?: RequestOptions) {
         return this.request<T>("PATCH", path, body, options);
     }

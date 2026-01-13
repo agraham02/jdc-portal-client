@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
     Dialog,
     DialogContent,
@@ -22,8 +22,9 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { HrDocumentsService } from "@/lib/services/file";
-import { HRLinkCategory } from "@/lib/types/file";
+import { HrCategory } from "@/lib/types/file";
 import { Switch } from "@/components/ui/switch";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface CreateHrLinkDialogProps {
     open: boolean;
@@ -35,23 +36,52 @@ export function CreateHrLinkDialog({
     open,
     onOpenChange,
     onSuccess,
-}: CreateHrLinkDialogProps) {
+}: Readonly<CreateHrLinkDialogProps>) {
     const [submitting, setSubmitting] = useState(false);
     const [title, setTitle] = useState("");
     const [url, setUrl] = useState("");
     const [description, setDescription] = useState("");
-    const [category, setCategory] = useState<string>(HRLinkCategory.OTHER);
-    const [sortOrder, setSortOrder] = useState("0");
-    const [tags, setTags] = useState("");
+    const [category, setCategory] = useState<string>("");
     const [isPublic, setIsPublic] = useState(false);
+    const [categories, setCategories] = useState<HrCategory[]>([]);
+    const [loadingCategories, setLoadingCategories] = useState(false);
+
+    // Fetch categories when dialog opens
+    useEffect(() => {
+        if (!open) return;
+
+        let cancelled = false;
+        setLoadingCategories(true);
+
+        HrDocumentsService.getCategories({ isActive: true })
+            .then((res) => {
+                if (cancelled) return;
+                setCategories(res.categories);
+                // Set default category if available (use _id now)
+                // Using functional update to avoid stale closure and dependency warning
+                if (res.categories.length > 0) {
+                    setCategory((prev) => {
+                        if (prev) return prev; // Keep existing selection
+                        const otherCat = res.categories.find(
+                            (c) => c.slug === "other"
+                        );
+                        return otherCat?._id || res.categories[0]._id;
+                    });
+                }
+            })
+            .catch((err) => !cancelled && console.error(err))
+            .finally(() => !cancelled && setLoadingCategories(false));
+
+        return () => {
+            cancelled = true;
+        };
+    }, [open]);
 
     const resetForm = () => {
         setTitle("");
         setUrl("");
         setDescription("");
-        setCategory(HRLinkCategory.OTHER);
-        setSortOrder("0");
-        setTags("");
+        setCategory("");
         setIsPublic(false);
     };
 
@@ -83,11 +113,6 @@ export function CreateHrLinkDialog({
                 url: url.trim(),
                 description: description.trim() || undefined,
                 category: category,
-                sortOrder: parseInt(sortOrder, 10) || 0,
-                tags: tags
-                    .split(",")
-                    .map((t) => t.trim())
-                    .filter(Boolean),
                 isPublic: isPublic,
             });
 
@@ -146,32 +171,31 @@ export function CreateHrLinkDialog({
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="category">Category</Label>
-                        <Select value={category} onValueChange={setCategory}>
-                            <SelectTrigger id="category">
-                                <SelectValue placeholder="Select category" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value={HRLinkCategory.PAYROLL}>
-                                    Payroll
-                                </SelectItem>
-                                <SelectItem value={HRLinkCategory.BENEFITS}>
-                                    Benefits
-                                </SelectItem>
-                                <SelectItem value={HRLinkCategory.TRAINING}>
-                                    Training
-                                </SelectItem>
-                                <SelectItem value={HRLinkCategory.POLICY}>
-                                    Policy
-                                </SelectItem>
-                                <SelectItem value={HRLinkCategory.DIRECTORY}>
-                                    Directory
-                                </SelectItem>
-                                <SelectItem value={HRLinkCategory.OTHER}>
-                                    Other
-                                </SelectItem>
-                            </SelectContent>
-                        </Select>
+                        <Label htmlFor="category">
+                            Category <span className="text-red-500">*</span>
+                        </Label>
+                        {loadingCategories ? (
+                            <Skeleton className="h-10 w-full" />
+                        ) : (
+                            <Select
+                                value={category}
+                                onValueChange={setCategory}
+                            >
+                                <SelectTrigger id="category">
+                                    <SelectValue placeholder="Select category" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {categories.map((cat) => (
+                                        <SelectItem
+                                            key={cat._id}
+                                            value={cat._id}
+                                        >
+                                            {cat.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        )}
                     </div>
 
                     <div className="space-y-2">
@@ -186,40 +210,15 @@ export function CreateHrLinkDialog({
                         />
                     </div>
 
-                    <div className="space-y-2">
-                        <Label htmlFor="sortOrder">Sort Order (0-999)</Label>
-                        <Input
-                            id="sortOrder"
-                            type="number"
-                            min="0"
-                            max="999"
-                            value={sortOrder}
-                            onChange={(e) => setSortOrder(e.target.value)}
-                            placeholder="0"
-                        />
-                        <p className="text-xs text-muted-foreground">
-                            Lower numbers appear first
-                        </p>
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label htmlFor="tags">Tags (comma-separated)</Label>
-                        <Input
-                            id="tags"
-                            value={tags}
-                            onChange={(e) => setTags(e.target.value)}
-                            placeholder="payroll, monthly, important"
-                        />
-                    </div>
-
                     <div className="flex items-center justify-between rounded-lg border p-4">
                         <div className="space-y-0.5">
                             <Label htmlFor="isPublic" className="font-medium">
                                 Public Access
                             </Label>
                             <p className="text-sm text-muted-foreground">
-                                Make this link visible to all users. If disabled,
-                                only users with FILE_READ permission can see it.
+                                Make this link visible to all users. If
+                                disabled, only users with HR_DOCUMENT_READ
+                                permission can see it.
                             </p>
                         </div>
                         <Switch

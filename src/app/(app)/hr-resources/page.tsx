@@ -10,8 +10,6 @@ import { FileText, Clock, Download, Link as LinkIcon } from "lucide-react";
 import { HrDocumentsTable } from "@/components/documents/HrDocumentsTable";
 import { HrLinksTable } from "@/components/documents/HrLinksTable";
 
-// TODO: update page to align with new isPublic logic structure
-
 export default function HRResourcesPage() {
     const [activeTab, setActiveTab] = useState<"documents" | "links">(
         "documents"

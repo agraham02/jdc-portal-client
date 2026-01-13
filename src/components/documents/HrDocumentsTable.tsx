@@ -36,6 +36,8 @@ import { format } from "date-fns";
 import { Can } from "@/components/auth/Can";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 import { formatBytes } from "@/lib/utils/formatters";
+import { downloadDocument } from "@/lib/utils/document-actions";
+import { DocumentPreviewModal } from "./DocumentPreviewModal";
 import Link from "next/link";
 
 type SortDir = "asc" | "desc";
@@ -51,6 +53,9 @@ export function HrDocumentsTable() {
     const [search, setSearch] = useState("");
     const [sortBy, setSortBy] = useState("createdAt");
     const [sortOrder, setSortOrder] = useState<SortDir>("desc");
+    const [previewDocument, setPreviewDocument] = useState<HRDocument | null>(
+        null
+    );
 
     const load = async () => {
         setLoading(true);
@@ -84,27 +89,11 @@ export function HrDocumentsTable() {
     }, [page, limit, search, sortBy, sortOrder]);
 
     const onDownload = async (file: HRDocument) => {
-        try {
-            await HrDocumentsService.triggerDownload(
-                file._id,
-                file.originalName
-            );
-            toast.success("Download started");
-        } catch {
-            toast.error("Download failed");
-        }
+        await downloadDocument(file._id, file.originalName);
     };
 
-    const onView = async (file: HRDocument) => {
-        try {
-            const blob = await HrDocumentsService.downloadFile(file._id);
-            const url = window.URL.createObjectURL(blob);
-            window.open(url, "_blank");
-            // Clean up after a delay to ensure the new tab has loaded the blob
-            setTimeout(() => window.URL.revokeObjectURL(url), 1000);
-        } catch {
-            toast.error("Failed to open document");
-        }
+    const onView = (file: HRDocument) => {
+        setPreviewDocument(file);
     };
 
     const onDelete = async (file: HRDocument) => {
@@ -118,7 +107,7 @@ export function HrDocumentsTable() {
         }
     };
 
-    const allowedTypes = [
+    const allowedTypes = new Set([
         "application/pdf",
         "application/msword",
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -126,12 +115,12 @@ export function HrDocumentsTable() {
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "image/png",
         "image/jpeg",
-    ];
+    ]);
     const maxBytes = 100 * 1024 * 1024; // 100MB
 
     const onReplace = async (file: HRDocument, picked: File | null) => {
         if (!picked) return;
-        if (!allowedTypes.includes(picked.type)) {
+        if (!allowedTypes.has(picked.type)) {
             toast.error("Unsupported file type");
             return;
         }
@@ -171,7 +160,7 @@ export function HrDocumentsTable() {
                         value={`${limit}`}
                         onValueChange={(v) => {
                             setPage(1);
-                            setLimit(parseInt(v, 10));
+                            setLimit(Number.parseInt(v, 10));
                         }}
                     >
                         <SelectTrigger className="w-[120px]">
@@ -261,7 +250,7 @@ export function HrDocumentsTable() {
                     <TableBody>
                         {loading &&
                             Array.from({ length: 5 }).map((_, i) => (
-                                <TableRow key={i}>
+                                <TableRow key={`skeleton-${String(i)}`}>
                                     <TableCell colSpan={6}>
                                         <Skeleton className="h-6 w-full" />
                                     </TableCell>
@@ -472,6 +461,19 @@ export function HrDocumentsTable() {
                     </div>
                 </div>
             </div>
+
+            {/* Document Preview Modal */}
+            {previewDocument && (
+                <DocumentPreviewModal
+                    open={!!previewDocument}
+                    onOpenChange={(open) => !open && setPreviewDocument(null)}
+                    documentId={previewDocument._id}
+                    filename={previewDocument.originalName}
+                    mimeType={previewDocument.mimetype}
+                    fileSize={previewDocument.size}
+                    description={previewDocument.description}
+                />
+            )}
         </div>
     );
 }
