@@ -258,7 +258,7 @@ export class FileService {
 // HR Documents service for managing HR documents and links
 export interface HrDocumentMetadata {
     description?: string;
-    tags?: string[];
+    category?: string;
     isPublic?: boolean;
 }
 
@@ -276,9 +276,8 @@ export class HrDocumentsService {
         if (metadata.description) {
             formData.append("description", metadata.description);
         }
-        if (metadata.tags && metadata.tags.length > 0) {
-            // Backend expects tags as array items
-            metadata.tags.forEach((tag) => formData.append("tags", tag));
+        if (metadata.category) {
+            formData.append("category", metadata.category);
         }
         if (metadata.isPublic !== undefined) {
             formData.append("isPublic", metadata.isPublic.toString());
