@@ -24,17 +24,18 @@ export interface DashboardStats {
  * Activity trend data point for charts
  */
 export interface ActivityTrendPoint {
+    name: string; // Day label from API (e.g., "Mon", "Tue")
     date: string;
-    newUsers: number;
-    newVendors: number;
-    newContracts: number;
+    users: number;
+    vendors: number;
+    contracts: number;
 }
 
 /**
  * Activity trends response from the API
  */
 export interface ActivityTrendsResponse {
-    data: ActivityTrendPoint[];
+    trends: ActivityTrendPoint[];
     period: {
         start: string;
         end: string;

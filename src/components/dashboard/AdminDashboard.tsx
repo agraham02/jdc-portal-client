@@ -25,6 +25,7 @@ import {
     ResponsiveContainer,
 } from "recharts";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { BaseDashboardCard } from "./BaseDashboardCard";
 import {
     AdminService,
@@ -86,16 +87,8 @@ interface ActivityChartProps {
 }
 
 function ActivityChart({ data, isLoading }: ActivityChartProps) {
-    // Transform data for the chart - use short day names
-    const chartData =
-        data?.map((point) => ({
-            name: new Date(point.date).toLocaleDateString("en-US", {
-                weekday: "short",
-            }),
-            users: point.newUsers,
-            vendors: point.newVendors,
-            contracts: point.newContracts,
-        })) ?? [];
+    // Use data directly from API - no transformation needed
+    const chartData = data ?? [];
 
     if (isLoading) {
         return (
@@ -103,9 +96,7 @@ function ActivityChart({ data, isLoading }: ActivityChartProps) {
                 title="Activity Trends"
                 className="lg:col-span-2"
             >
-                <div className="flex h-64 items-center justify-center">
-                    <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
+                <Skeleton className="h-64 w-full" />
             </BaseDashboardCard>
         );
     }
@@ -118,8 +109,12 @@ function ActivityChart({ data, isLoading }: ActivityChartProps) {
             >
                 <div className="flex h-64 flex-col items-center justify-center text-center">
                     <Activity className="mb-2 h-12 w-12 text-muted-foreground/50" />
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm font-medium text-muted-foreground">
                         No activity data available
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                        Activity will appear once users, vendors, or contracts
+                        are created
                     </p>
                 </div>
             </BaseDashboardCard>
@@ -141,6 +136,8 @@ function ActivityChart({ data, isLoading }: ActivityChartProps) {
                     <AreaChart
                         data={chartData}
                         margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                        aria-label="Activity trends showing new users, vendors, and contracts over the last 7 days"
+                        role="img"
                     >
                         <defs>
                             <linearGradient
@@ -170,12 +167,30 @@ function ActivityChart({ data, isLoading }: ActivityChartProps) {
                             >
                                 <stop
                                     offset="5%"
-                                    stopColor="#3b82f6"
+                                    stopColor="hsl(var(--chart-2))"
                                     stopOpacity={0.3}
                                 />
                                 <stop
                                     offset="95%"
-                                    stopColor="#3b82f6"
+                                    stopColor="hsl(var(--chart-2))"
+                                    stopOpacity={0}
+                                />
+                            </linearGradient>
+                            <linearGradient
+                                id="colorContracts"
+                                x1="0"
+                                y1="0"
+                                x2="0"
+                                y2="1"
+                            >
+                                <stop
+                                    offset="5%"
+                                    stopColor="hsl(var(--chart-3))"
+                                    stopOpacity={0.3}
+                                />
+                                <stop
+                                    offset="95%"
+                                    stopColor="hsl(var(--chart-3))"
                                     stopOpacity={0}
                                 />
                             </linearGradient>
@@ -211,10 +226,18 @@ function ActivityChart({ data, isLoading }: ActivityChartProps) {
                         <Area
                             type="monotone"
                             dataKey="vendors"
-                            stroke="#3b82f6"
+                            stroke="hsl(var(--chart-2))"
                             fillOpacity={1}
                             fill="url(#colorVendors)"
                             name="Vendors"
+                        />
+                        <Area
+                            type="monotone"
+                            dataKey="contracts"
+                            stroke="hsl(var(--chart-3))"
+                            fillOpacity={1}
+                            fill="url(#colorContracts)"
+                            name="Contracts"
                         />
                     </AreaChart>
                 </ResponsiveContainer>
@@ -240,10 +263,7 @@ function StatsHeader({
         return (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {[...Array(4)].map((_, i) => (
-                    <div
-                        key={i}
-                        className="h-24 animate-pulse rounded-xl bg-muted"
-                    />
+                    <Skeleton key={i} className="h-24 rounded-xl" />
                 ))}
             </div>
         );
@@ -305,7 +325,7 @@ function StatsHeader({
                     icon={<Clock className="h-6 w-6" />}
                     label="Pending Approvals"
                     value={stats?.pendingApprovals ?? 0}
-                    href="/admin/approvals"
+                    href="/vendors?status=Pending"
                     colorClass="bg-amber-500/10 text-amber-600 dark:text-amber-400"
                 />
             </div>
@@ -329,7 +349,7 @@ function QuickActionsCard() {
         {
             label: "Approve Vendors",
             description: "Review pending vendor registrations",
-            href: "/admin/approvals",
+            href: "/vendors?status=Pending",
             icon: <CheckCircle2 className="h-5 w-5" />,
             variant: "success",
             permission: "vendor:approve",
@@ -443,10 +463,7 @@ function SystemHealthCard() {
             <BaseDashboardCard title="System Health">
                 <div className="space-y-3">
                     {[...Array(2)].map((_, i) => (
-                        <div
-                            key={i}
-                            className="h-12 animate-pulse rounded-lg bg-muted"
-                        />
+                        <Skeleton key={i} className="h-12 rounded-lg" />
                     ))}
                 </div>
             </BaseDashboardCard>
@@ -499,10 +516,7 @@ function RecentActivityCard({ data, isLoading }: RecentActivityCardProps) {
             >
                 <div className="space-y-3">
                     {[...Array(5)].map((_, i) => (
-                        <div
-                            key={i}
-                            className="h-12 animate-pulse rounded-lg bg-muted"
-                        />
+                        <Skeleton key={i} className="h-12 rounded-lg" />
                     ))}
                 </div>
             </BaseDashboardCard>
@@ -517,8 +531,11 @@ function RecentActivityCard({ data, isLoading }: RecentActivityCardProps) {
             >
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                     <Activity className="mb-2 h-12 w-12 text-muted-foreground/50" />
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm font-medium text-muted-foreground">
                         No recent activity
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                        System actions will be logged here
                     </p>
                 </div>
             </BaseDashboardCard>
@@ -566,23 +583,38 @@ function RecentActivityCard({ data, isLoading }: RecentActivityCardProps) {
 export function AdminDashboard() {
     const {
         data: stats,
-        error,
+        error: statsError,
         isLoading,
         mutate,
         isValidating,
     } = useSWR("/admin-stats", () => AdminService.getDashboardStats());
 
     // Fetch activity trends for the chart
-    const { data: activityTrends, isLoading: isLoadingTrends } = useSWR(
-        "/admin-activity-trends",
-        () => AdminService.getActivityTrends(7)
+    const {
+        data: activityTrends,
+        error: trendsError,
+        isLoading: isLoadingTrends,
+        mutate: mutateActivityTrends,
+    } = useSWR("/admin-activity-trends", () =>
+        AdminService.getActivityTrends(7)
     );
 
     // Fetch recent activity
-    const { data: recentActivity, isLoading: isLoadingActivity } = useSWR(
-        "/admin-recent-activity",
-        () => AdminService.getRecentActivity(8)
+    const {
+        data: recentActivity,
+        error: activityError,
+        isLoading: isLoadingActivity,
+        mutate: mutateRecentActivity,
+    } = useSWR("/admin-recent-activity", () =>
+        AdminService.getRecentActivity(8)
     );
+
+    // Refresh all dashboard data
+    const handleRefreshAll = () => {
+        mutate();
+        mutateActivityTrends();
+        mutateRecentActivity();
+    };
 
     return (
         <div className="space-y-6">
@@ -590,13 +622,13 @@ export function AdminDashboard() {
             <StatsHeader
                 stats={stats}
                 isLoading={isLoading}
-                onRefresh={() => mutate()}
+                onRefresh={handleRefreshAll}
                 isRefreshing={isValidating}
             />
 
-            {error && (
+            {(statsError || trendsError || activityError) && (
                 <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-                    Failed to load dashboard stats. Please try refreshing.
+                    Failed to load some dashboard data. Please try refreshing.
                 </div>
             )}
 
@@ -604,7 +636,7 @@ export function AdminDashboard() {
             <div className="grid gap-6 lg:grid-cols-3">
                 {/* Activity chart takes 2 columns */}
                 <ActivityChart
-                    data={activityTrends?.data}
+                    data={activityTrends?.trends}
                     isLoading={isLoadingTrends}
                 />
 

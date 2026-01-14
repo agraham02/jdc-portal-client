@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import {
     GenericTable,
     type GenericTableConfig,
@@ -33,6 +34,7 @@ function getPopulatedUser(vendor: Vendor): User | null {
 
 export function VendorsTable() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { hasAny } = useAuthz();
     const canRead = hasAny([P.VENDOR_READ, P.VENDOR_READ_ALL]);
     const canUpdate = hasAny([P.VENDOR_UPDATE]);
@@ -42,6 +44,9 @@ export function VendorsTable() {
     const [loading, setLoading] = useState(true);
     const [vendors, setVendors] = useState<Vendor[]>([]);
     const [totalVendors, setTotalVendors] = useState(0);
+
+    // Get initial status from URL query params
+    const initialStatus = searchParams.get("status") || undefined;
 
     const filterDefinitions = useMemo<GenericTableConfig<Vendor>["filters"]>(
         () => [
@@ -71,6 +76,7 @@ export function VendorsTable() {
         filters: filterDefinitions,
         defaultPageSize: 25,
         enablePagination: true,
+        defaultFilters: initialStatus ? { status: initialStatus } : undefined,
     } as GenericTableConfig<Vendor>);
 
     const {
@@ -257,9 +263,7 @@ export function VendorsTable() {
                                   const user = getPopulatedUser(vendor);
                                   return (
                                       !user?.status ||
-                                      UserStatusHelper.isRestricted(
-                                          user.status
-                                      )
+                                      UserStatusHelper.isRestricted(user.status)
                                   );
                               },
                           },
