@@ -1,5 +1,10 @@
 import { z } from "zod";
 import { PASSWORD_MIN_LENGTH } from "@/lib/constants/auth";
+import {
+    ADDRESS_CONSTRAINTS,
+    VALIDATION_PATTERNS,
+    VALIDATION_MESSAGES,
+} from "@/lib/constants/validation";
 
 export const loginSchema = z.object({
     email: z.string().email("Invalid email address"),
@@ -8,14 +13,91 @@ export const loginSchema = z.object({
 
 export type LoginFormData = z.infer<typeof loginSchema>;
 
-// Address schema for reuse
-export const addressSchema = z.object({
-    line1: z.string().min(1, "Address line 1 is required"),
-    line2: z.string().optional(),
-    city: z.string().min(1, "City is required"),
-    state: z.string().min(2, "State is required"),
-    zip: z.string().min(5, "ZIP code must be at least 5 characters"),
+// Base address schema with field-level validation
+const baseAddressSchema = z.object({
+    line1: z
+        .string()
+        .max(
+            ADDRESS_CONSTRAINTS.LINE1_MAX_LENGTH,
+            VALIDATION_MESSAGES.ADDRESS_LINE1_MAX
+        )
+        .transform((val) => val.trim()),
+    line2: z
+        .string()
+        .max(
+            ADDRESS_CONSTRAINTS.LINE2_MAX_LENGTH,
+            VALIDATION_MESSAGES.ADDRESS_LINE2_MAX
+        )
+        .optional()
+        .transform((val) => val?.trim()),
+    city: z
+        .string()
+        .max(ADDRESS_CONSTRAINTS.CITY_MAX_LENGTH, VALIDATION_MESSAGES.CITY_MAX)
+        .transform((val) => val.trim()),
+    state: z
+        .string()
+        .length(
+            ADDRESS_CONSTRAINTS.STATE_LENGTH,
+            VALIDATION_MESSAGES.STATE_FORMAT
+        )
+        .regex(VALIDATION_PATTERNS.STATE_CODE, VALIDATION_MESSAGES.STATE_FORMAT)
+        .transform((val) => val.toUpperCase().trim()),
+    zip: z
+        .string()
+        .max(ADDRESS_CONSTRAINTS.ZIP_MAX_LENGTH, VALIDATION_MESSAGES.ZIP_MAX)
+        .regex(VALIDATION_PATTERNS.ZIP_CODE, VALIDATION_MESSAGES.ZIP_FORMAT)
+        .transform((val) => val.trim()),
 });
+
+/**
+ * Address schema with "all or nothing" validation
+ * If any field is filled, all required fields (line1, city, state, zip) must be filled
+ * line2 is always optional
+ */
+export const addressSchema = baseAddressSchema
+    .partial()
+    .superRefine((data, ctx) => {
+        // Compute once for efficiency
+        const hasAnyValue = Boolean(
+            data.line1 || data.city || data.state || data.zip
+        );
+
+        // If no fields filled, address is optional - pass validation
+        if (!hasAnyValue) return;
+
+        // If ANY field is filled, require core fields (line2 still optional)
+        if (!data.line1) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: VALIDATION_MESSAGES.ADDRESS_LINE1_REQUIRED,
+                path: ["line1"],
+            });
+        }
+
+        if (!data.city) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: VALIDATION_MESSAGES.CITY_REQUIRED,
+                path: ["city"],
+            });
+        }
+
+        if (!data.state) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: VALIDATION_MESSAGES.STATE_REQUIRED,
+                path: ["state"],
+            });
+        }
+
+        if (!data.zip) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: VALIDATION_MESSAGES.ZIP_REQUIRED,
+                path: ["zip"],
+            });
+        }
+    });
 
 // Password policy used across registration, reset, and change flows
 export const passwordComplexity = z

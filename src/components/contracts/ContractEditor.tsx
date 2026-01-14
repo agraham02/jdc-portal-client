@@ -31,6 +31,7 @@ import {
     getDocumentFilename,
 } from "@/lib/types/contracts";
 import { FileUpload } from "@/components/common/FileUpload";
+import { FileUploadCategory } from "@/lib/constants/file-upload";
 import { PlusIcon, TrashIcon, FileText, Download } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -691,18 +692,7 @@ export function ContractEditor({
                                 </p>
                             )}
                             <FileUpload
-                                acceptedFileTypes={[
-                                    ".pdf",
-                                    ".doc",
-                                    ".docx",
-                                    ".xls",
-                                    ".xlsx",
-                                    ".png",
-                                    ".jpg",
-                                    ".jpeg",
-                                ]}
-                                maxFiles={5}
-                                maxFileSizeMB={5}
+                                category={FileUploadCategory.CONTRACT}
                                 disabled={isSubmitting}
                                 uploadingFiles={files.map((file) => ({
                                     file,

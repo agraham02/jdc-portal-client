@@ -30,32 +30,14 @@ import {
     FileUpload,
     type UploadingFileMetadata,
 } from "@/components/common/FileUpload";
+import {
+    FileUploadCategory,
+    getAllowedFileTypes,
+    getFileSizeLimitMB,
+} from "@/lib/constants/file-upload";
 import { toast } from "sonner";
 import { Upload, AlertCircle, FileIcon, ArrowLeft } from "lucide-react";
 import Link from "next/link";
-
-const ALLOWED_TYPES = [
-    "application/pdf",
-    "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "application/vnd.ms-excel",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "image/png",
-    "image/jpeg",
-    "text/plain",
-];
-
-const TYPE_LABELS: Record<string, string> = {
-    "application/pdf": "PDF",
-    "application/msword": "DOC",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-        "DOCX",
-    "application/vnd.ms-excel": "XLS",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "XLSX",
-    "image/png": "PNG",
-    "image/jpeg": "JPEG",
-    "text/plain": "TXT",
-};
 
 export default function HRUploadPage() {
     const [uploadingFiles, setUploadingFiles] = useState<
@@ -113,6 +95,15 @@ export default function HRUploadPage() {
                         )
                     );
                 }
+            );
+
+            // Mark upload as complete
+            setUploadingFiles((prev) =>
+                prev.map((uf) =>
+                    uf.file === file
+                        ? { ...uf, progress: 100, uploadComplete: true }
+                        : uf
+                )
             );
 
             toast.success("HR document uploaded successfully!");
@@ -220,13 +211,13 @@ export default function HRUploadPage() {
                                     <div className="space-y-2">
                                         <Label>File *</Label>
                                         <FileUpload
+                                            category={
+                                                FileUploadCategory.HR_DOCUMENT
+                                            }
                                             uploadingFiles={uploadingFiles}
                                             onUploadingFilesChange={
                                                 setUploadingFiles
                                             }
-                                            acceptedFileTypes={ALLOWED_TYPES}
-                                            maxFiles={1}
-                                            maxFileSizeMB={100}
                                         />
                                     </div>
 
@@ -367,17 +358,19 @@ export default function HRUploadPage() {
                                         Supported formats:
                                     </p>
                                     <div className="flex flex-wrap gap-1">
-                                        {Object.values(TYPE_LABELS).map(
-                                            (label) => (
-                                                <Badge
-                                                    key={label}
-                                                    variant="secondary"
-                                                    className="text-xs"
-                                                >
-                                                    {label}
-                                                </Badge>
-                                            )
-                                        )}
+                                        {getAllowedFileTypes(
+                                            FileUploadCategory.HR_DOCUMENT
+                                        ).extensions.map((ext) => (
+                                            <Badge
+                                                key={ext}
+                                                variant="secondary"
+                                                className="text-xs"
+                                            >
+                                                {ext
+                                                    .toUpperCase()
+                                                    .replace(".", "")}
+                                            </Badge>
+                                        ))}
                                     </div>
                                 </div>
 
@@ -386,7 +379,10 @@ export default function HRUploadPage() {
                                         Maximum size:
                                     </p>
                                     <p className="text-sm text-muted-foreground">
-                                        100MB per file
+                                        {getFileSizeLimitMB(
+                                            FileUploadCategory.HR_DOCUMENT
+                                        )}
+                                        MB per file
                                     </p>
                                 </div>
 

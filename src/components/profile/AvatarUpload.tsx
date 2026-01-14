@@ -19,6 +19,12 @@ import { Camera, Trash2, Loader2, Upload } from "lucide-react";
 import { AuthService } from "@/lib/services/auth";
 import { apiToast } from "@/lib/utils/toast-helpers";
 import { cn } from "@/lib/utils";
+import {
+    FileUploadCategory,
+    isValidFileSize,
+    isValidFileType,
+    getFileSizeLimitMB,
+} from "@/lib/constants/file-upload";
 
 interface AvatarUploadProps {
     profilePhotoUrl?: string;
@@ -32,7 +38,7 @@ export function AvatarUpload({
     firstName,
     lastName,
     onAvatarChange,
-}: AvatarUploadProps) {
+}: Readonly<AvatarUploadProps>) {
     const [isUploading, setIsUploading] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -47,24 +53,26 @@ export function AvatarUpload({
         const file = event.target.files?.[0];
         if (!file) return;
 
-        // Validate file type
-        const allowedTypes = [
-            "image/jpeg",
-            "image/png",
-            "image/gif",
-            "image/webp",
-        ];
-        if (!allowedTypes.includes(file.type)) {
+        // Validate file type using centralized validation
+        if (
+            !isValidFileType(
+                file.name,
+                file.type,
+                FileUploadCategory.PROFILE_IMAGE
+            )
+        ) {
             apiToast.error(
                 "Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed."
             );
             return;
         }
 
-        // Validate file size (5MB max)
-        const maxSize = 5 * 1024 * 1024;
-        if (file.size > maxSize) {
-            apiToast.error("File size exceeds 5MB limit.");
+        // Validate file size using centralized validation
+        if (!isValidFileSize(file.size, FileUploadCategory.PROFILE_IMAGE)) {
+            const maxSize = getFileSizeLimitMB(
+                FileUploadCategory.PROFILE_IMAGE
+            );
+            apiToast.error(`File size exceeds ${maxSize}MB limit.`);
             return;
         }
 

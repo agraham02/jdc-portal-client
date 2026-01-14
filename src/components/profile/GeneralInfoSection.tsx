@@ -12,31 +12,41 @@ import { User as UserIcon } from "lucide-react";
 import { useForm, Controller, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-
-// Address schema for validation
-const addressSchema = z.object({
-    line1: z.string().min(1, "Address line 1 is required"),
-    line2: z.string().optional(),
-    city: z.string().min(1, "City is required"),
-    state: z
-        .string()
-        .length(2, "State must be 2 characters")
-        .regex(/^[A-Z]{2}$/, "State must be uppercase letters"),
-    zip: z
-        .string()
-        .min(5, "ZIP code must be at least 5 characters")
-        .regex(/^[A-Za-z0-9\s-]+$/, "Invalid ZIP code format"),
-});
+import { addressSchema } from "@/lib/validations/auth";
+import { TEXT_CONSTRAINTS } from "@/lib/constants/validation";
+import { mapBackendErrorsToForm } from "@/lib/utils/error-mapping";
 
 const profileSchema = z.object({
-    firstName: z.string().min(1, "First name is required"),
-    lastName: z.string().min(1, "Last name is required"),
+    firstName: z
+        .string()
+        .min(1, "First name is required")
+        .max(
+            TEXT_CONSTRAINTS.FIRST_NAME_MAX_LENGTH,
+            `First name cannot exceed ${TEXT_CONSTRAINTS.FIRST_NAME_MAX_LENGTH} characters`
+        ),
+    lastName: z
+        .string()
+        .min(1, "Last name is required")
+        .max(
+            TEXT_CONSTRAINTS.LAST_NAME_MAX_LENGTH,
+            `Last name cannot exceed ${TEXT_CONSTRAINTS.LAST_NAME_MAX_LENGTH} characters`
+        ),
     contactEmail: z
         .string()
         .email("Invalid email")
+        .max(
+            TEXT_CONSTRAINTS.EMAIL_MAX_LENGTH,
+            `Email cannot exceed ${TEXT_CONSTRAINTS.EMAIL_MAX_LENGTH} characters`
+        )
         .optional()
         .or(z.literal("")),
-    contactPhone: z.string().optional(),
+    contactPhone: z
+        .string()
+        .max(
+            TEXT_CONSTRAINTS.PHONE_MAX_LENGTH,
+            `Phone cannot exceed ${TEXT_CONSTRAINTS.PHONE_MAX_LENGTH} characters`
+        )
+        .optional(),
     physicalAddress: addressSchema.optional(),
     mailingAddress: addressSchema.optional(),
 });
@@ -53,7 +63,7 @@ export function GeneralInfoSection({
     defaultValues,
     onSubmit,
     isSubmitting,
-}: GeneralInfoSectionProps) {
+}: Readonly<GeneralInfoSectionProps>) {
     const methods = useForm<ProfileFormData>({
         resolver: zodResolver(profileSchema),
         defaultValues,
@@ -66,6 +76,7 @@ export function GeneralInfoSection({
         formState: { errors, isDirty },
         reset,
         control,
+        setError,
     } = methods;
 
     // Keep nested address fields in sync when parent defaultValues change
@@ -73,9 +84,20 @@ export function GeneralInfoSection({
         reset(defaultValues);
     }, [defaultValues, reset]);
 
+    // Handle form submission with backend error mapping
+    const onSubmitForm = async (data: ProfileFormData) => {
+        try {
+            await onSubmit(data);
+        } catch (error) {
+            // Map backend validation errors to form fields
+            mapBackendErrorsToForm(error, setError);
+            throw error; // Re-throw to let parent handle toast
+        }
+    };
+
     return (
         <Card className="p-6">
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={handleSubmit(onSubmitForm)} className="space-y-6">
                 <div>
                     <div className="flex items-center gap-2 mb-4">
                         <UserIcon className="h-5 w-5" />
@@ -95,9 +117,22 @@ export function GeneralInfoSection({
                             First Name{" "}
                             <span className="text-destructive">*</span>
                         </Label>
-                        <Input id="firstName" {...register("firstName")} />
+                        <Input
+                            id="firstName"
+                            {...register("firstName")}
+                            maxLength={TEXT_CONSTRAINTS.FIRST_NAME_MAX_LENGTH}
+                            aria-required="true"
+                            aria-invalid={!!errors.firstName}
+                            aria-describedby={
+                                errors.firstName ? "firstName-error" : undefined
+                            }
+                        />
                         {errors.firstName && (
-                            <p className="text-sm text-destructive">
+                            <p
+                                id="firstName-error"
+                                className="text-sm text-destructive"
+                                role="alert"
+                            >
                                 {errors.firstName.message}
                             </p>
                         )}
@@ -107,9 +142,22 @@ export function GeneralInfoSection({
                             Last Name{" "}
                             <span className="text-destructive">*</span>
                         </Label>
-                        <Input id="lastName" {...register("lastName")} />
+                        <Input
+                            id="lastName"
+                            {...register("lastName")}
+                            maxLength={TEXT_CONSTRAINTS.LAST_NAME_MAX_LENGTH}
+                            aria-required="true"
+                            aria-invalid={!!errors.lastName}
+                            aria-describedby={
+                                errors.lastName ? "lastName-error" : undefined
+                            }
+                        />
                         {errors.lastName && (
-                            <p className="text-sm text-destructive">
+                            <p
+                                id="lastName-error"
+                                className="text-sm text-destructive"
+                                role="alert"
+                            >
                                 {errors.lastName.message}
                             </p>
                         )}
@@ -121,9 +169,20 @@ export function GeneralInfoSection({
                             type="email"
                             {...register("contactEmail")}
                             placeholder="personal@example.com"
+                            maxLength={TEXT_CONSTRAINTS.EMAIL_MAX_LENGTH}
+                            aria-invalid={!!errors.contactEmail}
+                            aria-describedby={
+                                errors.contactEmail
+                                    ? "contactEmail-error"
+                                    : undefined
+                            }
                         />
                         {errors.contactEmail && (
-                            <p className="text-sm text-destructive">
+                            <p
+                                id="contactEmail-error"
+                                className="text-sm text-destructive"
+                                role="alert"
+                            >
                                 {errors.contactEmail.message}
                             </p>
                         )}

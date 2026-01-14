@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import {
@@ -24,9 +24,21 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
     FileUpload,
     type UploadingFileMetadata,
 } from "@/components/common/FileUpload";
+import { FileUploadCategory } from "@/lib/constants/file-upload";
+import { TEXT_CONSTRAINTS } from "@/lib/constants/validation";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 import { useAuth } from "@/lib/contexts/auth-context";
 import { AccountType } from "@/lib/types/auth";
@@ -66,9 +78,13 @@ export default function ApplyToContractPage() {
         Map<string, UploadingFileMetadata[]>
     >(new Map());
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
+    const [documentErrors, setDocumentErrors] = useState<Map<string, string>>(
+        new Map()
+    );
     const [existingApplication, setExistingApplication] =
         useState<ExistingApplicationInfo | null>(null);
     const [isCheckingApplication, setIsCheckingApplication] = useState(true);
+    const [showCancelDialog, setShowCancelDialog] = useState(false);
 
     // Only vendors and admins (with SYSTEM_ADMIN) can apply
     const isVendor = accountType === AccountType.VENDOR;
@@ -85,7 +101,7 @@ export default function ApplyToContractPage() {
     const {
         register,
         handleSubmit,
-        formState: { errors },
+        formState: { errors, isDirty },
         reset,
     } = useForm<FormData>({
         defaultValues: {
@@ -129,6 +145,17 @@ export default function ApplyToContractPage() {
 
     // Determine if this is a resubmission
     const isResubmission = existingApplication?.canResubmit ?? false;
+
+    // Check if any files are currently uploading or not yet confirmed by server
+    const hasUploadingFiles = useMemo(() => {
+        return Array.from(documentUploads.values()).some((files) =>
+            files.some(
+                (f) =>
+                    (f.progress > 0 && f.progress < 100) ||
+                    (f.progress === 100 && f.uploadComplete !== true)
+            )
+        );
+    }, [documentUploads]);
 
     // Check if contract is open for applications
     const isOpen = contract?.status === ContractStatus.OPEN;
@@ -200,16 +227,7 @@ export default function ApplyToContractPage() {
 
     async function onSubmitForm(data: FormData) {
         const errors: string[] = [];
-
-        const FALLBACK_ALLOWED_TYPES = [
-            "application/pdf",
-            "application/msword",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            "image/jpeg",
-            "image/png",
-            "image/gif",
-        ];
-        const FALLBACK_MAX_MB = 5;
+        const newDocumentErrors = new Map<string, string>();
 
         type DocRequirement = {
             name: string;
@@ -221,51 +239,82 @@ export default function ApplyToContractPage() {
 
         const contractDocs: DocRequirement[] =
             contract?.requiredDocuments || [];
-        const docMap = new Map(contractDocs.map((doc) => [doc.name, doc]));
 
-        const validateDoc = (
-            doc: DocRequirement,
-            uploads: UploadingFileMetadata[]
-        ) => {
-            const acceptedTypes =
-                (doc.acceptedTypes && doc.acceptedTypes.length > 0
-                    ? doc.acceptedTypes
-                    : FALLBACK_ALLOWED_TYPES) || FALLBACK_ALLOWED_TYPES;
-            const maxSizeMb = doc.maxSizeMB ?? doc.maxSizeMb ?? FALLBACK_MAX_MB;
+        // Validate required documents
+        contractDocs.forEach((doc) => {
+            const uploads = documentUploads.get(doc.name) || [];
 
+            // Check 1: Required documents must have files
             if (doc.required && uploads.length === 0) {
-                errors.push(`${doc.name} is required`);
+                const errorMsg = `Please upload required document: ${doc.name}`;
+                errors.push(errorMsg);
+                newDocumentErrors.set(doc.name, errorMsg);
                 return;
             }
 
-            uploads.forEach((upload) => {
-                const file = upload.file;
-                if (!acceptedTypes.includes(file.type)) {
-                    errors.push(`${doc.name}: unsupported file type`);
-                }
-                if (file.size > maxSizeMb * 1024 * 1024) {
-                    errors.push(`${doc.name}: file exceeds ${maxSizeMb}MB`);
-                }
-            });
-        };
+            // Skip further checks if no uploads for optional docs
+            if (uploads.length === 0) return;
 
-        contractDocs.forEach((doc) => {
-            validateDoc(doc, documentUploads.get(doc.name) || []);
-        });
+            // Check 2: Files must not have upload errors
+            const filesWithErrors = uploads.filter((u) => u.error);
+            if (filesWithErrors.length > 0) {
+                const errorMsg = `Some files for "${doc.name}" have errors. Please fix or remove them.`;
+                errors.push(errorMsg);
+                newDocumentErrors.set(doc.name, errorMsg);
+                return;
+            }
 
-        // Validate any uploads for documents not defined on the contract (defensive)
-        documentUploads.forEach((uploads, docName) => {
-            if (!docMap.has(docName)) {
-                validateDoc({ name: docName, required: false }, uploads);
+            // Check 3: Files must finish uploading (not in progress) and be confirmed by server
+            const uploadingFiles = uploads.filter(
+                (u) =>
+                    (u.progress > 0 && u.progress < 100) ||
+                    (u.progress === 100 && u.uploadComplete !== true)
+            );
+            if (uploadingFiles.length > 0) {
+                const errorMsg = `Files for "${doc.name}" are still uploading. Please wait.`;
+                errors.push(errorMsg);
+                newDocumentErrors.set(doc.name, errorMsg);
+                return;
             }
         });
 
         if (errors.length > 0) {
             setValidationErrors(errors);
+            setDocumentErrors(newDocumentErrors);
+
+            // Scroll to first error - check form fields first, then file uploads
+            setTimeout(() => {
+                const firstFormError = document.querySelector(
+                    '[aria-invalid="true"]'
+                );
+                const firstUploadError =
+                    newDocumentErrors.size > 0
+                        ? document.querySelector("[data-validation-error]")
+                        : null;
+
+                const firstError = firstFormError || firstUploadError;
+
+                if (firstError) {
+                    firstError.scrollIntoView({
+                        behavior: "smooth",
+                        block: "center",
+                    });
+
+                    // Focus the element for keyboard users
+                    if (firstError instanceof HTMLElement) {
+                        firstError.focus();
+                    }
+                } else {
+                    // Fallback to top if no error element found
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                }
+            }, 100);
+
             return;
         }
 
         setValidationErrors([]);
+        setDocumentErrors(new Map());
 
         setIsSubmitting(true);
         try {
@@ -317,6 +366,19 @@ export default function ApplyToContractPage() {
     }
 
     function handleCancel() {
+        // Check if user has entered data or uploaded files
+        const hasData = documentUploads.size > 0 || isDirty;
+
+        if (hasData && !showCancelDialog) {
+            setShowCancelDialog(true);
+            return;
+        }
+
+        // Clear state and navigate
+        setDocumentUploads(new Map());
+        setValidationErrors([]);
+        setDocumentErrors(new Map());
+        reset(); // Reset form
         router.push(`/contracts/${params.id}`);
     }
 
@@ -556,20 +618,33 @@ export default function ApplyToContractPage() {
                                         required:
                                             "Proposal details are required",
                                         minLength: {
-                                            value: 10,
+                                            value: TEXT_CONSTRAINTS.PROPOSAL_MIN_LENGTH,
                                             message:
-                                                "Proposal must be at least 10 characters",
+                                                TEXT_CONSTRAINTS.PROPOSAL_MIN_LENGTH >
+                                                0
+                                                    ? `Proposal must be at least ${TEXT_CONSTRAINTS.PROPOSAL_MIN_LENGTH} characters`
+                                                    : "Proposal cannot be empty",
                                         },
                                         maxLength: {
-                                            value: 2000,
-                                            message:
-                                                "Proposal cannot exceed 2000 characters",
+                                            value: TEXT_CONSTRAINTS.PROPOSAL_MAX_LENGTH,
+                                            message: `Proposal cannot exceed ${TEXT_CONSTRAINTS.PROPOSAL_MAX_LENGTH} characters`,
                                         },
                                     })}
                                     disabled={isSubmitting}
+                                    aria-required="true"
+                                    aria-invalid={!!errors.proposal}
+                                    aria-describedby={
+                                        errors.proposal
+                                            ? "proposal-error"
+                                            : undefined
+                                    }
                                 />
                                 {errors.proposal && (
-                                    <p className="text-sm text-destructive">
+                                    <p
+                                        id="proposal-error"
+                                        className="text-sm text-destructive"
+                                        role="alert"
+                                    >
                                         {errors.proposal.message}
                                     </p>
                                 )}
@@ -600,6 +675,14 @@ export default function ApplyToContractPage() {
                                             })}
                                             disabled={isSubmitting}
                                             className="flex-1"
+                                            aria-invalid={
+                                                !!errors.proposedBudget
+                                            }
+                                            aria-describedby={
+                                                errors.proposedBudget
+                                                    ? "proposedBudget-error"
+                                                    : undefined
+                                            }
                                         />
                                     </div>
                                     <p className="text-xs text-muted-foreground">
@@ -610,7 +693,11 @@ export default function ApplyToContractPage() {
                                         )}
                                     </p>
                                     {errors.proposedBudget && (
-                                        <p className="text-sm text-destructive">
+                                        <p
+                                            id="proposedBudget-error"
+                                            className="text-sm text-destructive"
+                                            role="alert"
+                                        >
                                             {errors.proposedBudget.message}
                                         </p>
                                     )}
@@ -657,7 +744,14 @@ export default function ApplyToContractPage() {
                                         className="border-l-4 border-l-destructive"
                                     >
                                         <CardContent className="pt-6">
-                                            <div className="space-y-3">
+                                            <div
+                                                className="space-y-3"
+                                                data-validation-error={
+                                                    documentErrors.has(doc.name)
+                                                        ? "true"
+                                                        : undefined
+                                                }
+                                            >
                                                 <div className="flex items-start justify-between">
                                                     <div className="space-y-1">
                                                         <div className="flex items-center gap-2">
@@ -670,6 +764,12 @@ export default function ApplyToContractPage() {
                                                             {hasFiles && (
                                                                 <CheckCircle2 className="h-4 w-4 text-green-600" />
                                                             )}
+                                                            {!hasFiles &&
+                                                                documentErrors.has(
+                                                                    doc.name
+                                                                ) && (
+                                                                    <AlertCircle className="h-4 w-4 text-destructive" />
+                                                                )}
                                                         </div>
                                                         {doc.description && (
                                                             <p className="text-sm text-muted-foreground">
@@ -681,35 +781,43 @@ export default function ApplyToContractPage() {
                                                     </div>
                                                 </div>
                                                 <FileUpload
-                                                    acceptedFileTypes={[
-                                                        ".pdf",
-                                                        ".doc",
-                                                        ".docx",
-                                                        ".jpg",
-                                                        ".jpeg",
-                                                        ".png",
-                                                        ".gif",
-                                                        "application/pdf",
-                                                        "application/msword",
-                                                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                                                        "image/jpeg",
-                                                        "image/png",
-                                                        "image/gif",
-                                                    ]}
-                                                    maxFiles={3}
-                                                    maxFileSizeMB={5}
+                                                    category={
+                                                        FileUploadCategory.CONTRACT
+                                                    }
                                                     disabled={isSubmitting}
                                                     uploadingFiles={files}
                                                     onUploadingFilesChange={(
                                                         newFiles
-                                                    ) =>
+                                                    ) => {
                                                         updateDocumentFiles(
                                                             doc.name,
                                                             newFiles
-                                                        )
-                                                    }
+                                                        );
+                                                        // Clear error when files are added
+                                                        if (
+                                                            newFiles.length >
+                                                                0 &&
+                                                            doc.required
+                                                        ) {
+                                                            setDocumentErrors(
+                                                                (prev) => {
+                                                                    const next =
+                                                                        new Map(
+                                                                            prev
+                                                                        );
+                                                                    next.delete(
+                                                                        doc.name
+                                                                    );
+                                                                    return next;
+                                                                }
+                                                            );
+                                                        }
+                                                    }}
                                                     showUploadButton={true}
                                                     uploadButtonText="Select Files"
+                                                    validationError={documentErrors.get(
+                                                        doc.name
+                                                    )}
                                                 />
                                             </div>
                                         </CardContent>
@@ -729,7 +837,14 @@ export default function ApplyToContractPage() {
                                         className="border-l-4 border-l-blue-500"
                                     >
                                         <CardContent className="pt-6">
-                                            <div className="space-y-3">
+                                            <div
+                                                className="space-y-3"
+                                                data-validation-error={
+                                                    documentErrors.has(doc.name)
+                                                        ? "true"
+                                                        : undefined
+                                                }
+                                            >
                                                 <div className="flex items-start justify-between">
                                                     <div className="space-y-1">
                                                         <div className="flex items-center gap-2">
@@ -753,23 +868,9 @@ export default function ApplyToContractPage() {
                                                     </div>
                                                 </div>
                                                 <FileUpload
-                                                    acceptedFileTypes={[
-                                                        ".pdf",
-                                                        ".doc",
-                                                        ".docx",
-                                                        ".jpg",
-                                                        ".jpeg",
-                                                        ".png",
-                                                        ".gif",
-                                                        "application/pdf",
-                                                        "application/msword",
-                                                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                                                        "image/jpeg",
-                                                        "image/png",
-                                                        "image/gif",
-                                                    ]}
-                                                    maxFiles={3}
-                                                    maxFileSizeMB={5}
+                                                    category={
+                                                        FileUploadCategory.CONTRACT
+                                                    }
                                                     disabled={isSubmitting}
                                                     uploadingFiles={files}
                                                     onUploadingFilesChange={(
@@ -782,6 +883,9 @@ export default function ApplyToContractPage() {
                                                     }
                                                     showUploadButton={true}
                                                     uploadButtonText="Select Files"
+                                                    validationError={documentErrors.get(
+                                                        doc.name
+                                                    )}
                                                 />
                                             </div>
                                         </CardContent>
@@ -810,19 +914,49 @@ export default function ApplyToContractPage() {
                         >
                             Cancel
                         </Button>
-                        <Button type="submit" disabled={isSubmitting}>
-                            {(() => {
-                                if (isSubmitting) {
-                                    return isResubmission
-                                        ? "Resubmitting..."
-                                        : "Submitting...";
-                                }
-                                return isResubmission
-                                    ? "Resubmit Application"
-                                    : "Submit Application";
-                            })()}
+                        <Button
+                            type="submit"
+                            disabled={isSubmitting || hasUploadingFiles}
+                        >
+                            {hasUploadingFiles
+                                ? "Uploading files..."
+                                : isSubmitting
+                                ? "Submitting..."
+                                : "Submit Application"}
                         </Button>
                     </div>
+
+                    {/* Cancel Confirmation Dialog */}
+                    <AlertDialog
+                        open={showCancelDialog}
+                        onOpenChange={setShowCancelDialog}
+                    >
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>
+                                    Discard Application?
+                                </AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    You have unsaved changes. Are you sure you
+                                    want to cancel? All your progress will be
+                                    lost.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>
+                                    Continue Editing
+                                </AlertDialogCancel>
+                                <AlertDialogAction
+                                    onClick={() => {
+                                        setShowCancelDialog(false);
+                                        handleCancel();
+                                    }}
+                                >
+                                    Discard Changes
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
                 </form>
             </main>
         </ProtectedRoute>

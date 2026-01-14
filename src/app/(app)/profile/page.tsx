@@ -60,13 +60,44 @@ export default function ProfilePage() {
 
     const handleProfileSubmit = async (data: ProfileFormData) => {
         try {
+            // Convert partial address to complete Address if all required fields present
+            // The Zod schema validates "all or nothing", so if any field exists, all required do
+            const toAddress = (
+                addr: typeof data.physicalAddress
+            ):
+                | {
+                      line1: string;
+                      line2?: string;
+                      city: string;
+                      state: string;
+                      zip: string;
+                  }
+                | undefined => {
+                if (
+                    !addr ||
+                    !addr.line1 ||
+                    !addr.city ||
+                    !addr.state ||
+                    !addr.zip
+                ) {
+                    return undefined;
+                }
+                return {
+                    line1: addr.line1,
+                    line2: addr.line2,
+                    city: addr.city,
+                    state: addr.state,
+                    zip: addr.zip,
+                };
+            };
+
             await AuthService.updateProfile({
                 firstName: data.firstName,
                 lastName: data.lastName,
                 contactEmail: data.contactEmail || undefined,
                 contactPhone: data.contactPhone || undefined,
-                physicalAddress: data.physicalAddress,
-                mailingAddress: data.mailingAddress,
+                physicalAddress: toAddress(data.physicalAddress),
+                mailingAddress: toAddress(data.mailingAddress),
             });
             apiToast.success("Profile updated successfully");
             await refresh();
