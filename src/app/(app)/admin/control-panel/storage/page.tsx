@@ -1,9 +1,31 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect, useState, useMemo } from "react";
+import {
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+    CardDescription,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import {
     HardDrive,
     Trash2,
@@ -16,6 +38,15 @@ import {
     Home,
     ChevronLeft,
     Package,
+    Image as ImageIcon,
+    FileCode,
+    File,
+    Copy,
+    Check,
+    X,
+    Cloud,
+    Globe,
+    CheckCircle2,
 } from "lucide-react";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { PermissionName as P } from "@/lib/constants/permission-names";
@@ -45,6 +76,57 @@ interface StorageStats {
     region: string;
 }
 
+// Get file icon based on extension
+function getFileIcon(key: string) {
+    const ext = key.split(".").pop()?.toLowerCase() || "";
+    if (["jpg", "jpeg", "png", "gif", "webp", "svg", "ico"].includes(ext)) {
+        return <ImageIcon className="h-4 w-4 text-purple-500" />;
+    }
+    if (["pdf"].includes(ext)) {
+        return <FileText className="h-4 w-4 text-red-500" />;
+    }
+    if (["json", "js", "ts", "tsx", "jsx", "html", "css"].includes(ext)) {
+        return <FileCode className="h-4 w-4 text-blue-500" />;
+    }
+    return <File className="h-4 w-4 text-gray-500" />;
+}
+
+// Stats card component
+function StatCard({
+    title,
+    value,
+    icon: Icon,
+    description,
+}: {
+    title: string;
+    value: string | number;
+    icon: React.ElementType;
+    description?: string;
+}) {
+    return (
+        <Card>
+            <CardContent className="p-6">
+                <div className="flex items-start justify-between">
+                    <div>
+                        <p className="text-sm font-medium text-muted-foreground">
+                            {title}
+                        </p>
+                        <p className="text-2xl font-bold mt-1">{value}</p>
+                        {description && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                                {description}
+                            </p>
+                        )}
+                    </div>
+                    <div className="p-3 rounded-lg bg-primary/10">
+                        <Icon className="h-5 w-5 text-primary" />
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
 function StorageManagerDashboard() {
     const [objects, setObjects] = useState<S3Object[]>([]);
     const [stats, setStats] = useState<StorageStats | null>(null);
@@ -66,6 +148,10 @@ function StorageManagerDashboard() {
         totalSize: number;
     } | null>(null);
     const [loadingOrphaned, setLoadingOrphaned] = useState(false);
+    const [activeTab, setActiveTab] = useState("browse");
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+    const [objectToDelete, setObjectToDelete] = useState<string | null>(null);
+    const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
     const fetchObjects = async (token?: string, prefix?: string) => {
         try {
@@ -251,22 +337,6 @@ function StorageManagerDashboard() {
         fetchObjects(undefined, "");
     };
 
-    const extractFolders = (objects: S3Object[]): string[] => {
-        const folders = new Set<string>();
-        const prefixLength = currentPrefix.length;
-
-        objects.forEach((obj) => {
-            const relativePath = obj.key.substring(prefixLength);
-            const slashIndex = relativePath.indexOf("/");
-            if (slashIndex > 0) {
-                const folder = relativePath.substring(0, slashIndex + 1);
-                folders.add(currentPrefix + folder);
-            }
-        });
-
-        return Array.from(folders).sort();
-    };
-
     useEffect(() => {
         fetchObjects(undefined, currentPrefix);
         fetchStats();
@@ -284,381 +354,650 @@ function StorageManagerDashboard() {
         return new Date(dateString).toLocaleString();
     };
 
+    const copyToClipboard = (key: string) => {
+        navigator.clipboard.writeText(key);
+        setCopiedKey(key);
+        setTimeout(() => setCopiedKey(null), 2000);
+    };
+
+    const confirmDelete = (key: string) => {
+        setObjectToDelete(key);
+        setShowDeleteDialog(true);
+    };
+
+    const handleDeleteConfirmed = async () => {
+        if (!objectToDelete) return;
+        await deleteObject(objectToDelete);
+        setShowDeleteDialog(false);
+        setObjectToDelete(null);
+    };
+
+    // Extract folders from objects
+    const folders = useMemo(() => {
+        const folderSet = new Set<string>();
+        const prefixLength = currentPrefix.length;
+
+        objects.forEach((obj) => {
+            const relativePath = obj.key.substring(prefixLength);
+            const slashIndex = relativePath.indexOf("/");
+            if (slashIndex > 0) {
+                const folder = relativePath.substring(0, slashIndex + 1);
+                folderSet.add(currentPrefix + folder);
+            }
+        });
+
+        return Array.from(folderSet).sort();
+    }, [objects, currentPrefix]);
+
+    // Get files only (not folders)
+    const files = useMemo(
+        () =>
+            objects.filter(
+                (obj) => !obj.key.substring(currentPrefix.length).includes("/")
+            ),
+        [objects, currentPrefix]
+    );
+
     return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold flex items-center gap-2">
-                        <HardDrive className="h-8 w-8" />
-                        Storage Manager
-                    </h1>
-                    <p className="text-muted-foreground mt-2">
-                        Browse, search, and manage S3 objects
-                    </p>
-                </div>
+        <TooltipProvider>
+            <div className="space-y-6">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-3xl font-bold flex items-center gap-3">
+                            <Cloud className="h-8 w-8 text-primary" />
+                            Storage Manager
+                        </h1>
+                        <p className="text-muted-foreground mt-1">
+                            Browse, search, and manage S3 objects
+                        </p>
+                    </div>
 
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                        fetchObjects();
-                        fetchStats();
-                    }}
-                    disabled={loading}
-                >
-                    <RefreshCw
-                        className={`h-4 w-4 mr-2 ${
-                            loading ? "animate-spin" : ""
-                        }`}
-                    />
-                    Refresh
-                </Button>
-            </div>
-
-            {/* Breadcrumb Navigation */}
-            {currentPrefix && (
-                <Card>
-                    <CardContent className="pt-6">
-                        <div className="flex items-center gap-2 text-sm">
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={goToRoot}
-                            >
-                                <Home className="h-4 w-4 mr-1" />
-                                Root
-                            </Button>
-                            {prefixHistory.length > 0 && (
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={navigateBack}
-                                >
-                                    <ChevronLeft className="h-4 w-4 mr-1" />
-                                    Back
-                                </Button>
-                            )}
-                            <span className="text-muted-foreground">
-                                Current:{" "}
-                                <code className="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
-                                    {currentPrefix || "/"}
-                                </code>
-                            </span>
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
-
-            {/* Storage Stats */}
-            {stats && (
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">
-                                Total Objects
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">
-                                {stats.totalObjects.toLocaleString()}
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">
-                                Total Size
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">
-                                {formatBytes(stats.totalSize)}
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">
-                                Bucket
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-xl font-bold truncate">
-                                {stats.bucketName}
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">
-                                Region
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">
-                                {stats.region}
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-            )}
-
-            {/* Search Bar & Orphaned Files */}
-            <Card>
-                <CardContent className="pt-6 space-y-4">
-                    <div className="flex gap-2">
-                        <Input
-                            placeholder="Search objects by key..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                    searchObjects();
-                                }
-                            }}
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                            fetchObjects(undefined, currentPrefix);
+                            fetchStats();
+                        }}
+                        disabled={loading}
+                    >
+                        <RefreshCw
+                            className={`h-4 w-4 mr-2 ${
+                                loading ? "animate-spin" : ""
+                            }`}
                         />
-                        <Button onClick={searchObjects} disabled={isSearching}>
-                            <Search
-                                className={`h-4 w-4 mr-2 ${
-                                    isSearching ? "animate-spin" : ""
-                                }`}
-                            />
-                            Search
-                        </Button>
-                        {searchTerm && (
-                            <Button
-                                variant="outline"
-                                onClick={() => {
-                                    setSearchTerm("");
-                                    fetchObjects(undefined, currentPrefix);
-                                }}
-                            >
-                                Clear
-                            </Button>
-                        )}
-                    </div>
+                        Refresh
+                    </Button>
+                </div>
 
-                    <div className="flex items-center justify-between pt-2 border-t">
-                        <div className="text-sm text-muted-foreground">
-                            <Package className="h-4 w-4 inline mr-1" />
-                            Find files not referenced in database
-                        </div>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={fetchOrphanedObjects}
-                            disabled={loadingOrphaned}
+                {/* Stats Overview */}
+                {stats && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <StatCard
+                            title="Total Objects"
+                            value={stats.totalObjects.toLocaleString()}
+                            icon={Package}
+                            description="Files stored in bucket"
+                        />
+                        <StatCard
+                            title="Total Size"
+                            value={formatBytes(stats.totalSize)}
+                            icon={HardDrive}
+                            description="Storage used"
+                        />
+                        <StatCard
+                            title="Bucket"
+                            value={stats.bucketName}
+                            icon={Cloud}
+                        />
+                        <StatCard
+                            title="Region"
+                            value={stats.region}
+                            icon={Globe}
+                        />
+                    </div>
+                )}
+
+                {/* Tabs */}
+                <Tabs value={activeTab} onValueChange={setActiveTab}>
+                    <TabsList className="grid w-full grid-cols-3 lg:w-[450px]">
+                        <TabsTrigger
+                            value="browse"
+                            className="flex items-center gap-2"
                         >
-                            {loadingOrphaned ? (
-                                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                            ) : (
-                                <Package className="h-4 w-4 mr-2" />
-                            )}
-                            Find Orphaned Files
-                        </Button>
-                    </div>
-                </CardContent>
-            </Card>
+                            <Folder className="h-4 w-4" />
+                            Browse
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="search"
+                            className="flex items-center gap-2"
+                        >
+                            <Search className="h-4 w-4" />
+                            Search
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="orphaned"
+                            className="flex items-center gap-2"
+                        >
+                            <AlertTriangle className="h-4 w-4" />
+                            Orphaned
+                        </TabsTrigger>
+                    </TabsList>
 
-            {/* Orphaned Files Results */}
-            {orphanedObjects && orphanedObjects.totalOrphaned > 0 && (
-                <Card className="border-orange-500 bg-orange-50 dark:bg-orange-900/20">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-orange-700 dark:text-orange-400">
-                            <AlertTriangle className="h-5 w-5" />
-                            Orphaned Files Detected
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-2">
-                            <p className="text-sm">
-                                Found{" "}
-                                <strong>{orphanedObjects.totalOrphaned}</strong>{" "}
-                                file(s) not referenced in database (Total size:{" "}
-                                <strong>
-                                    {formatBytes(orphanedObjects.totalSize)}
-                                </strong>
-                                )
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                                Showing first{" "}
-                                {orphanedObjects.orphanedObjects.length} results
-                            </p>
-                            <div className="mt-2 space-y-1 max-h-60 overflow-y-auto">
-                                {orphanedObjects.orphanedObjects.map((obj) => (
-                                    <div
-                                        key={obj.key}
-                                        className="text-xs font-mono bg-white dark:bg-gray-800 p-2 rounded flex items-center justify-between"
+                    {/* Browse Tab */}
+                    <TabsContent value="browse" className="space-y-4">
+                        {/* Breadcrumb Navigation */}
+                        <Card>
+                            <CardContent className="p-4">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <Button
+                                        variant={
+                                            currentPrefix === ""
+                                                ? "secondary"
+                                                : "ghost"
+                                        }
+                                        size="sm"
+                                        onClick={goToRoot}
                                     >
-                                        <span className="truncate flex-1">
-                                            {obj.key}
-                                        </span>
-                                        <span className="text-muted-foreground ml-2">
-                                            {formatBytes(obj.size)}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
+                                        <Home className="h-4 w-4 mr-1" />
+                                        Root
+                                    </Button>
+                                    {currentPrefix && (
+                                        <>
+                                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                            {prefixHistory.length > 0 && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={navigateBack}
+                                                >
+                                                    <ChevronLeft className="h-4 w-4" />
+                                                </Button>
+                                            )}
+                                            <Badge
+                                                variant="outline"
+                                                className="font-mono text-xs"
+                                            >
+                                                {currentPrefix}
+                                            </Badge>
+                                        </>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
 
-            {/* Batch Actions */}
-            {selectedObjects.size > 0 && (
-                <Card className="border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20">
-                    <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <AlertTriangle className="h-5 w-5 text-yellow-600" />
-                                <span className="font-semibold">
-                                    {selectedObjects.size} object(s) selected
-                                </span>
-                            </div>
-                            <div className="flex gap-2">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() =>
-                                        setSelectedObjects(new Set())
-                                    }
-                                >
-                                    Deselect All
-                                </Button>
-                                <Button
-                                    variant="destructive"
-                                    size="sm"
-                                    onClick={deleteSelected}
-                                    disabled={deleting}
-                                >
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Delete Selected
-                                </Button>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
-
-            {/* Objects Table */}
-            <Card>
-                <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <CardTitle className="flex items-center gap-2">
-                            <FileText className="h-5 w-5" />
-                            S3 Objects
-                        </CardTitle>
-                        <Button variant="outline" size="sm" onClick={selectAll}>
-                            {selectedObjects.size === objects.length
-                                ? "Deselect All"
-                                : "Select All"}
-                        </Button>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    {loading ? (
-                        <div className="flex items-center justify-center py-8">
-                            <RefreshCw className="h-6 w-6 animate-spin" />
-                            <span className="ml-2">Loading objects...</span>
-                        </div>
-                    ) : objects.length === 0 ? (
-                        <div className="text-center py-8 text-muted-foreground">
-                            No objects found
-                        </div>
-                    ) : (
-                        <div className="space-y-2">
-                            {/* Display folders first */}
-                            {extractFolders(objects).map((folder) => (
-                                <div
-                                    key={folder}
-                                    className="flex items-center justify-between p-3 rounded border border-gray-200 dark:border-gray-700 bg-blue-50 dark:bg-blue-900/10 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/20"
-                                    onClick={() => navigateToPrefix(folder)}
-                                >
-                                    <div className="flex items-center gap-3 flex-1">
-                                        <Folder className="h-5 w-5 text-blue-600" />
-                                        <div className="font-semibold">
-                                            {folder.replace(currentPrefix, "")}
+                        {/* Batch Actions Bar */}
+                        {selectedObjects.size > 0 && (
+                            <Card className="border-primary/50 bg-primary/5">
+                                <CardContent className="p-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <CheckCircle2 className="h-5 w-5 text-primary" />
+                                            <span className="font-medium">
+                                                {selectedObjects.size} object
+                                                {selectedObjects.size === 1
+                                                    ? ""
+                                                    : "s"}{" "}
+                                                selected
+                                            </span>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() =>
+                                                    setSelectedObjects(
+                                                        new Set()
+                                                    )
+                                                }
+                                            >
+                                                Deselect All
+                                            </Button>
+                                            <Button
+                                                variant="destructive"
+                                                size="sm"
+                                                onClick={deleteSelected}
+                                                disabled={deleting}
+                                            >
+                                                <Trash2 className="h-4 w-4 mr-2" />
+                                                Delete Selected
+                                            </Button>
                                         </div>
                                     </div>
-                                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                                </div>
-                            ))}
+                                </CardContent>
+                            </Card>
+                        )}
 
-                            {/* Display files */}
-                            {objects
-                                .filter(
-                                    (obj) =>
-                                        !obj.key
-                                            .substring(currentPrefix.length)
-                                            .includes("/")
-                                )
-                                .map((obj) => (
-                                    <div
-                                        key={obj.key}
-                                        className={`flex items-center justify-between p-3 rounded border ${
-                                            selectedObjects.has(obj.key)
-                                                ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
-                                                : "border-gray-200 dark:border-gray-700"
-                                        }`}
+                        {/* File Browser */}
+                        <Card>
+                            <CardHeader className="pb-3">
+                                <div className="flex items-center justify-between">
+                                    <CardTitle className="flex items-center gap-2">
+                                        <FileText className="h-5 w-5" />
+                                        Files & Folders
+                                    </CardTitle>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={selectAll}
                                     >
-                                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedObjects.has(
-                                                    obj.key
-                                                )}
-                                                onChange={() =>
-                                                    toggleSelection(obj.key)
+                                        {selectedObjects.size === objects.length
+                                            ? "Deselect All"
+                                            : "Select All"}
+                                    </Button>
+                                </div>
+                            </CardHeader>
+                            <CardContent>
+                                {loading ? (
+                                    <div className="flex items-center justify-center py-12">
+                                        <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+                                        <span className="ml-3 text-muted-foreground">
+                                            Loading...
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-1">
+                                        {/* Folders */}
+                                        {folders.map((folder) => (
+                                            <div
+                                                key={folder}
+                                                className="flex items-center justify-between p-3 rounded-lg border bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors"
+                                                onClick={() =>
+                                                    navigateToPrefix(folder)
                                                 }
-                                                className="h-4 w-4"
-                                            />
-                                            <div className="flex-1 min-w-0">
-                                                <div className="font-mono text-sm truncate">
-                                                    {obj.key}
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <Folder className="h-5 w-5 text-blue-500" />
+                                                    <span className="font-medium">
+                                                        {folder.replace(
+                                                            currentPrefix,
+                                                            ""
+                                                        )}
+                                                    </span>
                                                 </div>
-                                                <div className="text-xs text-muted-foreground">
-                                                    {formatBytes(obj.size)} •{" "}
-                                                    {formatDate(
-                                                        obj.lastModified
-                                                    )}
+                                                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                                            </div>
+                                        ))}
+
+                                        {/* Files */}
+                                        {files.map((obj) => (
+                                            <div
+                                                key={obj.key}
+                                                className={`group flex items-center justify-between p-3 rounded-lg border transition-colors ${
+                                                    selectedObjects.has(obj.key)
+                                                        ? "border-primary bg-primary/5"
+                                                        : "hover:bg-muted/50"
+                                                }`}
+                                            >
+                                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedObjects.has(
+                                                            obj.key
+                                                        )}
+                                                        onChange={() =>
+                                                            toggleSelection(
+                                                                obj.key
+                                                            )
+                                                        }
+                                                        className="h-4 w-4 rounded border-gray-300"
+                                                    />
+                                                    {getFileIcon(obj.key)}
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="font-mono text-sm truncate">
+                                                            {obj.key
+                                                                .split("/")
+                                                                .pop()}
+                                                        </p>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {formatBytes(
+                                                                obj.size
+                                                            )}{" "}
+                                                            •{" "}
+                                                            {formatDate(
+                                                                obj.lastModified
+                                                            )}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-8 w-8"
+                                                                onClick={() =>
+                                                                    copyToClipboard(
+                                                                        obj.key
+                                                                    )
+                                                                }
+                                                            >
+                                                                {copiedKey ===
+                                                                obj.key ? (
+                                                                    <Check className="h-4 w-4 text-green-600" />
+                                                                ) : (
+                                                                    <Copy className="h-4 w-4" />
+                                                                )}
+                                                            </Button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            Copy path
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-8 w-8 text-red-600 hover:text-red-700"
+                                                                onClick={() =>
+                                                                    confirmDelete(
+                                                                        obj.key
+                                                                    )
+                                                                }
+                                                                disabled={
+                                                                    deleting
+                                                                }
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            Delete
+                                                        </TooltipContent>
+                                                    </Tooltip>
                                                 </div>
                                             </div>
-                                        </div>
+                                        ))}
+
+                                        {objects.length === 0 && (
+                                            <div className="text-center py-12">
+                                                <Folder className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                                                <p className="text-muted-foreground">
+                                                    {currentPrefix
+                                                        ? "This folder is empty"
+                                                        : "No objects found"}
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Pagination */}
+                                {continuationToken && (
+                                    <div className="flex justify-center mt-6">
                                         <Button
-                                            variant="ghost"
-                                            size="sm"
+                                            variant="outline"
                                             onClick={() =>
-                                                deleteObject(obj.key)
+                                                fetchObjects(
+                                                    continuationToken,
+                                                    currentPrefix
+                                                )
                                             }
-                                            disabled={deleting}
+                                            disabled={loading}
                                         >
-                                            <Trash2 className="h-4 w-4 text-red-600" />
+                                            Load More
+                                            <ChevronRight className="h-4 w-4 ml-2" />
                                         </Button>
                                     </div>
-                                ))}
-                        </div>
-                    )}
+                                )}
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
 
-                    {/* Pagination */}
-                    {continuationToken && (
-                        <div className="flex justify-center mt-4">
+                    {/* Search Tab */}
+                    <TabsContent value="search" className="space-y-4">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Search Objects</CardTitle>
+                                <CardDescription>
+                                    Search for files by name across all folders
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="flex gap-2">
+                                    <div className="relative flex-1">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                            placeholder="Search by file name or path..."
+                                            value={searchTerm}
+                                            onChange={(e) =>
+                                                setSearchTerm(e.target.value)
+                                            }
+                                            onKeyDown={(e) => {
+                                                if (e.key === "Enter")
+                                                    searchObjects();
+                                            }}
+                                            className="pl-10"
+                                        />
+                                    </div>
+                                    <Button
+                                        onClick={searchObjects}
+                                        disabled={isSearching}
+                                    >
+                                        {isSearching ? (
+                                            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                        ) : (
+                                            <Search className="h-4 w-4 mr-2" />
+                                        )}
+                                        Search
+                                    </Button>
+                                    {searchTerm && (
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => {
+                                                setSearchTerm("");
+                                                fetchObjects(
+                                                    undefined,
+                                                    currentPrefix
+                                                );
+                                            }}
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </Button>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Search Results */}
+                        {searchTerm && (
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Search Results</CardTitle>
+                                    <CardDescription>
+                                        {objects.length} result
+                                        {objects.length === 1 ? "" : "s"} for
+                                        &quot;{searchTerm}&quot;
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="space-y-1">
+                                        {objects.map((obj) => (
+                                            <div
+                                                key={obj.key}
+                                                className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50"
+                                            >
+                                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                    {getFileIcon(obj.key)}
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="font-mono text-sm truncate">
+                                                            {obj.key}
+                                                        </p>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {formatBytes(
+                                                                obj.size
+                                                            )}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="text-red-600"
+                                                    onClick={() =>
+                                                        confirmDelete(obj.key)
+                                                    }
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
+                    </TabsContent>
+
+                    {/* Orphaned Files Tab */}
+                    <TabsContent value="orphaned" className="space-y-4">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <AlertTriangle className="h-5 w-5 text-orange-500" />
+                                    Orphaned Files Detection
+                                </CardTitle>
+                                <CardDescription>
+                                    Find files in storage that are not
+                                    referenced in the database
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <Button
+                                    onClick={fetchOrphanedObjects}
+                                    disabled={loadingOrphaned}
+                                    variant="outline"
+                                >
+                                    {loadingOrphaned ? (
+                                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                    ) : (
+                                        <Search className="h-4 w-4 mr-2" />
+                                    )}
+                                    Scan for Orphaned Files
+                                </Button>
+
+                                {orphanedObjects && (
+                                    <div className="space-y-4">
+                                        <div className="flex gap-4">
+                                            <Badge
+                                                variant={
+                                                    orphanedObjects.totalOrphaned >
+                                                    0
+                                                        ? "destructive"
+                                                        : "secondary"
+                                                }
+                                            >
+                                                {orphanedObjects.totalOrphaned}{" "}
+                                                orphaned files
+                                            </Badge>
+                                            <Badge variant="outline">
+                                                {formatBytes(
+                                                    orphanedObjects.totalSize
+                                                )}{" "}
+                                                total
+                                            </Badge>
+                                        </div>
+
+                                        {orphanedObjects.orphanedObjects
+                                            .length > 0 && (
+                                            <div className="space-y-1 max-h-80 overflow-y-auto">
+                                                {orphanedObjects.orphanedObjects.map(
+                                                    (obj) => (
+                                                        <div
+                                                            key={obj.key}
+                                                            className="flex items-center justify-between p-3 rounded-lg border bg-red-50/50 dark:bg-red-950/20"
+                                                        >
+                                                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                                {getFileIcon(
+                                                                    obj.key
+                                                                )}
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="font-mono text-sm truncate">
+                                                                        {
+                                                                            obj.key
+                                                                        }
+                                                                    </p>
+                                                                    <p className="text-xs text-muted-foreground">
+                                                                        {formatBytes(
+                                                                            obj.size
+                                                                        )}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="text-red-600"
+                                                                onClick={() =>
+                                                                    confirmDelete(
+                                                                        obj.key
+                                                                    )
+                                                                }
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </div>
+                                                    )
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {orphanedObjects.totalOrphaned ===
+                                            0 && (
+                                            <div className="text-center py-8">
+                                                <CheckCircle2 className="h-12 w-12 mx-auto text-green-500 mb-4" />
+                                                <p className="text-muted-foreground">
+                                                    No orphaned files found.
+                                                    Storage is clean!
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                </Tabs>
+
+                {/* Delete Confirmation Dialog */}
+                <Dialog
+                    open={showDeleteDialog}
+                    onOpenChange={setShowDeleteDialog}
+                >
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Delete Object</DialogTitle>
+                            <DialogDescription>
+                                Are you sure you want to delete this object?
+                                This action cannot be undone.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="p-4 bg-muted rounded-lg">
+                            <p className="font-mono text-sm break-all">
+                                {objectToDelete}
+                            </p>
+                        </div>
+                        <DialogFooter>
                             <Button
                                 variant="outline"
-                                onClick={() => fetchObjects(continuationToken)}
-                                disabled={loading}
+                                onClick={() => setShowDeleteDialog(false)}
                             >
-                                Load More
-                                <ChevronRight className="h-4 w-4 ml-2" />
+                                Cancel
                             </Button>
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
-        </div>
+                            <Button
+                                variant="destructive"
+                                onClick={handleDeleteConfirmed}
+                                disabled={deleting}
+                            >
+                                {deleting ? "Deleting..." : "Delete"}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            </div>
+        </TooltipProvider>
     );
 }
 

@@ -2,73 +2,50 @@
 
 import { BaseDashboardCard } from "../BaseDashboardCard";
 import useSWR from "swr";
-import { UserService } from "@/lib/services/user";
-import { VendorService } from "@/lib/services/vendor";
-import { ContractsService } from "@/lib/services/contracts";
-import { Users, Briefcase, FileText } from "lucide-react";
-import { ContractStatus } from "@/lib/types/contracts";
+import { AdminService } from "@/lib/services/admin";
+import { Users, Briefcase, FileText, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 /**
  * StatsCard displays key system metrics for administrators:
  * - Total users and pending approvals
- * - Total vendors and pending approvals
- * - Total contracts and active contracts
+ * - Total vendors
+ * - Total contracts and open/awarded counts
  */
 export function StatsCard() {
-    const { data: usersData, error: usersError } = useSWR(
-        "/users-stats",
-        async () => {
-            // Get just counts (limit=1 to minimize data transfer)
-            const allUsers = await UserService.getUsers({ limit: 1, page: 1 });
-            return {
-                totalUsers: allUsers.total || 0,
-                // Note: No separate pending endpoint, would need status filter
-                pendingUsers: 0, // TODO: Add status filter when backend supports it
-            };
-        }
-    );
+    const {
+        data: stats,
+        error,
+        isLoading,
+        mutate,
+        isValidating,
+    } = useSWR("/admin-stats", () => AdminService.getDashboardStats());
 
-    const { data: vendorsData, error: vendorsError } = useSWR(
-        "/vendors-stats",
-        async () => {
-            const [allVendors, pending] = await Promise.all([
-                VendorService.getVendors({ limit: 1, page: 1 }),
-                VendorService.getPendingVendors(),
-            ]);
-            return {
-                totalVendors: allVendors.total || 0,
-                pendingVendors: pending.total || 0,
-            };
-        }
-    );
+    const handleRefresh = () => {
+        mutate();
+    };
 
-    const { data: contractsData, error: contractsError } = useSWR(
-        "/contracts-stats",
-        async () => {
-            const [all, active] = await Promise.all([
-                ContractsService.listContracts({ limit: 1, page: 1 }),
-                ContractsService.listContracts({
-                    limit: 1,
-                    page: 1,
-                    status: ContractStatus.OPEN,
-                }),
-            ]);
-            return {
-                totalContracts: all.total || 0,
-                activeContracts: active.total || 0,
-            };
-        }
+    const refreshButton = (
+        <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleRefresh}
+            disabled={isValidating}
+            className="h-8 w-8"
+            aria-label="Refresh stats"
+        >
+            <RefreshCw
+                className={`h-4 w-4 ${isValidating ? "animate-spin" : ""}`}
+            />
+        </Button>
     );
-
-    const isLoading = !usersData || !vendorsData || !contractsData;
-    const error =
-        usersError?.message || vendorsError?.message || contractsError?.message;
 
     return (
         <BaseDashboardCard
             title="System Overview"
             isLoading={isLoading}
-            error={error}
+            error={error?.message}
+            action={refreshButton}
         >
             <div className="grid gap-4">
                 {/* Users Stats */}
@@ -82,11 +59,14 @@ export function StatsCard() {
                         </p>
                         <div className="flex items-baseline gap-2">
                             <p className="text-2xl font-bold">
-                                {usersData?.totalUsers || 0}
+                                {stats?.users.total ?? 0}
                             </p>
-                            {usersData && usersData.pendingUsers > 0 && (
+                            <span className="text-sm text-muted-foreground">
+                                ({stats?.users.active ?? 0} active)
+                            </span>
+                            {stats && stats.users.pending > 0 && (
                                 <span className="text-sm text-amber-600 dark:text-amber-400">
-                                    {usersData.pendingUsers} pending
+                                    {stats.users.pending} pending
                                 </span>
                             )}
                         </div>
@@ -104,13 +84,8 @@ export function StatsCard() {
                         </p>
                         <div className="flex items-baseline gap-2">
                             <p className="text-2xl font-bold">
-                                {vendorsData?.totalVendors || 0}
+                                {stats?.vendors.total ?? 0}
                             </p>
-                            {vendorsData && vendorsData.pendingVendors > 0 && (
-                                <span className="text-sm text-amber-600 dark:text-amber-400">
-                                    {vendorsData.pendingVendors} pending
-                                </span>
-                            )}
                         </div>
                     </div>
                 </div>
@@ -126,14 +101,18 @@ export function StatsCard() {
                         </p>
                         <div className="flex items-baseline gap-2">
                             <p className="text-2xl font-bold">
-                                {contractsData?.totalContracts || 0}
+                                {stats?.contracts.total ?? 0}
                             </p>
-                            {contractsData &&
-                                contractsData.activeContracts > 0 && (
-                                    <span className="text-sm text-green-600 dark:text-green-400">
-                                        {contractsData.activeContracts} active
-                                    </span>
-                                )}
+                            {stats && stats.contracts.open > 0 && (
+                                <span className="text-sm text-green-600 dark:text-green-400">
+                                    {stats.contracts.open} open
+                                </span>
+                            )}
+                            {stats && stats.contracts.awarded > 0 && (
+                                <span className="text-sm text-blue-600 dark:text-blue-400">
+                                    {stats.contracts.awarded} awarded
+                                </span>
+                            )}
                         </div>
                     </div>
                 </div>
