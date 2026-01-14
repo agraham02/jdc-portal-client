@@ -258,8 +258,10 @@ export class FileService {
 // HR Documents service for managing HR documents and links
 export interface HrDocumentMetadata {
     description?: string;
-    tags?: string[];
+    category?: string;
     isPublic?: boolean;
+    tags?: string[];
+    hrCategory?: string;
 }
 
 export class HrDocumentsService {
@@ -276,12 +278,14 @@ export class HrDocumentsService {
         if (metadata.description) {
             formData.append("description", metadata.description);
         }
-        if (metadata.tags && metadata.tags.length > 0) {
-            // Backend expects tags as array items
-            metadata.tags.forEach((tag) => formData.append("tags", tag));
+        if (metadata.category) {
+            formData.append("category", metadata.category);
         }
         if (metadata.isPublic !== undefined) {
             formData.append("isPublic", metadata.isPublic.toString());
+        }
+        if (metadata.hrCategory) {
+            formData.append("hrCategory", metadata.hrCategory);
         }
 
         return formData;
@@ -292,12 +296,26 @@ export class HrDocumentsService {
     /**
      * Upload HR document file
      * POST /hr-documents/files/upload
+     * @param file - File to upload
+     * @param metadata - Optional metadata (description, tags, isPublic)
+     * @param onProgress - Optional callback for upload progress (0-100)
      */
     static async uploadFile(
         file: File,
-        metadata: HrDocumentMetadata = {}
+        metadata: HrDocumentMetadata = {},
+        onProgress?: (percent: number) => void
     ): Promise<HRDocument> {
         const formData = this.buildFormData(file, metadata);
+
+        // Use progress-enabled upload if callback provided
+        if (onProgress) {
+            return apiClient.postFormDataWithProgress<HRDocument>(
+                "/hr-documents/files/upload",
+                formData,
+                onProgress
+            );
+        }
+
         return apiClient.postFormData<HRDocument>(
             "/hr-documents/files/upload",
             formData
@@ -419,6 +437,83 @@ export class HrDocumentsService {
      */
     static async deleteLink(id: string): Promise<void> {
         return apiClient.delete<void>(`/hr-documents/links/${id}`);
+    }
+
+    // === HR CATEGORIES ===
+
+    /**
+     * Get all HR categories
+     * GET /hr-documents/categories
+     *
+     * @param query - Query parameters for filtering/pagination
+     * @param query.page - Page number (default: 1)
+     * @param query.limit - Items per page (default: 25, max: 100)
+     * @param query.isActive - Filter by active status
+     * @param query.search - Search by name or description
+     * @returns Paginated list of categories
+     */
+    static async getCategories(
+        query: import("../types/file").HrCategoryQueryDto = {}
+    ): Promise<import("../types/file").HrCategoryListResponse> {
+        const params = new URLSearchParams();
+
+        Object.entries(query).forEach(([key, value]) => {
+            if (value !== undefined && value !== null) {
+                params.append(key, value.toString());
+            }
+        });
+
+        const queryString = params.toString();
+        return apiClient.get<import("../types/file").HrCategoryListResponse>(
+            `/hr-documents/categories${queryString ? `?${queryString}` : ""}`
+        );
+    }
+
+    /**
+     * Get HR category by ID
+     * GET /hr-documents/categories/:id
+     */
+    static async getCategory(
+        id: string
+    ): Promise<import("../types/file").HrCategory> {
+        return apiClient.get<import("../types/file").HrCategory>(
+            `/hr-documents/categories/${id}`
+        );
+    }
+
+    /**
+     * Create HR category
+     * POST /hr-documents/categories
+     */
+    static async createCategory(
+        data: import("../types/file").CreateHrCategoryDto
+    ): Promise<import("../types/file").HrCategory> {
+        return apiClient.post<import("../types/file").HrCategory>(
+            "/hr-documents/categories",
+            data
+        );
+    }
+
+    /**
+     * Update HR category
+     * PATCH /hr-documents/categories/:id
+     */
+    static async updateCategory(
+        id: string,
+        data: import("../types/file").UpdateHrCategoryDto
+    ): Promise<import("../types/file").HrCategory> {
+        return apiClient.patch<import("../types/file").HrCategory>(
+            `/hr-documents/categories/${id}`,
+            data
+        );
+    }
+
+    /**
+     * Delete HR category
+     * DELETE /hr-documents/categories/:id
+     */
+    static async deleteCategory(id: string): Promise<void> {
+        return apiClient.delete<void>(`/hr-documents/categories/${id}`);
     }
 
     // === HELPER METHODS ===

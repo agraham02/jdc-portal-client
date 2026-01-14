@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useDeferredValue, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,9 +20,12 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "sonner";
 import { HrDocumentsService } from "@/lib/services/file";
-import { HrLink, HRLinkCategory } from "@/lib/types/file";
+import { usePaginatedApi, useApi } from "@/lib/hooks/useApi";
+import { apiToast } from "@/lib/utils/toast-helpers";
+import { errorMessages, successMessages } from "@/lib/utils/error-messages";
+import { cn } from "@/lib/utils";
+import { HrLink, HrCategoryRef, HrCategory } from "@/lib/types/file";
 import {
     ExternalLinkIcon,
     RefreshCcwIcon,
@@ -37,109 +40,136 @@ import { PermissionName as P } from "@/lib/constants/permission-names";
 import { CreateHrLinkDialog } from "./CreateHrLinkDialog";
 import { EditHrLinkDialog } from "./EditHrLinkDialog";
 
+interface HrLinksResponse {
+    links: HrLink[];
+    total: number;
+    totalPages: number;
+    page: number;
+    limit: number;
+}
+
+interface HrCategoriesResponse {
+    categories: HrCategory[];
+    total: number;
+    totalPages: number;
+    page: number;
+    limit: number;
+}
+
 type SortDir = "asc" | "desc";
 
 export function HrLinksTable() {
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [links, setLinks] = useState<HrLink[]>([]);
-    const [total, setTotal] = useState(0);
-    const [totalPages, setTotalPages] = useState(1);
     const [page, setPage] = useState(1);
     const [limit, setLimit] = useState(25);
     const [search, setSearch] = useState("");
     const [categoryFilter, setCategoryFilter] = useState<string>("all");
     const [activeFilter, setActiveFilter] = useState<string>("all");
-    const [sortBy, setSortBy] = useState("sortOrder");
-    const [sortOrder, setSortOrder] = useState<SortDir>("asc");
+    const [sortBy, setSortBy] = useState("createdAt");
+    const [sortOrder, setSortOrder] = useState<SortDir>("desc");
     const [createDialogOpen, setCreateDialogOpen] = useState(false);
     const [editingLink, setEditingLink] = useState<HrLink | null>(null);
 
-    const load = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            const res = await HrDocumentsService.getLinks({
-                page,
-                limit,
-                search: search || undefined,
-                category: categoryFilter !== "all" ? categoryFilter : undefined,
-                isActive:
-                    activeFilter === "active"
-                        ? true
-                        : activeFilter === "inactive"
-                        ? false
-                        : undefined,
-                sortBy,
-                sortOrder,
-            });
-            setLinks(res.links);
-            setTotal(res.total);
-            setTotalPages(res.totalPages);
-        } catch (e: unknown) {
-            console.error(e);
-            const msg =
-                typeof e === "object" && e && "message" in e
-                    ? String((e as { message?: string }).message)
-                    : "Failed to load links";
-            setError(msg);
-        } finally {
-            setLoading(false);
-        }
+    // Defer search value for better UX during typing
+    const deferredSearch = useDeferredValue(search);
+    const isStale = deferredSearch !== search;
+
+    // Determine isActive filter value
+    const getIsActiveValue = (): boolean | undefined => {
+        if (activeFilter === "active") return true;
+        if (activeFilter === "inactive") return false;
+        return undefined;
     };
 
-    useEffect(() => {
-        load();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [page, limit, search, categoryFilter, activeFilter, sortBy, sortOrder]);
+    // Build query params for SWR
+    const queryParams: Record<string, string | number | boolean> = {
+        page,
+        limit,
+        sortBy,
+        sortOrder,
+    };
+    if (deferredSearch) queryParams.search = deferredSearch;
+    if (categoryFilter !== "all") queryParams.category = categoryFilter;
+    const isActiveValue = getIsActiveValue();
+    if (isActiveValue !== undefined) queryParams.isActive = isActiveValue;
+
+    // Fetch links with SWR
+    const {
+        data: linksData,
+        error: linksError,
+        isLoading: loading,
+        mutate,
+    } = usePaginatedApi<HrLinksResponse>("/hr-documents/links", queryParams);
+
+    const links = linksData?.links ?? [];
+    const total = linksData?.total ?? 0;
+    const totalPages = linksData?.totalPages ?? 1;
+    const error = linksError ? errorMessages.hrLinks.load : null;
+
+    // Fetch categories with SWR (for filter dropdown)
+    const { data: categoriesData } = useApi<HrCategoriesResponse>(
+        "/hr-documents/categories?isActive=true&limit=100"
+    );
+    const categories = categoriesData?.categories ?? [];
 
     const onDelete = async (link: HrLink) => {
         if (!confirm(`Delete link "${link.title}"?`)) return;
         try {
             await HrDocumentsService.deleteLink(link._id);
-            toast.success("Link deleted successfully");
-            load();
+            apiToast.success(successMessages.hrLinks.deleted);
+            mutate();
         } catch {
-            toast.error("Failed to delete link");
+            apiToast.error(errorMessages.hrLinks.delete);
         }
     };
 
     const onToggleActive = async (link: HrLink) => {
+        const action = link.isActive ? "deactivate" : "activate";
         try {
             await HrDocumentsService.updateLink(link._id, {
                 isActive: !link.isActive,
             });
-            toast.success(
-                link.isActive
-                    ? "Link deactivated successfully"
-                    : "Link activated successfully"
-            );
-            load();
-        } catch (e: unknown) {
-            const action = link.isActive ? "deactivate" : "activate";
-            const msg =
-                typeof e === "object" && e && "message" in e
-                    ? String((e as { message?: string }).message)
-                    : `Failed to ${action} link`;
-            toast.error(msg);
+            const message = link.isActive
+                ? successMessages.hrLinks.deactivated
+                : successMessages.hrLinks.activated;
+            apiToast.success(message);
+            mutate();
+        } catch {
+            apiToast.error(`Failed to ${action} link`);
         }
     };
 
-    const getCategoryBadgeColor = (category: HRLinkCategory) => {
-        switch (category) {
-            case HRLinkCategory.PAYROLL:
-                return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
-            case HRLinkCategory.BENEFITS:
-                return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
-            case HRLinkCategory.TRAINING:
-                return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
-            case HRLinkCategory.POLICY:
-                return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200";
-            case HRLinkCategory.DIRECTORY:
-                return "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200";
-            default:
-                return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200";
+    /** Extract category name from populated object or fallback to string */
+    const getCategoryName = (category: HrCategoryRef | string): string => {
+        if (typeof category === "object" && category !== null) {
+            return category.name;
         }
+        return String(category);
+    };
+
+    /** Generate consistent badge color based on category name hash */
+    const getCategoryBadgeColor = (
+        category: HrCategoryRef | string
+    ): string => {
+        const name = getCategoryName(category);
+        const colorPalette = [
+            "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+            "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+            "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+            "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
+            "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200",
+            "bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200",
+            "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200",
+            "bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200",
+        ];
+        // Simple hash to get consistent color per category
+        let hash = 0;
+        for (let i = 0; i < name.length; i++) {
+            const codePoint = name.codePointAt(i);
+            if (codePoint !== undefined) {
+                hash = codePoint + ((hash << 5) - hash);
+            }
+        }
+        return colorPalette[Math.abs(hash) % colorPalette.length];
     };
 
     return (
@@ -173,24 +203,11 @@ export function HrLinksTable() {
                                 <SelectItem value="all">
                                     All Categories
                                 </SelectItem>
-                                <SelectItem value={HRLinkCategory.PAYROLL}>
-                                    Payroll
-                                </SelectItem>
-                                <SelectItem value={HRLinkCategory.BENEFITS}>
-                                    Benefits
-                                </SelectItem>
-                                <SelectItem value={HRLinkCategory.TRAINING}>
-                                    Training
-                                </SelectItem>
-                                <SelectItem value={HRLinkCategory.POLICY}>
-                                    Policy
-                                </SelectItem>
-                                <SelectItem value={HRLinkCategory.DIRECTORY}>
-                                    Directory
-                                </SelectItem>
-                                <SelectItem value={HRLinkCategory.OTHER}>
-                                    Other
-                                </SelectItem>
+                                {categories.map((cat) => (
+                                    <SelectItem key={cat._id} value={cat._id}>
+                                        {cat.name}
+                                    </SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                         <Select
@@ -217,7 +234,7 @@ export function HrLinksTable() {
                             value={`${limit}`}
                             onValueChange={(v) => {
                                 setPage(1);
-                                setLimit(parseInt(v, 10));
+                                setLimit(Number.parseInt(v, 10));
                             }}
                         >
                             <SelectTrigger className="w-[120px]">
@@ -245,7 +262,7 @@ export function HrLinksTable() {
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={load}
+                            onClick={() => mutate()}
                             disabled={loading}
                         >
                             <RefreshCcwIcon className="h-4 w-4 mr-2" />
@@ -255,7 +272,12 @@ export function HrLinksTable() {
                 </div>
             </div>
 
-            <div className="rounded-md border">
+            <div
+                className={cn(
+                    "rounded-md border transition-opacity duration-150",
+                    isStale && "opacity-70"
+                )}
+            >
                 <Table>
                     <TableHeader>
                         <TableRow className="border-b-2">
@@ -306,7 +328,7 @@ export function HrLinksTable() {
                     <TableBody>
                         {loading &&
                             Array.from({ length: 5 }).map((_, i) => (
-                                <TableRow key={i}>
+                                <TableRow key={`skeleton-${String(i)}`}>
                                     <TableCell colSpan={6}>
                                         <Skeleton className="h-6 w-full" />
                                     </TableCell>
@@ -366,7 +388,7 @@ export function HrLinksTable() {
                                                 link.category
                                             )}
                                         >
-                                            {link.category}
+                                            {getCategoryName(link.category)}
                                         </Badge>
                                     </TableCell>
                                     <TableCell>
@@ -438,6 +460,7 @@ export function HrLinksTable() {
                                                     )
                                                 }
                                                 title="Open link"
+                                                aria-label={`Open ${link.title} in new tab`}
                                                 className="h-8 w-8 p-0"
                                             >
                                                 <ExternalLinkIcon className="h-4 w-4" />
@@ -450,6 +473,7 @@ export function HrLinksTable() {
                                                         setEditingLink(link)
                                                     }
                                                     title="Edit link"
+                                                    aria-label={`Edit ${link.title}`}
                                                     className="h-8 w-8 p-0"
                                                 >
                                                     <PencilIcon className="h-4 w-4" />
@@ -464,6 +488,11 @@ export function HrLinksTable() {
                                                         link.isActive
                                                             ? "Deactivate link"
                                                             : "Activate link"
+                                                    }
+                                                    aria-label={
+                                                        link.isActive
+                                                            ? `Deactivate ${link.title}`
+                                                            : `Activate ${link.title}`
                                                     }
                                                     className="h-8 px-2"
                                                 >
@@ -480,6 +509,7 @@ export function HrLinksTable() {
                                                         onDelete(link)
                                                     }
                                                     title="Delete link"
+                                                    aria-label={`Delete ${link.title}`}
                                                     className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
                                                 >
                                                     <Trash2Icon className="h-4 w-4" />
@@ -535,7 +565,7 @@ export function HrLinksTable() {
             <CreateHrLinkDialog
                 open={createDialogOpen}
                 onOpenChange={setCreateDialogOpen}
-                onSuccess={load}
+                onSuccess={() => mutate()}
             />
 
             {editingLink && (
@@ -545,7 +575,7 @@ export function HrLinksTable() {
                     onOpenChange={(open: boolean) =>
                         !open && setEditingLink(null)
                     }
-                    onSuccess={load}
+                    onSuccess={() => mutate()}
                 />
             )}
         </div>
