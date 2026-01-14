@@ -13,60 +13,56 @@ export const loginSchema = z.object({
 
 export type LoginFormData = z.infer<typeof loginSchema>;
 
-// Base address schema with field-level validation
+// Base address schema - minimal per-field validation, main logic in superRefine
 const baseAddressSchema = z.object({
     line1: z
         .string()
         .max(
             ADDRESS_CONSTRAINTS.LINE1_MAX_LENGTH,
             VALIDATION_MESSAGES.ADDRESS_LINE1_MAX
-        )
-        .transform((val) => val.trim()),
+        ),
     line2: z
         .string()
         .max(
             ADDRESS_CONSTRAINTS.LINE2_MAX_LENGTH,
             VALIDATION_MESSAGES.ADDRESS_LINE2_MAX
         )
-        .optional()
-        .transform((val) => val?.trim()),
+        .optional(),
     city: z
         .string()
-        .max(ADDRESS_CONSTRAINTS.CITY_MAX_LENGTH, VALIDATION_MESSAGES.CITY_MAX)
-        .transform((val) => val.trim()),
-    state: z
-        .string()
-        .length(
-            ADDRESS_CONSTRAINTS.STATE_LENGTH,
-            VALIDATION_MESSAGES.STATE_FORMAT
-        )
-        .regex(VALIDATION_PATTERNS.STATE_CODE, VALIDATION_MESSAGES.STATE_FORMAT)
-        .transform((val) => val.toUpperCase().trim()),
+        .max(ADDRESS_CONSTRAINTS.CITY_MAX_LENGTH, VALIDATION_MESSAGES.CITY_MAX),
+    state: z.string(),
     zip: z
         .string()
-        .max(ADDRESS_CONSTRAINTS.ZIP_MAX_LENGTH, VALIDATION_MESSAGES.ZIP_MAX)
-        .regex(VALIDATION_PATTERNS.ZIP_CODE, VALIDATION_MESSAGES.ZIP_FORMAT)
-        .transform((val) => val.trim()),
+        .max(ADDRESS_CONSTRAINTS.ZIP_MAX_LENGTH, VALIDATION_MESSAGES.ZIP_MAX),
 });
 
 /**
  * Address schema with "all or nothing" validation
  * If any field is filled, all required fields (line1, city, state, zip) must be filled
  * line2 is always optional
+ *
+ * Validation logic:
+ * - All fields empty → valid (address is optional)
+ * - Some fields filled → all core fields required with format validation
  */
 export const addressSchema = baseAddressSchema
     .partial()
     .superRefine((data, ctx) => {
-        // Compute once for efficiency
+        // Compute once for efficiency - treat empty strings as unfilled
         const hasAnyValue = Boolean(
-            data.line1 || data.city || data.state || data.zip
+            data.line1?.trim() ||
+                data.city?.trim() ||
+                data.state?.trim() ||
+                data.zip?.trim()
         );
 
-        // If no fields filled, address is optional - pass validation
+        // If no fields filled (or all empty strings), address is optional - pass validation
         if (!hasAnyValue) return;
 
         // If ANY field is filled, require core fields (line2 still optional)
-        if (!data.line1) {
+        // Check presence and format together
+        if (!data.line1?.trim()) {
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
                 message: VALIDATION_MESSAGES.ADDRESS_LINE1_REQUIRED,
@@ -74,7 +70,7 @@ export const addressSchema = baseAddressSchema
             });
         }
 
-        if (!data.city) {
+        if (!data.city?.trim()) {
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
                 message: VALIDATION_MESSAGES.CITY_REQUIRED,
@@ -82,18 +78,34 @@ export const addressSchema = baseAddressSchema
             });
         }
 
-        if (!data.state) {
+        // State: required + must be 2 uppercase letters
+        const stateTrimmed = data.state?.trim().toUpperCase();
+        if (!stateTrimmed) {
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
                 message: VALIDATION_MESSAGES.STATE_REQUIRED,
                 path: ["state"],
             });
+        } else if (!VALIDATION_PATTERNS.STATE_CODE.test(stateTrimmed)) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: VALIDATION_MESSAGES.STATE_FORMAT,
+                path: ["state"],
+            });
         }
 
-        if (!data.zip) {
+        // ZIP: required + format check
+        const zipTrimmed = data.zip?.trim();
+        if (!zipTrimmed) {
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
                 message: VALIDATION_MESSAGES.ZIP_REQUIRED,
+                path: ["zip"],
+            });
+        } else if (!VALIDATION_PATTERNS.ZIP_CODE.test(zipTrimmed)) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: VALIDATION_MESSAGES.ZIP_FORMAT,
                 path: ["zip"],
             });
         }

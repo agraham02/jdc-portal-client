@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { AddressForm } from "@/components/common";
 import { User as UserIcon } from "lucide-react";
 import { useForm, Controller, FormProvider } from "react-hook-form";
@@ -68,6 +69,7 @@ export function GeneralInfoSection({
         resolver: zodResolver(profileSchema),
         defaultValues,
         mode: "onBlur",
+        shouldUnregister: false, // Keep form values even when fields are unmounted
     });
 
     const {
@@ -77,7 +79,26 @@ export function GeneralInfoSection({
         reset,
         control,
         setError,
+        setValue,
+        watch,
     } = methods;
+
+    // State for "mailing address same as physical" checkbox
+    const [sameAsPhysical, setSameAsPhysical] = useState(false);
+
+    // Watch physical address to auto-sync to mailing when checkbox is checked
+    const physicalAddress = watch("physicalAddress");
+
+    // Auto-sync physical address to mailing address when checkbox is checked
+    useEffect(() => {
+        if (sameAsPhysical && physicalAddress) {
+            setValue("mailingAddress.line1", physicalAddress.line1 || "");
+            setValue("mailingAddress.line2", physicalAddress.line2 || "");
+            setValue("mailingAddress.city", physicalAddress.city || "");
+            setValue("mailingAddress.state", physicalAddress.state || "");
+            setValue("mailingAddress.zip", physicalAddress.zip || "");
+        }
+    }, [sameAsPhysical, physicalAddress, setValue]);
 
     // Keep nested address fields in sync when parent defaultValues change
     useEffect(() => {
@@ -228,13 +249,57 @@ export function GeneralInfoSection({
                             idPrefix="physical"
                         />
 
-                        <Separator />
+                        <div className="flex items-center space-x-2 py-2">
+                            <Checkbox
+                                id="sameAsPhysical"
+                                checked={sameAsPhysical}
+                                onCheckedChange={(checked) => {
+                                    const isChecked = checked === true;
+                                    setSameAsPhysical(isChecked);
 
-                        <AddressForm
-                            prefix="mailingAddress"
-                            title="Mailing Address"
-                            idPrefix="mailing"
-                        />
+                                    if (isChecked && physicalAddress) {
+                                        // Copy physical address to mailing address
+                                        setValue(
+                                            "mailingAddress.line1",
+                                            physicalAddress.line1 || ""
+                                        );
+                                        setValue(
+                                            "mailingAddress.line2",
+                                            physicalAddress.line2 || ""
+                                        );
+                                        setValue(
+                                            "mailingAddress.city",
+                                            physicalAddress.city || ""
+                                        );
+                                        setValue(
+                                            "mailingAddress.state",
+                                            physicalAddress.state || ""
+                                        );
+                                        setValue(
+                                            "mailingAddress.zip",
+                                            physicalAddress.zip || ""
+                                        );
+                                    }
+                                }}
+                            />
+                            <label
+                                htmlFor="sameAsPhysical"
+                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                            >
+                                Mailing address same as physical address
+                            </label>
+                        </div>
+
+                        {!sameAsPhysical && (
+                            <>
+                                <Separator />
+                                <AddressForm
+                                    prefix="mailingAddress"
+                                    title="Mailing Address"
+                                    idPrefix="mailing"
+                                />
+                            </>
+                        )}
                     </div>
                 </FormProvider>
 
