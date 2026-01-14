@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useDeferredValue, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,8 +20,11 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "sonner";
 import { HrDocumentsService } from "@/lib/services/file";
+import { usePaginatedApi, useApi } from "@/lib/hooks/useApi";
+import { apiToast } from "@/lib/utils/toast-helpers";
+import { errorMessages, successMessages } from "@/lib/utils/error-messages";
+import { cn } from "@/lib/utils";
 import { HrLink, HrCategoryRef, HrCategory } from "@/lib/types/file";
 import {
     ExternalLinkIcon,
@@ -37,15 +40,25 @@ import { PermissionName as P } from "@/lib/constants/permission-names";
 import { CreateHrLinkDialog } from "./CreateHrLinkDialog";
 import { EditHrLinkDialog } from "./EditHrLinkDialog";
 
+interface HrLinksResponse {
+    links: HrLink[];
+    total: number;
+    totalPages: number;
+    page: number;
+    limit: number;
+}
+
+interface HrCategoriesResponse {
+    categories: HrCategory[];
+    total: number;
+    totalPages: number;
+    page: number;
+    limit: number;
+}
+
 type SortDir = "asc" | "desc";
 
 export function HrLinksTable() {
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [links, setLinks] = useState<HrLink[]>([]);
-    const [categories, setCategories] = useState<HrCategory[]>([]);
-    const [total, setTotal] = useState(0);
-    const [totalPages, setTotalPages] = useState(1);
     const [page, setPage] = useState(1);
     const [limit, setLimit] = useState(25);
     const [search, setSearch] = useState("");
@@ -56,96 +69,72 @@ export function HrLinksTable() {
     const [createDialogOpen, setCreateDialogOpen] = useState(false);
     const [editingLink, setEditingLink] = useState<HrLink | null>(null);
 
-    // Load categories once on mount
-    useEffect(() => {
-        let cancelled = false;
-        const loadCategories = async () => {
-            try {
-                const res = await HrDocumentsService.getCategories({
-                    isActive: true,
-                    limit: 100,
-                });
-                if (!cancelled) setCategories(res.categories);
-            } catch (e) {
-                console.error("Failed to load categories:", e);
-            }
-        };
-        loadCategories();
-        return () => {
-            cancelled = true;
-        };
-    }, []);
+    // Defer search value for better UX during typing
+    const deferredSearch = useDeferredValue(search);
+    const isStale = deferredSearch !== search;
 
-    const load = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            // Determine isActive filter value
-            let isActiveValue: boolean | undefined;
-            if (activeFilter === "active") {
-                isActiveValue = true;
-            } else if (activeFilter === "inactive") {
-                isActiveValue = false;
-            }
-
-            const res = await HrDocumentsService.getLinks({
-                page,
-                limit,
-                search: search || undefined,
-                category: categoryFilter === "all" ? undefined : categoryFilter,
-                isActive: isActiveValue,
-                sortBy,
-                sortOrder,
-            });
-            setLinks(res.links);
-            setTotal(res.total);
-            setTotalPages(res.totalPages);
-        } catch (e: unknown) {
-            console.error(e);
-            const msg =
-                typeof e === "object" && e && "message" in e
-                    ? String((e as { message?: string }).message)
-                    : "Failed to load links";
-            setError(msg);
-        } finally {
-            setLoading(false);
-        }
+    // Determine isActive filter value
+    const getIsActiveValue = (): boolean | undefined => {
+        if (activeFilter === "active") return true;
+        if (activeFilter === "inactive") return false;
+        return undefined;
     };
 
-    useEffect(() => {
-        load();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [page, limit, search, categoryFilter, activeFilter, sortBy, sortOrder]);
+    // Build query params for SWR
+    const queryParams: Record<string, string | number | boolean> = {
+        page,
+        limit,
+        sortBy,
+        sortOrder,
+    };
+    if (deferredSearch) queryParams.search = deferredSearch;
+    if (categoryFilter !== "all") queryParams.category = categoryFilter;
+    const isActiveValue = getIsActiveValue();
+    if (isActiveValue !== undefined) queryParams.isActive = isActiveValue;
+
+    // Fetch links with SWR
+    const {
+        data: linksData,
+        error: linksError,
+        isLoading: loading,
+        mutate,
+    } = usePaginatedApi<HrLinksResponse>("/hr-documents/links", queryParams);
+
+    const links = linksData?.links ?? [];
+    const total = linksData?.total ?? 0;
+    const totalPages = linksData?.totalPages ?? 1;
+    const error = linksError ? errorMessages.hrLinks.load : null;
+
+    // Fetch categories with SWR (for filter dropdown)
+    const { data: categoriesData } = useApi<HrCategoriesResponse>(
+        "/hr-documents/categories?isActive=true&limit=100"
+    );
+    const categories = categoriesData?.categories ?? [];
 
     const onDelete = async (link: HrLink) => {
         if (!confirm(`Delete link "${link.title}"?`)) return;
         try {
             await HrDocumentsService.deleteLink(link._id);
-            toast.success("Link deleted successfully");
-            load();
+            apiToast.success(successMessages.hrLinks.deleted);
+            mutate();
         } catch {
-            toast.error("Failed to delete link");
+            apiToast.error(errorMessages.hrLinks.delete);
         }
     };
 
     const onToggleActive = async (link: HrLink) => {
+        const action = link.isActive ? "deactivate" : "activate";
         try {
             await HrDocumentsService.updateLink(link._id, {
                 isActive: !link.isActive,
             });
-            toast.success(
-                link.isActive
-                    ? "Link deactivated successfully"
-                    : "Link activated successfully"
-            );
-            load();
-        } catch (e: unknown) {
-            const action = link.isActive ? "deactivate" : "activate";
-            const msg =
-                typeof e === "object" && e && "message" in e
-                    ? String((e as { message?: string }).message)
-                    : `Failed to ${action} link`;
-            toast.error(msg);
+            const message = link.isActive
+                ? successMessages.hrLinks.deactivated
+                : successMessages.hrLinks.activated;
+            apiToast.success(message);
+            mutate();
+        } catch {
+            apiToast.error(`Failed to ${action} link`);
         }
     };
 
@@ -273,7 +262,7 @@ export function HrLinksTable() {
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={load}
+                            onClick={() => mutate()}
                             disabled={loading}
                         >
                             <RefreshCcwIcon className="h-4 w-4 mr-2" />
@@ -283,7 +272,12 @@ export function HrLinksTable() {
                 </div>
             </div>
 
-            <div className="rounded-md border">
+            <div
+                className={cn(
+                    "rounded-md border transition-opacity duration-150",
+                    isStale && "opacity-70"
+                )}
+            >
                 <Table>
                     <TableHeader>
                         <TableRow className="border-b-2">
@@ -571,7 +565,7 @@ export function HrLinksTable() {
             <CreateHrLinkDialog
                 open={createDialogOpen}
                 onOpenChange={setCreateDialogOpen}
-                onSuccess={load}
+                onSuccess={() => mutate()}
             />
 
             {editingLink && (
@@ -581,7 +575,7 @@ export function HrLinksTable() {
                     onOpenChange={(open: boolean) =>
                         !open && setEditingLink(null)
                     }
-                    onSuccess={load}
+                    onSuccess={() => mutate()}
                 />
             )}
         </div>

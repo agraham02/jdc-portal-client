@@ -101,7 +101,8 @@ export default function HRUploadPage() {
                 file,
                 {
                     description: description.trim() || undefined,
-                    category: category || undefined,
+                    category: "hr_document", // Fixed category for HR documents
+                    hrCategory: category || undefined, // HR category selection
                     isPublic: isPublic,
                 },
                 // Real progress callback

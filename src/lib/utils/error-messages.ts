@@ -129,9 +129,32 @@ export const errorMessages = {
     // HR Documents
     hrDocuments: {
         load: "Failed to load documents",
+        loadSingle: "Failed to load document",
         upload: "Failed to upload document",
+        replace: "Failed to replace document",
         delete: "Failed to delete document",
         download: "Failed to download document",
+    },
+
+    // HR Categories
+    hrCategories: {
+        load: "Failed to load categories",
+        loadSingle: "Failed to load category",
+        create: "Failed to create category",
+        update: "Failed to update category",
+        delete: "Failed to delete category",
+        deleteInUse: "Cannot delete category that is in use by links",
+    },
+
+    // HR Links
+    hrLinks: {
+        load: "Failed to load links",
+        loadSingle: "Failed to load link",
+        create: "Failed to create link",
+        update: "Failed to update link",
+        delete: "Failed to delete link",
+        activate: "Failed to activate link",
+        deactivate: "Failed to deactivate link",
     },
 
     // Generic
@@ -234,7 +257,22 @@ export const successMessages = {
 
     hrDocuments: {
         uploaded: "Document uploaded successfully",
+        replaced: "Document replaced successfully",
         deleted: "Document deleted successfully",
+    },
+
+    hrCategories: {
+        created: "Category created successfully",
+        updated: "Category updated successfully",
+        deleted: "Category deleted successfully",
+    },
+
+    hrLinks: {
+        created: "Link created successfully",
+        updated: "Link updated successfully",
+        deleted: "Link deleted successfully",
+        activated: "Link activated successfully",
+        deactivated: "Link deactivated successfully",
     },
 };
 

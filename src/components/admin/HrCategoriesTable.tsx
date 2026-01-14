@@ -1,30 +1,16 @@
 "use client";
 
-import { useEffect, useState, useDeferredValue } from "react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { useState, useMemo, useCallback, useDeferredValue } from "react";
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "sonner";
+    GenericTable,
+    type GenericTableConfig,
+    useTableState,
+} from "@/components/ui/generic-table";
+import { usePaginatedApi } from "@/lib/hooks/useApi";
 import { HrDocumentsService } from "@/lib/services/file";
-import { HrCategory } from "@/lib/types/file";
-import {
-    RefreshCcwIcon,
-    Trash2Icon,
-    PencilIcon,
-    Search,
-    PlusIcon,
-} from "lucide-react";
-import { CreateHrCategoryDialog } from "./CreateHrCategoryDialog";
-import { EditHrCategoryDialog } from "./EditHrCategoryDialog";
+import { HrCategory, HrCategoryListResponse } from "@/lib/types/file";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -35,13 +21,18 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { PlusIcon } from "lucide-react";
+import { apiToast } from "@/lib/utils/toast-helpers";
+import { errorMessages, successMessages } from "@/lib/utils/error-messages";
+import { cn } from "@/lib/utils";
+import { HrCategoryFormDialog } from "./HrCategoryFormDialog";
 
+/**
+ * HR Categories management table with full CRUD support
+ * Uses GenericTable for consistent UI and SWR for data fetching
+ */
 export function HrCategoriesTable() {
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [categories, setCategories] = useState<HrCategory[]>([]);
-    const [search, setSearch] = useState("");
-    const deferredSearch = useDeferredValue(search);
+    // Dialog state
     const [createDialogOpen, setCreateDialogOpen] = useState(false);
     const [editingCategory, setEditingCategory] = useState<HrCategory | null>(
         null
@@ -49,240 +40,280 @@ export function HrCategoriesTable() {
     const [deletingCategory, setDeletingCategory] = useState<HrCategory | null>(
         null
     );
-    const [deleting, setDeleting] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
-    const load = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            const res = await HrDocumentsService.getCategories({
-                limit: 100,
-                search: deferredSearch || undefined,
-            });
-            setCategories(res.categories);
-        } catch (e: unknown) {
-            console.error(e);
-            const msg =
-                typeof e === "object" && e && "message" in e
-                    ? String((e as { message?: string }).message)
-                    : "Failed to load categories";
-            setError(msg);
-        } finally {
-            setLoading(false);
-        }
+    // Filter definitions for the table
+    const filterDefinitions = useMemo<
+        GenericTableConfig<HrCategory>["filters"]
+    >(
+        () => [
+            {
+                key: "search",
+                label: "Search",
+                type: "search",
+                placeholder: "Search categories...",
+                className: "w-64",
+            },
+            {
+                key: "isActive",
+                label: "Status",
+                type: "select",
+                className: "w-32",
+                options: [
+                    { value: "true", label: "Active" },
+                    { value: "false", label: "Inactive" },
+                ],
+            },
+        ],
+        []
+    );
+
+    // Table state management
+    const tableState = useTableState<HrCategory>({
+        filters: filterDefinitions,
+        defaultPageSize: 25,
+        enablePagination: true,
+    } as GenericTableConfig<HrCategory>);
+
+    const {
+        page,
+        pageSize,
+        filters: activeFilters,
+    } = tableState;
+
+    // Extract filter values
+    const searchFilter = activeFilters.search?.trim() ?? "";
+    const statusFilter =
+        activeFilters.isActive && activeFilters.isActive !== "all"
+            ? activeFilters.isActive === "true"
+            : undefined;
+
+    // Defer search to prevent UI jank
+    const deferredSearch = useDeferredValue(searchFilter);
+    const isSearchStale = searchFilter !== deferredSearch;
+
+    // Build query params - only include defined values
+    const queryParams: Record<string, string | number | boolean> = {
+        page,
+        limit: pageSize,
     };
+    if (deferredSearch) {
+        queryParams.search = deferredSearch;
+    }
+    if (statusFilter !== undefined) {
+        queryParams.isActive = statusFilter;
+    }
 
-    useEffect(() => {
-        load();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [deferredSearch]);
+    // SWR data fetching with automatic caching and revalidation
+    const {
+        data,
+        error,
+        isLoading,
+        mutate,
+    } = usePaginatedApi<HrCategoryListResponse>(
+        "/hr-documents/categories",
+        queryParams
+    );
 
-    const onDelete = async () => {
+    const categories = data?.categories ?? [];
+    const totalCategories = data?.total ?? 0;
+
+    // Refresh data
+    const handleRefresh = useCallback(() => {
+        mutate();
+    }, [mutate]);
+
+    // Handle category deletion with optimistic update
+    const handleDelete = async () => {
         if (!deletingCategory) return;
-        setDeleting(true);
+        const categoryToDelete = deletingCategory;
+
+        // Close dialog immediately
+        setDeletingCategory(null);
+        setIsDeleting(true);
+
+        // Optimistic update: immediately remove from cache
+        mutate(
+            (current) =>
+                current
+                    ? {
+                          ...current,
+                          categories: current.categories.filter(
+                              (c) => c._id !== categoryToDelete._id
+                          ),
+                          total: current.total - 1,
+                      }
+                    : current,
+            { revalidate: false }
+        );
+
         try {
-            await HrDocumentsService.deleteCategory(deletingCategory._id);
-            toast.success("Category deleted successfully");
-            setDeletingCategory(null);
-            load();
+            await HrDocumentsService.deleteCategory(categoryToDelete._id);
+            apiToast.success(successMessages.hrCategories.deleted);
+            // Revalidate to ensure consistency
+            mutate();
         } catch (e: unknown) {
-            const msg =
-                typeof e === "object" && e && "message" in e
-                    ? String((e as { message?: string }).message)
-                    : "Failed to delete category";
-            toast.error(msg);
+            // Revert optimistic update on error
+            mutate();
+            apiToast.error(errorMessages.hrCategories.delete, e);
         } finally {
-            setDeleting(false);
+            setIsDeleting(false);
         }
     };
+
+    // Handle dialog success - refresh data
+    const handleDialogSuccess = useCallback(() => {
+        mutate();
+    }, [mutate]);
+
+    // Table configuration
+    const tableConfig: GenericTableConfig<HrCategory> = useMemo(
+        () => ({
+            columns: [
+                {
+                    key: "name",
+                    label: "Name",
+                    render: (cat) => (
+                        <span className="font-medium">{cat.name}</span>
+                    ),
+                },
+                {
+                    key: "slug",
+                    label: "Slug",
+                    render: (cat) => (
+                        <code className="text-sm bg-muted px-1.5 py-0.5 rounded font-mono">
+                            {cat.slug}
+                        </code>
+                    ),
+                },
+                {
+                    key: "description",
+                    label: "Description",
+                    render: (cat) =>
+                        cat.description || (
+                            <span className="text-muted-foreground italic">
+                                No description
+                            </span>
+                        ),
+                    className: "max-w-xs truncate",
+                },
+                {
+                    key: "sortOrder",
+                    label: "Sort Order",
+                    render: (cat) => (
+                        <span className="text-muted-foreground">
+                            {cat.sortOrder}
+                        </span>
+                    ),
+                },
+                {
+                    key: "isActive",
+                    label: "Status",
+                    render: (cat) => (
+                        <Badge
+                            variant={cat.isActive ? "default" : "secondary"}
+                            aria-label={
+                                cat.isActive
+                                    ? "Active category"
+                                    : "Inactive category"
+                            }
+                        >
+                            {cat.isActive ? "Active" : "Inactive"}
+                        </Badge>
+                    ),
+                },
+            ],
+            actions: [
+                {
+                    key: "edit",
+                    label: "Edit",
+                    variant: "secondary",
+                    onClick: (cat) => setEditingCategory(cat),
+                },
+                {
+                    key: "delete",
+                    label: "Delete",
+                    variant: "destructive",
+                    onClick: (cat) => setDeletingCategory(cat),
+                },
+            ],
+            filters: filterDefinitions,
+            defaultPageSize: 25,
+            enablePagination: true,
+            manualFiltering: true,
+            manualPagination: true,
+            emptyMessage:
+                searchFilter || statusFilter !== undefined
+                    ? "No categories match your filters"
+                    : "No categories found. Create your first category to get started.",
+            loadingMessage: "Loading categories...",
+        }),
+        [filterDefinitions, searchFilter, statusFilter]
+    );
+
+    // Convert SWR error to string for GenericTable
+    const getErrorMessage = (): string | null => {
+        if (!error) return null;
+        if (typeof error === "object" && "message" in error) {
+            return String(error.message);
+        }
+        return errorMessages.hrCategories.load;
+    };
+    const errorMessage = getErrorMessage();
 
     return (
         <div className="space-y-4">
-            {/* Controls */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-between">
-                <div className="flex gap-2 flex-1">
-                    <div className="relative flex-1 max-w-sm">
-                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder="Search categories..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            className="pl-9"
-                        />
-                    </div>
-                </div>
-                <div className="flex gap-2">
-                    <Button onClick={() => setCreateDialogOpen(true)}>
-                        <PlusIcon className="h-4 w-4 mr-2" />
-                        Add Category
-                    </Button>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={load}
-                        disabled={loading}
-                    >
-                        <RefreshCcwIcon className="h-4 w-4 mr-2" />
-                        {loading ? "Loading..." : "Refresh"}
-                    </Button>
-                </div>
+            {/* Header with Create button */}
+            <div className="flex justify-end">
+                <Button onClick={() => setCreateDialogOpen(true)}>
+                    <PlusIcon className="h-4 w-4 mr-2" />
+                    Add Category
+                </Button>
             </div>
 
-            {/* Table */}
-            <div className="rounded-md border">
-                <Table>
-                    <TableHeader>
-                        <TableRow className="border-b-2">
-                            <TableHead>Name</TableHead>
-                            <TableHead>Slug</TableHead>
-                            <TableHead>Description</TableHead>
-                            <TableHead>Sort Order</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">
-                                Actions
-                            </TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {loading && (
-                            <>
-                                <TableRow>
-                                    <TableCell colSpan={6}>
-                                        <Skeleton className="h-6 w-full" />
-                                    </TableCell>
-                                </TableRow>
-                                <TableRow>
-                                    <TableCell colSpan={6}>
-                                        <Skeleton className="h-6 w-full" />
-                                    </TableCell>
-                                </TableRow>
-                                <TableRow>
-                                    <TableCell colSpan={6}>
-                                        <Skeleton className="h-6 w-full" />
-                                    </TableCell>
-                                </TableRow>
-                            </>
-                        )}
-                        {error && !loading && (
-                            <TableRow>
-                                <TableCell colSpan={6} className="text-red-600">
-                                    {error}
-                                </TableCell>
-                            </TableRow>
-                        )}
-                        {!loading && !error && categories.length === 0 && (
-                            <TableRow>
-                                <TableCell
-                                    colSpan={6}
-                                    className="text-center py-12"
-                                >
-                                    <div className="flex flex-col items-center gap-3 text-muted-foreground">
-                                        <p className="font-medium text-lg">
-                                            No categories found
-                                        </p>
-                                        <p className="text-sm">
-                                            {search
-                                                ? `No categories match "${search}"`
-                                                : "Create your first category to get started"}
-                                        </p>
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-                        )}
-                        {!loading &&
-                            !error &&
-                            categories.map((cat) => (
-                                <TableRow
-                                    key={cat._id}
-                                    className="hover:bg-muted/50 transition-colors"
-                                >
-                                    <TableCell className="font-medium">
-                                        {cat.name}
-                                    </TableCell>
-                                    <TableCell>
-                                        <code className="text-sm bg-muted px-1 py-0.5 rounded">
-                                            {cat.slug}
-                                        </code>
-                                    </TableCell>
-                                    <TableCell className="max-w-xs truncate">
-                                        {cat.description || (
-                                            <span className="text-muted-foreground italic">
-                                                No description
-                                            </span>
-                                        )}
-                                    </TableCell>
-                                    <TableCell>{cat.sortOrder}</TableCell>
-                                    <TableCell>
-                                        <Badge
-                                            variant={
-                                                cat.isActive
-                                                    ? "default"
-                                                    : "secondary"
-                                            }
-                                        >
-                                            {cat.isActive
-                                                ? "Active"
-                                                : "Inactive"}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <div className="flex gap-1 justify-end">
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() =>
-                                                    setEditingCategory(cat)
-                                                }
-                                                title="Edit"
-                                                aria-label={`Edit ${cat.name}`}
-                                            >
-                                                <PencilIcon className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() =>
-                                                    setDeletingCategory(cat)
-                                                }
-                                                title="Delete"
-                                                aria-label={`Delete ${cat.name}`}
-                                                className="text-destructive hover:text-destructive"
-                                            >
-                                                <Trash2Icon className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                    </TableBody>
-                </Table>
+            {/* Table with stale indicator during search */}
+            <div
+                className={cn(
+                    "transition-opacity duration-200",
+                    isSearchStale && "opacity-60"
+                )}
+            >
+                <GenericTable
+                    data={categories}
+                    loading={isLoading}
+                    error={errorMessage}
+                    config={tableConfig}
+                    onRefresh={handleRefresh}
+                    state={tableState}
+                    totalItems={totalCategories}
+                />
             </div>
 
             {/* Create Dialog */}
-            <CreateHrCategoryDialog
+            <HrCategoryFormDialog
+                mode="create"
                 open={createDialogOpen}
                 onOpenChange={setCreateDialogOpen}
-                onSuccess={load}
+                onSuccess={handleDialogSuccess}
             />
 
             {/* Edit Dialog */}
             {editingCategory && (
-                <EditHrCategoryDialog
+                <HrCategoryFormDialog
+                    mode="edit"
                     open={!!editingCategory}
                     category={editingCategory}
-                    onOpenChange={(open: boolean) =>
-                        !open && setEditingCategory(null)
-                    }
-                    onSuccess={load}
+                    onOpenChange={(open) => !open && setEditingCategory(null)}
+                    onSuccess={handleDialogSuccess}
                 />
             )}
 
-            {/* Delete Confirmation */}
+            {/* Delete Confirmation Dialog */}
             <AlertDialog
                 open={!!deletingCategory}
                 onOpenChange={(open) => {
                     // Prevent dismissal while delete is in progress
-                    if (deleting) return;
+                    if (isDeleting) return;
                     if (!open) setDeletingCategory(null);
                 }}
             >
@@ -300,15 +331,15 @@ export function HrCategoriesTable() {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel disabled={deleting}>
+                        <AlertDialogCancel disabled={isDeleting}>
                             Cancel
                         </AlertDialogCancel>
                         <AlertDialogAction
-                            onClick={onDelete}
-                            disabled={deleting}
+                            onClick={handleDelete}
+                            disabled={isDeleting}
                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         >
-                            {deleting ? "Deleting..." : "Delete"}
+                            {isDeleting ? "Deleting..." : "Delete"}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

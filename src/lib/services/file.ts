@@ -260,6 +260,8 @@ export interface HrDocumentMetadata {
     description?: string;
     category?: string;
     isPublic?: boolean;
+    tags?: string[];
+    hrCategory?: string;
 }
 
 export class HrDocumentsService {
@@ -281,6 +283,9 @@ export class HrDocumentsService {
         }
         if (metadata.isPublic !== undefined) {
             formData.append("isPublic", metadata.isPublic.toString());
+        }
+        if (metadata.hrCategory) {
+            formData.append("hrCategory", metadata.hrCategory);
         }
 
         return formData;
@@ -439,6 +444,13 @@ export class HrDocumentsService {
     /**
      * Get all HR categories
      * GET /hr-documents/categories
+     *
+     * @param query - Query parameters for filtering/pagination
+     * @param query.page - Page number (default: 1)
+     * @param query.limit - Items per page (default: 25, max: 100)
+     * @param query.isActive - Filter by active status
+     * @param query.search - Search by name or description
+     * @returns Paginated list of categories
      */
     static async getCategories(
         query: import("../types/file").HrCategoryQueryDto = {}

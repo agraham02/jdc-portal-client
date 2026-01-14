@@ -141,6 +141,8 @@ export interface HRDocument {
     filename: string;
     size: number;
     mimetype: string;
+    category?: string; // FileCategory enum
+    hrCategory?: HrCategoryRef; // HR category reference
     description?: string;
     tags: string[];
     uploadedBy: UserReference;
