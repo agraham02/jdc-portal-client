@@ -69,17 +69,12 @@ export function HrCategoriesTable() {
     );
 
     // Table state management
-    const tableState = useTableState<HrCategory>({
+    const tableState = useTableState({
         filters: filterDefinitions,
         defaultPageSize: 25,
-        enablePagination: true,
-    } as GenericTableConfig<HrCategory>);
+    });
 
-    const {
-        page,
-        pageSize,
-        filters: activeFilters,
-    } = tableState;
+    const { page, pageSize, filters: activeFilters } = tableState;
 
     // Extract filter values
     const searchFilter = activeFilters.search?.trim() ?? "";
@@ -105,15 +100,11 @@ export function HrCategoriesTable() {
     }
 
     // SWR data fetching with automatic caching and revalidation
-    const {
-        data,
-        error,
-        isLoading,
-        mutate,
-    } = usePaginatedApi<HrCategoryListResponse>(
-        "/hr-documents/categories",
-        queryParams
-    );
+    const { data, error, isLoading, mutate } =
+        usePaginatedApi<HrCategoryListResponse>(
+            "/hr-documents/categories",
+            queryParams
+        );
 
     const categories = data?.categories ?? [];
     const totalCategories = data?.total ?? 0;

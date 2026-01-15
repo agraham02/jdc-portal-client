@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import {
     GenericTable,
     type GenericTableConfig,
@@ -13,11 +13,20 @@ import { useAuthz } from "@/lib/authz/useAuthz";
 import { UserStatusHelper } from "@/lib/utils/user-status-helper";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 import TextPreview from "@/components/common/TextPreview";
-import { useRouter } from "next/navigation";
 import { StatusBadge } from "../common";
 import { useErrorState } from "@/lib/hooks/useErrorState";
 import { apiToast } from "@/lib/utils/toast-helpers";
 import { errorMessages, successMessages } from "@/lib/utils/error-messages";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 function getPopulatedUser(vendor: Vendor): User | null {
     const user = vendor.userId;
@@ -25,28 +34,51 @@ function getPopulatedUser(vendor: Vendor): User | null {
         typeof user === "object" &&
         user !== null &&
         "status" in user &&
-        typeof (user as User).status === "string"
+        typeof user.status === "string"
     ) {
-        return user as User;
+        return user;
     }
     return null;
 }
 
 export function VendorsTable() {
     const router = useRouter();
+    const pathname = usePathname();
     const searchParams = useSearchParams();
     const { hasAny } = useAuthz();
     const canRead = hasAny([P.VENDOR_READ, P.VENDOR_READ_ALL]);
-    const canUpdate = hasAny([P.VENDOR_UPDATE]);
+    const canManage = hasAny([
+        P.VENDOR_UPDATE,
+        P.VENDOR_UPDATE_ALL,
+        P.VENDOR_APPROVE,
+    ]);
     const canDelete = hasAny([P.VENDOR_DELETE]);
 
     const { error, setError, clearError } = useErrorState();
     const [loading, setLoading] = useState(true);
     const [vendors, setVendors] = useState<Vendor[]>([]);
     const [totalVendors, setTotalVendors] = useState(0);
+    const [confirmAction, setConfirmAction] = useState<null | {
+        type: "reject" | "deactivate";
+        vendor: Vendor;
+    }>(null);
+    const hasSyncedFromUrlRef = useRef(false);
+    const filtersRef = useRef<Record<string, string>>({});
 
     // Get initial status from URL query params
-    const initialStatus = searchParams.get("status") || undefined;
+    const initialStatus = useMemo(() => {
+        const status = searchParams.get("status");
+        if (
+            status &&
+            Object.values(UserStatus).includes(status as UserStatus)
+        ) {
+            return status as UserStatus;
+        }
+        return undefined;
+    }, [searchParams]);
+    const initialSearch = useMemo(() => {
+        return searchParams.get("search") || "";
+    }, [searchParams]);
 
     const filterDefinitions = useMemo<GenericTableConfig<Vendor>["filters"]>(
         () => [
@@ -65,19 +97,21 @@ export function VendorsTable() {
                 options: [
                     { value: UserStatus.ACTIVE, label: "Active" },
                     { value: UserStatus.PENDING, label: "Pending" },
+                    { value: UserStatus.ONBOARDING, label: "Onboarding" },
                     { value: UserStatus.INACTIVE, label: "Inactive" },
+                    { value: UserStatus.REJECTED, label: "Rejected" },
+                    { value: UserStatus.TERMINATED, label: "Terminated" },
+                    { value: UserStatus.ARCHIVED, label: "Archived" },
                 ],
             },
         ],
         []
     );
 
-    const tableState = useTableState<Vendor>({
+    const tableState = useTableState({
         filters: filterDefinitions,
         defaultPageSize: 25,
-        enablePagination: true,
-        defaultFilters: initialStatus ? { status: initialStatus } : undefined,
-    } as GenericTableConfig<Vendor>);
+    });
 
     const {
         page,
@@ -85,12 +119,70 @@ export function VendorsTable() {
         filters: activeFilters,
         setPage,
         setPageSize,
+        updateFilter,
     } = tableState;
+
+    useEffect(() => {
+        filtersRef.current = activeFilters;
+    }, [activeFilters]);
+
+    // Sync filters from URL query params (for back/forward navigation)
+    useEffect(() => {
+        const nextStatus = initialStatus ?? "all";
+        const nextSearch = initialSearch ?? "";
+        const currentFilters = filtersRef.current;
+
+        if (currentFilters.status !== nextStatus) {
+            updateFilter("status", nextStatus);
+        }
+        if ((currentFilters.search ?? "") !== nextSearch) {
+            updateFilter("search", nextSearch);
+        }
+
+        if (!hasSyncedFromUrlRef.current) {
+            hasSyncedFromUrlRef.current = true;
+        }
+    }, [initialStatus, initialSearch, updateFilter]);
+
     const searchFilter = activeFilters.search?.trim() ?? "";
+    const [debouncedSearch, setDebouncedSearch] = useState(searchFilter);
     const statusFilter =
         activeFilters.status && activeFilters.status !== "all"
             ? (activeFilters.status as UserStatus)
             : undefined;
+
+    useEffect(() => {
+        const timeoutId = globalThis.setTimeout(() => {
+            setDebouncedSearch(searchFilter);
+        }, 400);
+
+        return () => globalThis.clearTimeout(timeoutId);
+    }, [searchFilter]);
+
+    useEffect(() => {
+        if (!hasSyncedFromUrlRef.current) return;
+
+        const params = new URLSearchParams(searchParams.toString());
+        if (debouncedSearch) {
+            params.set("search", debouncedSearch);
+        } else {
+            params.delete("search");
+        }
+
+        if (statusFilter) {
+            params.set("status", statusFilter);
+        } else {
+            params.delete("status");
+        }
+
+        const nextQuery = params.toString();
+        const currentQuery = searchParams.toString();
+        if (nextQuery !== currentQuery) {
+            router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, {
+                scroll: false,
+            });
+        }
+    }, [debouncedSearch, statusFilter, pathname, router, searchParams]);
 
     const loadVendors = useCallback(async () => {
         if (!canRead) return;
@@ -101,7 +193,7 @@ export function VendorsTable() {
             const response = await VendorService.getVendors({
                 page,
                 limit: pageSize,
-                search: searchFilter || undefined,
+                search: debouncedSearch || undefined,
                 status: statusFilter,
             });
             setVendors(response.data);
@@ -121,7 +213,7 @@ export function VendorsTable() {
         canRead,
         page,
         pageSize,
-        searchFilter,
+        debouncedSearch,
         statusFilter,
         setPage,
         setPageSize,
@@ -133,40 +225,58 @@ export function VendorsTable() {
         loadVendors();
     }, [loadVendors]);
 
+    const runVendorAction = useCallback(
+        async (
+            action: () => Promise<void>,
+            successMessage: string,
+            errorMessage: string
+        ) => {
+            try {
+                await action();
+                apiToast.success(successMessage);
+                await loadVendors();
+            } catch (error) {
+                apiToast.error(errorMessage, error);
+            }
+        },
+        [loadVendors]
+    );
+
+    const handleApprove = useCallback(
+        async (vendor: Vendor) => {
+            await runVendorAction(
+                () => VendorService.approveVendor(vendor._id),
+                successMessages.vendors.approved,
+                errorMessages.vendors.approve
+            );
+        },
+        [runVendorAction]
+    );
+
+    const handleReject = useCallback(
+        async (vendor: Vendor) => {
+            await runVendorAction(
+                () =>
+                    VendorService.rejectVendor(vendor._id, "Rejected by admin"),
+                successMessages.vendors.rejected,
+                errorMessages.vendors.reject
+            );
+        },
+        [runVendorAction]
+    );
+
+    const handleDeactivate = useCallback(
+        async (vendor: Vendor) => {
+            await runVendorAction(
+                () => VendorService.deactivateVendor(vendor._id),
+                successMessages.vendors.deactivated,
+                errorMessages.vendors.deactivate
+            );
+        },
+        [runVendorAction]
+    );
+
     const tableConfig: GenericTableConfig<Vendor> = useMemo(() => {
-        const handleApprove = async (vendor: Vendor) => {
-            try {
-                await VendorService.approveVendor(vendor._id);
-                apiToast.success(successMessages.vendors.approved);
-                await loadVendors();
-            } catch (error) {
-                apiToast.error(errorMessages.vendors.approve, error);
-            }
-        };
-
-        const handleReject = async (vendor: Vendor) => {
-            try {
-                await VendorService.rejectVendor(
-                    vendor._id,
-                    "Rejected by admin"
-                );
-                apiToast.success(successMessages.vendors.rejected);
-                await loadVendors();
-            } catch (error) {
-                apiToast.error(errorMessages.vendors.reject, error);
-            }
-        };
-
-        const handleDeactivate = async (vendor: Vendor) => {
-            try {
-                await VendorService.deactivateVendor(vendor._id);
-                apiToast.success(successMessages.vendors.deactivated);
-                await loadVendors();
-            } catch (error) {
-                apiToast.error(errorMessages.vendors.deactivate, error);
-            }
-        };
-
         return {
             columns: [
                 {
@@ -181,7 +291,17 @@ export function VendorsTable() {
                 {
                     key: "contactEmail",
                     label: "Contact Email",
-                    render: (vendor) => vendor.contactEmail || "—",
+                    render: (vendor) =>
+                        vendor.contactEmail ? (
+                            <a
+                                href={`mailto:${vendor.contactEmail}`}
+                                className="text-blue-600 hover:underline"
+                            >
+                                {vendor.contactEmail}
+                            </a>
+                        ) : (
+                            "—"
+                        ),
                 },
                 {
                     key: "website",
@@ -189,7 +309,11 @@ export function VendorsTable() {
                     render: (vendor) =>
                         vendor.website ? (
                             <a
-                                href={vendor.website}
+                                href={
+                                    vendor.website.startsWith("http")
+                                        ? vendor.website
+                                        : `https://${vendor.website}`
+                                }
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-blue-600 hover:underline"
@@ -227,7 +351,7 @@ export function VendorsTable() {
                         router.push(`/vendors/${vendor._id}`);
                     },
                 },
-                ...(canUpdate
+                ...(canManage
                     ? [
                           {
                               key: "approve",
@@ -243,7 +367,11 @@ export function VendorsTable() {
                               key: "reject",
                               label: "Quick Reject",
                               variant: "destructive" as const,
-                              onClick: handleReject,
+                              onClick: (vendor: Vendor) =>
+                                  setConfirmAction({
+                                      type: "reject",
+                                      vendor,
+                                  }),
                               hidden: (vendor: Vendor) => {
                                   // Only show for pending vendors
                                   const user = getPopulatedUser(vendor);
@@ -258,7 +386,11 @@ export function VendorsTable() {
                               key: "deactivate",
                               label: "Deactivate",
                               variant: "destructive" as const,
-                              onClick: handleDeactivate,
+                              onClick: (vendor: Vendor) =>
+                                  setConfirmAction({
+                                      type: "deactivate",
+                                      vendor,
+                                  }),
                               hidden: (vendor: Vendor) => {
                                   const user = getPopulatedUser(vendor);
                                   return (
@@ -279,7 +411,13 @@ export function VendorsTable() {
             loadingMessage: "Loading vendors…",
             emptyMessage: "No vendors found",
         };
-    }, [canUpdate, canDelete, router, loadVendors, filterDefinitions]);
+    }, [
+        canManage,
+        canDelete,
+        router,
+        filterDefinitions,
+        handleApprove,
+    ]);
 
     if (!canRead) {
         return (
@@ -290,14 +428,57 @@ export function VendorsTable() {
     }
 
     return (
-        <GenericTable
-            data={vendors}
-            loading={loading}
-            error={error}
-            config={tableConfig}
-            onRefresh={loadVendors}
-            state={tableState}
-            totalItems={totalVendors}
-        />
+        <>
+            <GenericTable
+                data={vendors}
+                loading={loading}
+                error={error}
+                config={tableConfig}
+                onRefresh={loadVendors}
+                state={tableState}
+                totalItems={totalVendors}
+            />
+            <AlertDialog
+                open={Boolean(confirmAction)}
+                onOpenChange={(open) => {
+                    if (!open) setConfirmAction(null);
+                }}
+            >
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>
+                            {confirmAction?.type === "reject"
+                                ? "Reject vendor"
+                                : "Deactivate vendor"}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {confirmAction?.type === "reject"
+                                ? "This will reject the vendor’s account request. They will need to reapply if this was a mistake."
+                                : "This will deactivate the vendor’s account. They will lose access until reactivated."}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={async () => {
+                                if (!confirmAction) return;
+                                if (confirmAction.type === "reject") {
+                                    await handleReject(confirmAction.vendor);
+                                } else {
+                                    await handleDeactivate(
+                                        confirmAction.vendor
+                                    );
+                                }
+                                setConfirmAction(null);
+                            }}
+                        >
+                            {confirmAction?.type === "reject"
+                                ? "Reject"
+                                : "Deactivate"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </>
     );
 }

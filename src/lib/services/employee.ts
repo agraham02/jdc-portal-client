@@ -28,12 +28,18 @@ export interface CompleteEmployeeOnboardingDto {
 }
 
 export interface UpdateEmployeeDto {
+    email?: string;
+    firstName?: string;
+    lastName?: string;
+    password?: string;
     employeeId?: string;
     jobTitle?: string;
     department?: string;
     hireDate?: string; // ISO date string
     managerId?: string;
     status?: UserStatus;
+    contactPhone?: string;
+    contactEmail?: string;
 }
 
 export class EmployeeService {

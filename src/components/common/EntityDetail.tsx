@@ -34,6 +34,7 @@ import { AddressForm, DateInput, ServicesInput, StatusBadge } from ".";
 import { AuthService } from "@/lib/services/auth";
 import { useAuthz } from "@/lib/authz/useAuthz";
 import { PermissionName as P } from "@/lib/constants/permission-names";
+import { DEPARTMENT_OPTIONS } from "@/lib/constants/departments";
 
 type EntityType = "user" | "employee" | "vendor";
 
@@ -48,6 +49,7 @@ export function EntityDetail({ entityType, id, canUpdate }: Props) {
     const [loading, setLoading] = useState(true);
     const [editing, setEditing] = useState(false);
     const [resending, setResending] = useState(false);
+    const [saving, setSaving] = useState(false);
     const { hasAny } = useAuthz();
     const canResendActivation = hasAny([P.EMPLOYEE_CREATE, P.EMPLOYEE_UPDATE]);
     const [data, setData] = useState<EmployeeWithUser | VendorWithUser | null>(
@@ -185,6 +187,7 @@ export function EntityDetail({ entityType, id, canUpdate }: Props) {
     };
 
     const onSave = async () => {
+        setSaving(true);
         try {
             if (entityType === "employee") {
                 const updateData: UpdateEmployeeDto = {
@@ -198,19 +201,22 @@ export function EntityDetail({ entityType, id, canUpdate }: Props) {
                     managerId: (form.managerId as string) || undefined,
                 };
                 await EmployeeService.updateEmployee(id, updateData);
+                toast.success("Employee updated successfully");
             } else if (entityType === "vendor") {
                 const updateData: UpdateVendorDto = {
                     companyName: form.companyName as string | undefined,
                     website: form.website as string | undefined,
                     contactName: form.contactName as string | undefined,
+                    contactEmail: form.contactEmail as string | undefined,
+                    contactPhone: form.contactPhone as string | undefined,
                     servicesOffered: form.servicesOffered as
                         | string[]
                         | undefined,
                     notes: form.notes as string | undefined,
                 };
                 await VendorService.updateVendor(id, updateData);
+                toast.success("Vendor updated successfully");
             }
-            toast.success("Saved successfully");
             setEditing(false);
             // Reload data
             const resp =
@@ -220,7 +226,27 @@ export function EntityDetail({ entityType, id, canUpdate }: Props) {
             setData(resp);
             router.refresh();
         } catch (e) {
-            toast.error((e as Error)?.message || "Failed to save");
+            const error = e as Error;
+            // Check for specific error messages
+            if (error.message?.includes("Employee ID already exists")) {
+                toast.error(
+                    "Employee ID is already in use. Please choose a different ID."
+                );
+            } else if (error.message?.includes("cannot be their own manager")) {
+                toast.error(
+                    "An employee cannot be assigned as their own manager."
+                );
+            } else if (
+                error.message?.includes("only update your contact information")
+            ) {
+                toast.error(
+                    "You can only update your contact information. Contact your manager or HR to update other fields."
+                );
+            } else {
+                toast.error(error?.message || "Failed to save changes");
+            }
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -329,8 +355,14 @@ export function EntityDetail({ entityType, id, canUpdate }: Props) {
                         )}
                         {editing ? (
                             <>
-                                <Button onClick={onSave}>Save Changes</Button>
-                                <Button variant="outline" onClick={onCancel}>
+                                <Button onClick={onSave} disabled={saving}>
+                                    {saving ? "Saving..." : "Save Changes"}
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    onClick={onCancel}
+                                    disabled={saving}
+                                >
                                     Cancel
                                 </Button>
                             </>
@@ -404,6 +436,11 @@ export function EntityDetail({ entityType, id, canUpdate }: Props) {
                                 disabled={!editing}
                                 placeholder="EMP-12345"
                             />
+                            {editing && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Must be unique across all employees
+                                </p>
+                            )}
                         </div>
                         <div>
                             <Label htmlFor="jobTitle">Job Title</Label>
@@ -419,22 +456,64 @@ export function EntityDetail({ entityType, id, canUpdate }: Props) {
                         </div>
                         <div>
                             <Label htmlFor="department">Department</Label>
-                            <Input
-                                id="department"
-                                value={(form.department as string) ?? ""}
-                                onChange={(e) =>
-                                    onChange("department", e.target.value)
-                                }
-                                disabled={!editing}
-                                placeholder="Engineering"
-                            />
+                            {editing ? (
+                                <Select
+                                    value={(form.department as string) ?? ""}
+                                    onValueChange={(value) =>
+                                        onChange("department", value)
+                                    }
+                                >
+                                    <SelectTrigger id="department">
+                                        <SelectValue placeholder="Select department" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {DEPARTMENT_OPTIONS.map((option) => (
+                                            <SelectItem
+                                                key={option.value}
+                                                value={option.value}
+                                            >
+                                                {option.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            ) : (
+                                <Input
+                                    id="department"
+                                    value={(form.department as string) ?? ""}
+                                    disabled
+                                    placeholder="Not assigned"
+                                />
+                            )}
                         </div>
-                        <DateInput
-                        // label="Hire Date"
-                        // value={(form.hireDate as Date) || null}
-                        // onChange={(date) => onChange("hireDate", date)}
-                        // disabled={!editing}
-                        />
+                        <div>
+                            <Label htmlFor="hireDate">Hire Date</Label>
+                            {editing ? (
+                                <DateInput
+                                    label=""
+                                    value={(form.hireDate as Date) || null}
+                                    onChange={(date) =>
+                                        onChange("hireDate", date)
+                                    }
+                                    disabled={false}
+                                />
+                            ) : (
+                                <Input
+                                    id="hireDate"
+                                    value={
+                                        form.hireDate
+                                            ? format(
+                                                  new Date(
+                                                      form.hireDate as Date
+                                                  ),
+                                                  "PP"
+                                              )
+                                            : "Not set"
+                                    }
+                                    disabled
+                                />
+                            )}
+                        </div>
                         <div>
                             <Label htmlFor="status">Status</Label>
                             <Select
@@ -464,32 +543,38 @@ export function EntityDetail({ entityType, id, canUpdate }: Props) {
                         <div>
                             <Label htmlFor="managerId">Manager</Label>
                             {editing ? (
-                                <Select
-                                    value={(form.managerId as string) ?? ""}
-                                    onValueChange={(value) =>
-                                        onChange(
-                                            "managerId",
-                                            value === "none" ? "" : value
-                                        )
-                                    }
-                                >
-                                    <SelectTrigger id="managerId">
-                                        <SelectValue placeholder="Select manager" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="none">
-                                            No Manager
-                                        </SelectItem>
-                                        {managerOptions.map((option) => (
-                                            <SelectItem
-                                                key={option.value}
-                                                value={option.value}
-                                            >
-                                                {option.label}
+                                <>
+                                    <Select
+                                        value={(form.managerId as string) ?? ""}
+                                        onValueChange={(value) =>
+                                            onChange(
+                                                "managerId",
+                                                value === "none" ? "" : value
+                                            )
+                                        }
+                                    >
+                                        <SelectTrigger id="managerId">
+                                            <SelectValue placeholder="Select manager" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="none">
+                                                No Manager
                                             </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                            {managerOptions.map((option) => (
+                                                <SelectItem
+                                                    key={option.value}
+                                                    value={option.value}
+                                                >
+                                                    {option.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                        Only active employees can be selected as
+                                        managers
+                                    </p>
+                                </>
                             ) : (
                                 <Input
                                     id="managerId"

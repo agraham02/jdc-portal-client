@@ -66,11 +66,10 @@ export function ContractsTable() {
         return filters;
     }, [canReadAll]);
 
-    const tableState = useTableState<Contract>({
+    const tableState = useTableState({
         filters: filterDefinitions,
         defaultPageSize: 25,
-        enablePagination: true,
-    } as GenericTableConfig<Contract>);
+    });
 
     const {
         page,
