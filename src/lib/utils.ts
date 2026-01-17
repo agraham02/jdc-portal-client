@@ -26,3 +26,23 @@ export function parseCommaSeparatedString(
 
     return parsed.length > 0 ? parsed : undefined;
 }
+
+/**
+ * Generates a unique client-side ID for UI component keys.
+ * Uses crypto.randomUUID() when available, with a timestamp-based fallback.
+ * Note: Not cryptographically secure in fallback mode - use only for UI keys.
+ *
+ * @returns A unique string ID
+ */
+export function createClientId(): string {
+    const cryptoObj = globalThis.crypto;
+    if (
+        cryptoObj &&
+        "randomUUID" in cryptoObj &&
+        typeof cryptoObj.randomUUID === "function"
+    ) {
+        return cryptoObj.randomUUID();
+    }
+    // Fallback: Math.random() is safe for UI component keys (no cryptographic security needed)
+    return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
