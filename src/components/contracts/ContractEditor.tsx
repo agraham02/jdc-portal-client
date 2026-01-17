@@ -34,6 +34,7 @@ import { FileUpload } from "@/components/common/FileUpload";
 import { FileUploadCategory } from "@/lib/constants/file-upload";
 import { PlusIcon, TrashIcon, FileText, Download } from "lucide-react";
 import { useState, useEffect } from "react";
+import { createClientId } from "@/lib/utils";
 
 // Common currencies
 const CURRENCIES = [
@@ -92,19 +93,6 @@ const contractSchema = z.object({
 type ContractFormData = z.infer<typeof contractSchema>;
 
 type RequiredDocumentWithClientId = RequiredDocument & { clientId: string };
-
-function createClientId(): string {
-    const cryptoObj = globalThis.crypto;
-    if (
-        cryptoObj &&
-        "randomUUID" in cryptoObj &&
-        typeof cryptoObj.randomUUID === "function"
-    ) {
-        return cryptoObj.randomUUID();
-    }
-    // Fallback: Math.random() is safe for UI component keys (no cryptographic security needed)
-    return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
 
 interface ContractEditorProps {
     initialData?: Partial<CreateContractDto>;
