@@ -63,9 +63,7 @@ export function EmployeeCombobox({
                     allEmployees.push(...response.data);
 
                     // Check if there are more pages
-                    hasMore =
-                        response.pagination &&
-                        page < response.pagination.totalPages;
+                    hasMore = page < response.totalPages;
                     page++;
                 }
 
