@@ -67,11 +67,9 @@ export function EmployeeCombobox({
                     page++;
                 }
 
-                // Filter out the excluded employee and only keep active employees
+                // Filter out the excluded employee
                 const filteredEmployees = allEmployees.filter(
-                    (emp) =>
-                        emp._id !== excludeEmployeeId &&
-                        emp.userId?.status === UserStatus.ACTIVE
+                    (emp) => emp._id !== excludeEmployeeId
                 );
 
                 setEmployees(filteredEmployees);
@@ -141,7 +139,7 @@ export function EmployeeCombobox({
                     )}
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[400px] p-0" align="start">
+            <PopoverContent className="w-full max-w-[400px] p-0" align="start">
                 <Command shouldFilter={false}>
                     <CommandInput
                         placeholder="Search by name, email, ID, department..."
