@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { Can } from "@/components/auth/Can";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 import { VendorsTable } from "@/components/vendors/VendorsTable";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 export default function VendorsPage() {
     return (
@@ -19,7 +21,9 @@ export default function VendorsPage() {
                         </Link>
                     </Can>
                 </div>
-                <VendorsTable />
+                <Suspense fallback={<LoadingSpinner />}>
+                    <VendorsTable />
+                </Suspense>
             </main>
         </ProtectedRoute>
     );

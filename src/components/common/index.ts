@@ -1,5 +1,6 @@
 export * from "./AddressForm";
 export * from "./DateInput";
+export * from "./EmployeeCombobox";
 export * from "./ServicesInput";
 export * from "./StatusBadge";
 export * from "./EmptyStates";

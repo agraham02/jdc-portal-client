@@ -5,6 +5,7 @@ import {
     Building2,
     Database,
     FileText,
+    FolderKanban,
     HardDrive,
     LayoutDashboard,
     Mail,
@@ -43,6 +44,12 @@ export const menu = {
             url: "/hr-resources",
             icon: FileText,
             // No permission required - public resources visible to all authenticated users
+        },
+        {
+            title: "HR Categories",
+            url: "/admin/hr-categories",
+            icon: FolderKanban,
+            anyOf: [P.HR_DOCUMENT_CREATE, P.HR_DOCUMENT_UPDATE],
         },
     ] satisfies MenuItem[],
 

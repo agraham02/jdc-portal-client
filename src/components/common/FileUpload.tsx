@@ -16,6 +16,15 @@ import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { formatBytes } from "@/lib/utils/formatters";
+import {
+    FileUploadCategory,
+    getFileSizeLimitBytes,
+    getFileSizeLimitMB,
+    getMaxFiles,
+    getAllowedFileTypes,
+    isValidFileSize,
+    isValidFileType,
+} from "@/lib/constants/file-upload";
 
 /**
  * Generic file metadata interface
@@ -25,10 +34,17 @@ export interface UploadingFileMetadata<TExtra = Record<string, never>> {
     file: File;
     progress: number;
     error?: string;
+    uploadComplete?: boolean; // True when upload is confirmed by server
     metadata?: TExtra;
 }
 
 export interface FileUploadProps<TMetadata = Record<string, never>> {
+    /**
+     * File upload category - automatically determines size limits, allowed types, and max files
+     * @required
+     */
+    category: FileUploadCategory;
+
     /**
      * Callback fired when files are successfully uploaded
      * @param fileIds - Array of file IDs returned from the server
@@ -46,30 +62,13 @@ export interface FileUploadProps<TMetadata = Record<string, never>> {
      * If not provided, will attempt to POST files to uploadEndpoint
      */
     onUpload?: (
-        files: UploadingFileMetadata<TMetadata>[]
+        files: UploadingFileMetadata<TMetadata>[],
     ) => Promise<Array<{ _id: string }>>;
 
     /**
      * API endpoint for file upload (used if onUpload is not provided)
      */
     uploadEndpoint?: string;
-
-    /**
-     * Accepted file types (MIME types or extensions like .pdf)
-     */
-    acceptedFileTypes?: string[];
-
-    /**
-     * Maximum number of files allowed
-     * @default 10
-     */
-    maxFiles?: number;
-
-    /**
-     * Maximum file size in megabytes
-     * @default 5
-     */
-    maxFileSizeMB?: number;
 
     /**
      * Additional CSS classes
@@ -102,8 +101,13 @@ export interface FileUploadProps<TMetadata = Record<string, never>> {
      * Controlled mode: callback to update uploading files
      */
     onUploadingFilesChange?: (
-        files: UploadingFileMetadata<TMetadata>[]
+        files: UploadingFileMetadata<TMetadata>[],
     ) => void;
+
+    /**
+     * Optional validation error message to display (e.g., from parent validation)
+     */
+    validationError?: string;
 }
 
 /**
@@ -112,9 +116,8 @@ export interface FileUploadProps<TMetadata = Record<string, never>> {
  * @example
  * ```tsx
  * <FileUpload
+ *   category={FileUploadCategory.CONTRACT}
  *   uploadEndpoint="/api/contracts/123/documents"
- *   acceptedFileTypes={['.pdf', '.docx']}
- *   maxFiles={5}
  *   onUploadComplete={(fileIds) => console.log('Uploaded:', fileIds)}
  * />
  * ```
@@ -122,7 +125,7 @@ export interface FileUploadProps<TMetadata = Record<string, never>> {
  * @example With custom upload handler
  * ```tsx
  * <FileUpload
- *   acceptedFileTypes={['.pdf']}
+ *   category={FileUploadCategory.PROFILE_IMAGE}
  *   onUpload={async (files) => {
  *     const formData = new FormData();
  *     files.forEach(({ file }) => formData.append('files', file));
@@ -133,21 +136,24 @@ export interface FileUploadProps<TMetadata = Record<string, never>> {
  * ```
  */
 export function FileUpload<TMetadata = Record<string, never>>({
+    category,
     onUploadComplete,
     onUploadError,
     onUpload,
     uploadEndpoint,
-    acceptedFileTypes = [".pdf", ".doc", ".docx", ".jpg", ".jpeg", ".png"],
-    maxFiles = 10,
-    maxFileSizeMB = 5,
     className,
     showUploadButton = true,
     uploadButtonText = "Select Files",
     disabled = false,
     uploadingFiles: controlledUploadingFiles,
     onUploadingFilesChange,
-}: FileUploadProps<TMetadata>) {
-    const maxFileSize = maxFileSizeMB * 1024 * 1024; // Convert MB to bytes
+    validationError,
+}: Readonly<FileUploadProps<TMetadata>>) {
+    // Get limits from category
+    const maxFileSize = getFileSizeLimitBytes(category);
+    const maxFiles = getMaxFiles(category);
+    const { mimeTypes, extensions } = getAllowedFileTypes(category);
+    const acceptedFileTypes = [...mimeTypes, ...extensions];
     const [internalUploadingFiles, setInternalUploadingFiles] = useState<
         UploadingFileMetadata<TMetadata>[]
     >([]);
@@ -162,56 +168,45 @@ export function FileUpload<TMetadata = Record<string, never>>({
             updater:
                 | UploadingFileMetadata<TMetadata>[]
                 | ((
-                      prev: UploadingFileMetadata<TMetadata>[]
-                  ) => UploadingFileMetadata<TMetadata>[])
+                      prev: UploadingFileMetadata<TMetadata>[],
+                  ) => UploadingFileMetadata<TMetadata>[]),
         ) => {
-            if (onUploadingFilesChange) {
-                // Controlled mode
-                if (typeof updater === "function") {
-                    onUploadingFilesChange(
-                        updater(controlledUploadingFiles ?? [])
-                    );
-                } else {
-                    onUploadingFilesChange(updater);
-                }
+            if (typeof updater === "function") {
+                setInternalUploadingFiles((prev) =>
+                    (
+                        updater as (
+                            prev: UploadingFileMetadata<TMetadata>[],
+                        ) => UploadingFileMetadata<TMetadata>[]
+                    )(prev),
+                );
             } else {
-                // Uncontrolled mode
-                if (typeof updater === "function") {
-                    setInternalUploadingFiles(updater);
-                } else {
-                    setInternalUploadingFiles(updater);
-                }
+                setInternalUploadingFiles(updater);
             }
         },
-        [onUploadingFilesChange, controlledUploadingFiles]
+        [onUploadingFilesChange, controlledUploadingFiles],
     );
 
     const validateFile = useCallback(
         (file: File): string | null => {
-            // Check file size
-            if (file.size > maxFileSize) {
+            // Check file size using centralized validation
+            if (!isValidFileSize(file.size, category)) {
                 return `File size exceeds ${formatBytes(maxFileSize)}`;
             }
 
-            // Check file type
-            const fileExtension = `.${file.name
-                .split(".")
-                .pop()
-                ?.toLowerCase()}`;
-            const mimeMatches = acceptedFileTypes.some((type) =>
-                type.includes("/") ? file.type === type : false
-            );
-            const extensionMatches = acceptedFileTypes.includes(fileExtension);
-
-            if (!mimeMatches && !extensionMatches) {
-                return `File type ${fileExtension} is not supported. Allowed: ${acceptedFileTypes.join(
-                    ", "
+            // Check file type using centralized validation
+            if (!isValidFileType(file.name, file.type, category)) {
+                const fileExtension = `.${file.name
+                    .split(".")
+                    .pop()
+                    ?.toLowerCase()}`;
+                return `File type ${fileExtension} is not supported. Allowed: ${extensions.join(
+                    ", ",
                 )}`;
             }
 
             return null;
         },
-        [maxFileSize, acceptedFileTypes]
+        [category, maxFileSize, extensions],
     );
 
     const uploadFilesToServer = useCallback(
@@ -222,6 +217,19 @@ export function FileUpload<TMetadata = Record<string, never>>({
                 if (onUpload) {
                     // Use custom upload handler
                     response = await onUpload(filesToUpload);
+
+                    // Mark files as upload complete for custom handlers
+                    setUploadingFiles((prev) =>
+                        prev.map((uf) =>
+                            filesToUpload.some((f) => f.file === uf.file)
+                                ? {
+                                      ...uf,
+                                      progress: 100,
+                                      uploadComplete: true,
+                                  }
+                                : uf,
+                        ),
+                    );
                 } else if (uploadEndpoint) {
                     // Default XMLHttpRequest upload with progress tracking
                     response = await new Promise((resolve, reject) => {
@@ -239,14 +247,14 @@ export function FileUpload<TMetadata = Record<string, never>>({
                                 setUploadingFiles((prev) =>
                                     prev.map((uf) =>
                                         filesToUpload.some(
-                                            (f) => f.file === uf.file
+                                            (f) => f.file === uf.file,
                                         )
                                             ? {
                                                   ...uf,
                                                   progress: percentComplete,
                                               }
-                                            : uf
-                                    )
+                                            : uf,
+                                    ),
                                 );
                             }
                         });
@@ -255,21 +263,37 @@ export function FileUpload<TMetadata = Record<string, never>>({
                             if (xhr.status >= 200 && xhr.status < 300) {
                                 try {
                                     const data = JSON.parse(
-                                        xhr.responseText
+                                        xhr.responseText,
                                     ) as Array<{ _id: string }>;
+
+                                    // Mark files as upload complete
+                                    setUploadingFiles((prev) =>
+                                        prev.map((uf) =>
+                                            filesToUpload.some(
+                                                (f) => f.file === uf.file,
+                                            )
+                                                ? {
+                                                      ...uf,
+                                                      progress: 100,
+                                                      uploadComplete: true,
+                                                  }
+                                                : uf,
+                                        ),
+                                    );
+
                                     resolve(data);
                                 } catch {
                                     reject(
                                         new Error(
-                                            "Invalid response from server"
-                                        )
+                                            "Invalid response from server",
+                                        ),
                                     );
                                 }
                             } else {
                                 reject(
                                     new Error(
-                                        `Upload failed: ${xhr.statusText}`
-                                    )
+                                        `Upload failed: ${xhr.statusText}`,
+                                    ),
                                 );
                             }
                         });
@@ -284,7 +308,7 @@ export function FileUpload<TMetadata = Record<string, never>>({
                     });
                 } else {
                     throw new Error(
-                        "Either onUpload or uploadEndpoint must be provided"
+                        "Either onUpload or uploadEndpoint must be provided",
                     );
                 }
 
@@ -294,8 +318,8 @@ export function FileUpload<TMetadata = Record<string, never>>({
                 // Remove uploaded files from state
                 setUploadingFiles((prev) =>
                     prev.filter(
-                        (uf) => !filesToUpload.some((f) => f.file === uf.file)
-                    )
+                        (uf) => !filesToUpload.some((f) => f.file === uf.file),
+                    ),
                 );
 
                 onUploadComplete?.(fileIds, files);
@@ -306,8 +330,8 @@ export function FileUpload<TMetadata = Record<string, never>>({
                     prev.map((uf) =>
                         filesToUpload.some((f) => f.file === uf.file)
                             ? { ...uf, error: err.message }
-                            : uf
-                    )
+                            : uf,
+                    ),
                 );
                 onUploadError?.(err);
             }
@@ -318,7 +342,7 @@ export function FileUpload<TMetadata = Record<string, never>>({
             onUploadComplete,
             onUploadError,
             setUploadingFiles,
-        ]
+        ],
     );
 
     const handleFiles = useCallback(
@@ -331,7 +355,7 @@ export function FileUpload<TMetadata = Record<string, never>>({
             // Check max files limit
             if (uploadingFiles.length + fileArray.length > maxFiles) {
                 setGeneralError(
-                    `Cannot upload more than ${maxFiles} files at once`
+                    `Cannot upload more than ${maxFiles} files at once`,
                 );
                 return;
             }
@@ -370,13 +394,13 @@ export function FileUpload<TMetadata = Record<string, never>>({
             onUpload,
             uploadFilesToServer,
             setUploadingFiles,
-        ]
+        ],
     );
 
     const removeFile = (fileToRemove: File) => {
         if (disabled) return;
         setUploadingFiles((prev) =>
-            prev.filter((uf) => uf.file !== fileToRemove)
+            prev.filter((uf) => uf.file !== fileToRemove),
         );
     };
 
@@ -442,7 +466,8 @@ export function FileUpload<TMetadata = Record<string, never>>({
                     isDragging
                         ? "border-primary bg-primary/5"
                         : "border-muted-foreground/25 hover:border-muted-foreground/50",
-                    disabled && "cursor-not-allowed opacity-50"
+                    disabled && "cursor-not-allowed opacity-50",
+                    validationError && "border-destructive",
                 )}
                 onDragEnter={handleDragEnter}
                 onDragOver={handleDragOver}
@@ -453,18 +478,18 @@ export function FileUpload<TMetadata = Record<string, never>>({
                     <Upload
                         className={cn(
                             "mb-4 h-12 w-12 text-muted-foreground",
-                            disabled && "opacity-50"
+                            disabled && "opacity-50",
                         )}
                     />
                     <h3 className="mb-2 text-lg font-semibold">
                         Drop files here or click to browse
                     </h3>
                     <p className="mb-2 text-sm text-muted-foreground">
-                        Supports: {acceptedFileTypes.join(", ")}
+                        Supports: {extensions.join(", ")}
                     </p>
                     <p className="mb-6 text-sm text-muted-foreground">
-                        Max file size: {formatBytes(maxFileSize)} • Max files:{" "}
-                        {maxFiles}
+                        Max file size: {getFileSizeLimitMB(category)}MB • Max
+                        files: {maxFiles}
                     </p>
                     {showUploadButton && (
                         <Button
@@ -487,6 +512,14 @@ export function FileUpload<TMetadata = Record<string, never>>({
                     />
                 </div>
             </Card>
+
+            {/* Validation error from parent */}
+            {validationError && (
+                <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{validationError}</AlertDescription>
+                </Alert>
+            )}
 
             {/* General error */}
             {generalError && (
@@ -547,7 +580,7 @@ export function FileUpload<TMetadata = Record<string, never>>({
                                                     {progress === 100
                                                         ? "Complete"
                                                         : `${Math.round(
-                                                              progress
+                                                              progress,
                                                           )}%`}
                                                 </p>
                                             </div>

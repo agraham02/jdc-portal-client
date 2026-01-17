@@ -17,12 +17,8 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
-// import { ApplicationStatus } from "@/lib/types/contracts";
-// import { ContractsService } from "@/lib/services/contracts";
-// import { toast } from "sonner";
 import { FileUpload } from "@/components/common/FileUpload";
-import { FILE_VALIDATION_RULES } from "@/lib/types/contracts";
-// import { ConfirmDialog } from "@/components/contracts/ConfirmDialog";
+import { FileUploadCategory } from "@/lib/constants/file-upload";
 import { cn } from "@/lib/utils";
 import type {
     Contract,
@@ -32,7 +28,7 @@ import type {
 
 // Validation schema
 const applicationSchema = z.object({
-    proposalDetails: z
+    proposal: z
         .string()
         .min(50, "Proposal must be at least 50 characters")
         .max(10000, "Proposal must not exceed 10,000 characters"),
@@ -61,7 +57,7 @@ export function ApplicationForm({
     const form = useForm<ApplicationFormData>({
         resolver: zodResolver(applicationSchema),
         defaultValues: {
-            proposalDetails: "",
+            proposal: "",
         },
     });
 
@@ -83,7 +79,7 @@ export function ApplicationForm({
         }
 
         const dto: ApplyToContractDto = {
-            proposalDetails: data.proposalDetails,
+            proposal: data.proposal,
         };
 
         await onSubmit(dto);
@@ -132,7 +128,7 @@ export function ApplicationForm({
                         {/* Proposal Details */}
                         <FormField
                             control={form.control}
-                            name="proposalDetails"
+                            name="proposal"
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>
@@ -196,11 +192,11 @@ export function ApplicationForm({
                                 </div>
 
                                 <FileUpload
+                                    category={FileUploadCategory.CONTRACT}
                                     uploadEndpoint={`/api/contracts/${contract._id}/documents`}
-                                    acceptedFileTypes={FILE_VALIDATION_RULES.allowedTypes}
-                                    maxFiles={FILE_VALIDATION_RULES.maxFiles}
-                                    maxFileSizeMB={FILE_VALIDATION_RULES.maxSizeMB}
-                                    onUploadComplete={(fileIds) => handleUploadComplete(fileIds)}
+                                    onUploadComplete={(fileIds) =>
+                                        handleUploadComplete(fileIds)
+                                    }
                                     onUploadError={handleUploadError}
                                 />
 

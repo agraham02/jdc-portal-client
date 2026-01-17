@@ -1,5 +1,10 @@
 import { z } from "zod";
 import { PASSWORD_MIN_LENGTH } from "@/lib/constants/auth";
+import {
+    ADDRESS_CONSTRAINTS,
+    VALIDATION_PATTERNS,
+    VALIDATION_MESSAGES,
+} from "@/lib/constants/validation";
 
 export const loginSchema = z.object({
     email: z.string().email("Invalid email address"),
@@ -8,14 +13,103 @@ export const loginSchema = z.object({
 
 export type LoginFormData = z.infer<typeof loginSchema>;
 
-// Address schema for reuse
-export const addressSchema = z.object({
-    line1: z.string().min(1, "Address line 1 is required"),
-    line2: z.string().optional(),
-    city: z.string().min(1, "City is required"),
-    state: z.string().min(2, "State is required"),
-    zip: z.string().min(5, "ZIP code must be at least 5 characters"),
+// Base address schema - minimal per-field validation, main logic in superRefine
+const baseAddressSchema = z.object({
+    line1: z
+        .string()
+        .max(
+            ADDRESS_CONSTRAINTS.LINE1_MAX_LENGTH,
+            VALIDATION_MESSAGES.ADDRESS_LINE1_MAX
+        ),
+    line2: z
+        .string()
+        .max(
+            ADDRESS_CONSTRAINTS.LINE2_MAX_LENGTH,
+            VALIDATION_MESSAGES.ADDRESS_LINE2_MAX
+        )
+        .optional(),
+    city: z
+        .string()
+        .max(ADDRESS_CONSTRAINTS.CITY_MAX_LENGTH, VALIDATION_MESSAGES.CITY_MAX),
+    state: z.string(),
+    zip: z
+        .string()
+        .max(ADDRESS_CONSTRAINTS.ZIP_MAX_LENGTH, VALIDATION_MESSAGES.ZIP_MAX),
 });
+
+/**
+ * Address schema with "all or nothing" validation
+ * If any field is filled, all required fields (line1, city, state, zip) must be filled
+ * line2 is always optional
+ *
+ * Validation logic:
+ * - All fields empty → valid (address is optional)
+ * - Some fields filled → all core fields required with format validation
+ */
+export const addressSchema = baseAddressSchema
+    .partial()
+    .superRefine((data, ctx) => {
+        // Compute once for efficiency - treat empty strings as unfilled
+        const hasAnyValue = Boolean(
+            data.line1?.trim() ||
+                data.city?.trim() ||
+                data.state?.trim() ||
+                data.zip?.trim()
+        );
+
+        // If no fields filled (or all empty strings), address is optional - pass validation
+        if (!hasAnyValue) return;
+
+        // If ANY field is filled, require core fields (line2 still optional)
+        // Check presence and format together
+        if (!data.line1?.trim()) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: VALIDATION_MESSAGES.ADDRESS_LINE1_REQUIRED,
+                path: ["line1"],
+            });
+        }
+
+        if (!data.city?.trim()) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: VALIDATION_MESSAGES.CITY_REQUIRED,
+                path: ["city"],
+            });
+        }
+
+        // State: required + must be 2 uppercase letters
+        const stateTrimmed = data.state?.trim().toUpperCase();
+        if (!stateTrimmed) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: VALIDATION_MESSAGES.STATE_REQUIRED,
+                path: ["state"],
+            });
+        } else if (!VALIDATION_PATTERNS.STATE_CODE.test(stateTrimmed)) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: VALIDATION_MESSAGES.STATE_FORMAT,
+                path: ["state"],
+            });
+        }
+
+        // ZIP: required + format check
+        const zipTrimmed = data.zip?.trim();
+        if (!zipTrimmed) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: VALIDATION_MESSAGES.ZIP_REQUIRED,
+                path: ["zip"],
+            });
+        } else if (!VALIDATION_PATTERNS.ZIP_CODE.test(zipTrimmed)) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: VALIDATION_MESSAGES.ZIP_FORMAT,
+                path: ["zip"],
+            });
+        }
+    });
 
 // Password policy used across registration, reset, and change flows
 export const passwordComplexity = z

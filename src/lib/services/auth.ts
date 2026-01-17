@@ -5,7 +5,6 @@ import {
     LoginFormData,
     EmployeeRegistrationFormData,
 } from "../validations/auth";
-import type { ProfileUpdateFormData } from "../validations/profile";
 import type {
     ForgotPasswordFormData,
     ResetPasswordFormData,
@@ -17,6 +16,7 @@ import type {
     RequestPasswordResetDto,
     ConfirmPasswordResetDto,
     UpdateProfileDto,
+    UploadAvatarResponse,
 } from "../types/auth";
 
 export const AuthService = {
@@ -84,13 +84,8 @@ export const AuthService = {
     requestAccountDeletion() {
         return apiClient.delete<{ message: string }>("/auth/me", {});
     },
-    updateProfile(data: Partial<ProfileUpdateFormData>) {
-        const updateDto: UpdateProfileDto = {
-            firstName: data.firstName,
-            lastName: data.lastName,
-            contactPhone: data.contactPhone,
-        };
-        return apiClient.patch<{ message: string }>("/auth/me", updateDto);
+    updateProfile(data: Partial<UpdateProfileDto>) {
+        return apiClient.patch<{ message: string }>("/auth/me", data);
     },
     refreshToken() {
         return apiClient.post<{
@@ -185,5 +180,17 @@ export const AuthService = {
             `/auth/resend-activation/${encodeURIComponent(userId)}`,
             {}
         );
+    },
+    // Avatar management
+    uploadAvatar(file: File) {
+        const formData = new FormData();
+        formData.append("avatar", file);
+        return apiClient.postFormData<UploadAvatarResponse>(
+            "/auth/me/avatar",
+            formData
+        );
+    },
+    deleteAvatar() {
+        return apiClient.delete<{ message: string }>("/auth/me/avatar");
     },
 };

@@ -9,10 +9,6 @@ import { ContractEditor } from "@/components/contracts";
 import { ContractsService } from "@/lib/services/contracts";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 import type { CreateContractDto } from "@/lib/types/contracts";
-import {
-    showContractActionSuccess,
-    showContractActionError,
-} from "@/lib/utils/contract-notifications";
 import { toast } from "sonner";
 
 const isDevelopment = process.env.NODE_ENV === "development";
@@ -31,19 +27,22 @@ export default function ContractCreatePage() {
             setIsSubmitting(true);
             setError(undefined);
             const contract = await ContractsService.createContract(data, files);
-            showContractActionSuccess(
-                "Contract Created",
-                `Contract "${data.title}" has been created successfully${
+            toast.success("Contract Created", {
+                description: `Contract "${
+                    data.title
+                }" has been created successfully${
                     files.length > 0 ? ` with ${files.length} document(s)` : ""
-                }`
-            );
+                }`,
+            });
             router.push(`/contracts/${contract._id}`);
         } catch (err) {
             const message =
                 err instanceof Error
                     ? err.message
                     : "Failed to create contract";
-            showContractActionError("Create Contract", message);
+            toast.error("Create Contract Failed", {
+                description: message,
+            });
             setError(message);
             setIsSubmitting(false);
         }
@@ -146,7 +145,7 @@ export default function ContractCreatePage() {
                     isSubmitting={isSubmitting}
                     submitLabel="Create Contract"
                     files={files}
-                    setFiles={setFiles}
+                    onFilesChange={setFiles}
                 />
             </main>
         </ProtectedRoute>

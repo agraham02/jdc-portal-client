@@ -141,6 +141,8 @@ export interface HRDocument {
     filename: string;
     size: number;
     mimetype: string;
+    category?: string; // FileCategory enum
+    hrCategory?: HrCategoryRef; // HR category reference
     description?: string;
     tags: string[];
     uploadedBy: UserReference;
@@ -166,7 +168,7 @@ export interface HRDocumentDownloadResponse {
     filename: string;
 }
 
-// HR Link Category Enum
+// HR Link Category Enum (legacy - for backwards compatibility)
 export enum HRLinkCategory {
     PAYROLL = "payroll",
     BENEFITS = "benefits",
@@ -176,21 +178,69 @@ export enum HRLinkCategory {
     OTHER = "other",
 }
 
-// HR Link
+// HR Category (dynamic, database-managed)
+export interface HrCategory {
+    _id: string;
+    name: string;
+    slug: string;
+    description?: string;
+    isActive: boolean;
+    sortOrder: number;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface HrCategoryListResponse {
+    categories: HrCategory[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+}
+
+export interface CreateHrCategoryDto {
+    name: string;
+    slug: string;
+    description?: string;
+    sortOrder?: number;
+    isActive?: boolean;
+}
+
+export interface UpdateHrCategoryDto {
+    name?: string;
+    slug?: string;
+    description?: string;
+    sortOrder?: number;
+    isActive?: boolean;
+}
+
+export interface HrCategoryQueryDto {
+    page?: number;
+    limit?: number;
+    isActive?: boolean;
+    search?: string;
+}
+
+// HR Link - category is now an ObjectId reference, populated on read
 export interface HrLink {
     _id: string;
     title: string;
     description?: string;
     url: string;
-    category: HRLinkCategory;
+    category: HrCategoryRef | string; // Populated object or ObjectId string
     isActive: boolean;
-    isPublic?: boolean; // If true, visible to all users; if false, only users with FILE_READ permission
-    sortOrder: number;
-    tags: string[];
+    isPublic: boolean;
     createdBy: UserReference;
     updatedBy?: UserReference;
     createdAt: string; // ISO 8601
     updatedAt: string; // ISO 8601
+}
+
+// Populated category reference (subset of HrCategory)
+export interface HrCategoryRef {
+    _id: string;
+    name: string;
+    slug: string;
 }
 
 // HR Link List Response
@@ -202,14 +252,12 @@ export interface HRLinkListResponse {
     totalPages: number;
 }
 
-// Create HR Link DTO
+// Create HR Link DTO - category is now required ObjectId
 export interface CreateHrLinkDto {
     title: string;
     description?: string;
     url: string;
-    category?: HRLinkCategory | string;
-    sortOrder?: number;
-    tags?: string[];
+    category: string; // ObjectId
     isPublic?: boolean;
 }
 
@@ -218,10 +266,8 @@ export interface UpdateHrLinkDto {
     title?: string;
     description?: string;
     url?: string;
-    category?: HRLinkCategory | string;
+    category?: string; // ObjectId
     isActive?: boolean;
-    sortOrder?: number;
-    tags?: string[];
     isPublic?: boolean;
 }
 

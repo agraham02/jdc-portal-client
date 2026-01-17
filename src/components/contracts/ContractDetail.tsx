@@ -1,14 +1,19 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { FileList } from "./FileList";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { ApplyDialog } from "./ApplyDialog";
-import { Contract, ContractStatus } from "@/lib/types/contracts";
+import {
+    Contract,
+    ContractStatus,
+    FileDocument,
+    getDocumentFilename,
+} from "@/lib/types/contracts";
 import { Can } from "@/components/auth/Can";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 import { formatCurrency } from "@/lib/utils/formatters";
@@ -16,6 +21,8 @@ import { format } from "date-fns";
 import { apiToast } from "@/lib/utils/toast-helpers";
 import { sanitizeUserContent } from "@/lib/utils/sanitize";
 import { useErrorState } from "@/lib/hooks/useErrorState";
+import { ContractsService } from "@/lib/services/contracts";
+import { toast } from "sonner";
 import {
     CalendarIcon,
     DollarSignIcon,
@@ -35,14 +42,7 @@ interface ContractDetailProps {
     contract: Contract;
     onPublish?: () => Promise<void>;
     onClose?: () => Promise<void>;
-    onAward?: (applicationId: string) => Promise<void>;
     onDelete?: () => Promise<void>;
-    onDownloadDocument?: (fileId: string, filename: string) => Promise<void>;
-    onApply?: (
-        proposalDetails: string,
-        documents: Map<string, File[]>,
-        bidValue?: number
-    ) => Promise<void>;
     showActions?: boolean;
     className?: string;
 }
@@ -51,13 +51,11 @@ export function ContractDetail({
     contract,
     onPublish,
     onClose,
-    onAward,
     onDelete,
-    onDownloadDocument,
-    onApply,
     showActions = true,
     className,
 }: ContractDetailProps) {
+    const router = useRouter();
     const [confirmDialog, setConfirmDialog] = useState<{
         open: boolean;
         title: string;
@@ -71,7 +69,6 @@ export function ContractDetail({
         action: async () => {},
     });
     const [isLoading, setIsLoading] = useState(false);
-    const [showApplyDialog, setShowApplyDialog] = useState(false);
     const { setError, clearError } = useErrorState();
 
     const isDraft = contract.status === ContractStatus.DRAFT;
@@ -96,7 +93,7 @@ export function ContractDetail({
         title: string,
         description: string,
         action: () => Promise<void>,
-        variant: "default" | "destructive" = "default"
+        variant: "default" | "destructive" = "default",
     ) {
         setConfirmDialog({
             open: true,
@@ -108,25 +105,44 @@ export function ContractDetail({
     }
 
     async function handleDownload(fileId: string, filename: string) {
-        if (onDownloadDocument) {
-            await onDownloadDocument(fileId, filename);
+        try {
+            await ContractsService.triggerDocumentDownload(
+                contract._id,
+                fileId,
+                filename,
+            );
+            toast.success("Download started");
+        } catch (err) {
+            apiToast.error("Failed to download document", err);
         }
     }
 
-    async function handleApply(
-        proposalDetails: string,
-        documents: Map<string, File[]>,
-        bidValue?: number
-    ) {
-        if (onApply) {
-            try {
-                clearError();
-                await onApply(proposalDetails, documents, bidValue);
-                setShowApplyDialog(false);
-            } catch (err) {
-                setError(err);
-                throw err; // Re-throw for dialog to handle
+    async function handleViewDocument(file: FileDocument) {
+        try {
+            const blob = await ContractsService.downloadDocumentAsBlob(
+                contract._id,
+                file._id,
+            );
+            const url = globalThis.URL.createObjectURL(blob);
+            const newWindow = globalThis.open(url, "_blank");
+
+            // Revoke the blob URL as soon as it's no longer needed
+            if (newWindow) {
+                try {
+                    // Revoke after the new window has finished loading the blob
+                    newWindow.addEventListener("load", () => {
+                        globalThis.URL.revokeObjectURL(url);
+                    });
+                } catch {
+                    // If we can't attach listeners (e.g. popup blocked), fall back to immediate revoke
+                    globalThis.URL.revokeObjectURL(url);
+                }
+            } else {
+                // Popup blocked; URL is not used, so revoke immediately
+                globalThis.URL.revokeObjectURL(url);
             }
+        } catch (err) {
+            apiToast.error("Failed to open document", err);
         }
     }
 
@@ -180,7 +196,7 @@ export function ContractDetail({
                                                     "Publish Contract",
                                                     "This will make the contract visible to vendors and open it for applications. You will not be able to edit it afterwards.",
                                                     () =>
-                                                        handleAction(onPublish)
+                                                        handleAction(onPublish),
                                                 )
                                             }
                                             disabled={isLoading}
@@ -193,14 +209,14 @@ export function ContractDetail({
 
                                 {/* Close */}
                                 {isOpen && onClose && (
-                                    <Can anyOf={[P.CONTRACT_UPDATE]}>
+                                    <Can anyOf={[P.CONTRACT_APPROVE]}>
                                         <Button
                                             variant="outline"
                                             onClick={() =>
                                                 openConfirmDialog(
                                                     "Close Contract",
-                                                    "This will stop accepting new applications. You can reopen it later if needed.",
-                                                    () => handleAction(onClose)
+                                                    "This will permanently stop accepting new applications. This action cannot be undone.",
+                                                    () => handleAction(onClose),
                                                 )
                                             }
                                             disabled={isLoading}
@@ -212,12 +228,14 @@ export function ContractDetail({
                                 )}
 
                                 {/* Apply - shown for vendors when contract is open */}
-                                {isOpen && onApply && (
+                                {isOpen && (
                                     <Can anyOf={[P.CONTRACT_APPLY]}>
                                         <Button
                                             variant="default"
                                             onClick={() =>
-                                                setShowApplyDialog(true)
+                                                router.push(
+                                                    `/contracts/${contract._id}/apply`,
+                                                )
                                             }
                                             disabled={isLoading}
                                         >
@@ -227,18 +245,7 @@ export function ContractDetail({
                                     </Can>
                                 )}
 
-                                {/* Award - shown when there are applications */}
-                                {isOpen &&
-                                    onAward &&
-                                    contract.applications &&
-                                    contract.applications.length > 0 && (
-                                        <Can anyOf={[P.CONTRACT_AWARD]}>
-                                            <Button variant="default">
-                                                <TrophyIcon className="h-4 w-4 mr-2" />
-                                                Award Contract
-                                            </Button>
-                                        </Can>
-                                    )}
+                                {/* Award action is in ApplicationList - select which application to award there */}
 
                                 {/* Delete */}
                                 {!isAwarded && onDelete && (
@@ -251,7 +258,7 @@ export function ContractDetail({
                                                     "This action cannot be undone. All associated data will be permanently deleted.",
                                                     () =>
                                                         handleAction(onDelete),
-                                                    "destructive"
+                                                    "destructive",
                                                 )
                                             }
                                             disabled={isLoading}
@@ -290,7 +297,7 @@ export function ContractDetail({
                                 <p className="text-2xl font-bold">
                                     {formatCurrency(
                                         contract.budget,
-                                        contract.currency || "USD"
+                                        contract.currency || "USD",
                                     )}
                                 </p>
                             </CardContent>
@@ -310,13 +317,13 @@ export function ContractDetail({
                                 <p className="text-2xl font-bold">
                                     {format(
                                         new Date(contract.deadline),
-                                        "MMM d, yyyy"
+                                        "MMM d, yyyy",
                                     )}
                                 </p>
                                 <p className="text-sm text-muted-foreground mt-1">
                                     {format(
                                         new Date(contract.deadline),
-                                        "h:mm a"
+                                        "h:mm a",
                                     )}
                                 </p>
                             </CardContent>
@@ -338,7 +345,7 @@ export function ContractDetail({
                             <p className="text-sm text-muted-foreground mt-1">
                                 {format(
                                     new Date(contract.createdAt),
-                                    "MMM d, yyyy"
+                                    "MMM d, yyyy",
                                 )}
                             </p>
                         </CardContent>
@@ -365,7 +372,7 @@ export function ContractDetail({
                                             <p className="text-sm text-muted-foreground">
                                                 {format(
                                                     new Date(contract.openedAt),
-                                                    "MMM d, yyyy 'at' h:mm a"
+                                                    "MMM d, yyyy 'at' h:mm a",
                                                 )}
                                             </p>
                                         </div>
@@ -381,7 +388,7 @@ export function ContractDetail({
                                             <p className="text-sm text-muted-foreground">
                                                 {format(
                                                     new Date(contract.closedAt),
-                                                    "MMM d, yyyy 'at' h:mm a"
+                                                    "MMM d, yyyy 'at' h:mm a",
                                                 )}
                                             </p>
                                         </div>
@@ -397,9 +404,9 @@ export function ContractDetail({
                                             <p className="text-sm text-muted-foreground">
                                                 {format(
                                                     new Date(
-                                                        contract.awardedAt
+                                                        contract.awardedAt,
                                                     ),
-                                                    "MMM d, yyyy 'at' h:mm a"
+                                                    "MMM d, yyyy 'at' h:mm a",
                                                 )}
                                             </p>
                                         </div>
@@ -422,31 +429,29 @@ export function ContractDetail({
                             </CardHeader>
                             <CardContent>
                                 <ul className="space-y-3">
-                                    {contract.requiredDocuments.map(
-                                        (doc, index) => (
-                                            <li
-                                                key={index}
-                                                className="flex items-start gap-2"
-                                            >
-                                                <CheckCircleIcon className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                                                <div className="flex-1">
-                                                    <p className="font-medium">
-                                                        {doc.name}
-                                                        {doc.required && (
-                                                            <span className="text-destructive ml-1">
-                                                                *
-                                                            </span>
-                                                        )}
-                                                    </p>
-                                                    {doc.description && (
-                                                        <p className="text-sm text-muted-foreground">
-                                                            {doc.description}
-                                                        </p>
+                                    {contract.requiredDocuments.map((doc) => (
+                                        <li
+                                            key={doc.name}
+                                            className="flex items-start gap-2"
+                                        >
+                                            <CheckCircleIcon className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                                            <div className="flex-1">
+                                                <p className="font-medium">
+                                                    {doc.name}
+                                                    {doc.required && (
+                                                        <span className="text-destructive ml-1">
+                                                            *
+                                                        </span>
                                                     )}
-                                                </div>
-                                            </li>
-                                        )
-                                    )}
+                                                </p>
+                                                {doc.description && (
+                                                    <p className="text-sm text-muted-foreground">
+                                                        {doc.description}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </li>
+                                    ))}
                                 </ul>
                             </CardContent>
                         </Card>
@@ -461,14 +466,12 @@ export function ContractDetail({
                         <CardContent>
                             <FileList
                                 files={contract.documents}
-                                onDownload={
-                                    onDownloadDocument
-                                        ? (file) =>
-                                              handleDownload(
-                                                  file._id,
-                                                  file.filename
-                                              )
-                                        : undefined
+                                onView={handleViewDocument}
+                                onDownload={(file) =>
+                                    handleDownload(
+                                        file._id,
+                                        getDocumentFilename(file),
+                                    )
                                 }
                             />
                         </CardContent>
@@ -488,17 +491,6 @@ export function ContractDetail({
                 variant={confirmDialog.variant}
                 loading={isLoading}
             />
-
-            {/* Apply Dialog */}
-            {onApply && (
-                <ApplyDialog
-                    open={showApplyDialog}
-                    onOpenChange={setShowApplyDialog}
-                    contract={contract}
-                    onSubmit={handleApply}
-                    isLoading={isLoading}
-                />
-            )}
         </>
     );
 }

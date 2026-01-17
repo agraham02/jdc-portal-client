@@ -72,18 +72,19 @@ export function ContractDetailsGrid({ contract }: ContractDetailsGridProps) {
                 </Card>
             )}
 
-            {/* Awarded Application */}
-            {contract.awardedApplication && (
+            {/* Awarded Vendor */}
+            {contract.awardedToVendorId && (
                 <Card>
                     <CardHeader className="pb-3">
                         <CardTitle className="text-sm font-medium flex items-center gap-2">
                             <FileTextIcon className="h-4 w-4 text-muted-foreground" />
-                            Awarded Application
+                            Awarded Vendor
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
                         <p className="text-sm text-muted-foreground">
-                            Application ID: {contract.awardedApplication}
+                            {contract.awardedVendor?.companyName ||
+                                `Vendor ID: ${contract.awardedToVendorId}`}
                         </p>
                     </CardContent>
                 </Card>

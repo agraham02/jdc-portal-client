@@ -130,7 +130,14 @@ const applicationStatusConfig: Record<ApplicationStatus, StatusConfig> = {
         icon: Clock,
     },
     [ApplicationStatus.ACCEPTED]: {
-        label: "Accepted",
+        label: "In Review",
+        variant: "outline",
+        className:
+            "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800",
+        icon: Clock,
+    },
+    [ApplicationStatus.AWARDED]: {
+        label: "Awarded",
         variant: "default",
         className:
             "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",

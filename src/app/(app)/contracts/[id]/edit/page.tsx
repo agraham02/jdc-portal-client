@@ -1,29 +1,31 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { Button } from "@/components/ui/button";
 import { ContractEditor } from "@/components/contracts";
 import { ContractsService } from "@/lib/services/contracts";
 import { PermissionName as P } from "@/lib/constants/permission-names";
-import type { Contract, UpdateContractDto } from "@/lib/types/contracts";
-import {
-    showContractActionSuccess,
-    showContractActionError,
-} from "@/lib/utils/contract-notifications";
+import type {
+    Contract,
+    UpdateContractDto,
+    FileDocument,
+} from "@/lib/types/contracts";
+import { toast } from "sonner";
 
-export default function ContractEditPage({
-    params,
-}: {
-    params: { id: string };
-}) {
+export default function ContractEditPage() {
+    const params = useParams<{ id: string }>();
     const router = useRouter();
     const [contract, setContract] = useState<Contract | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string>();
+    const [files, setFiles] = useState<File[]>([]);
+    const [existingDocuments, setExistingDocuments] = useState<FileDocument[]>(
+        []
+    );
 
     useEffect(() => {
         async function loadContract() {
@@ -31,6 +33,7 @@ export default function ContractEditPage({
                 setIsLoading(true);
                 const data = await ContractsService.getContract(params.id);
                 setContract(data);
+                setExistingDocuments(data.documents || []);
             } catch (err) {
                 setError(
                     err instanceof Error
@@ -49,20 +52,70 @@ export default function ContractEditPage({
         try {
             setIsSubmitting(true);
             setError(undefined);
+
+            // Update contract metadata
             await ContractsService.updateContract(params.id, data);
-            showContractActionSuccess(
-                "Contract Updated",
-                "Contract has been updated successfully"
-            );
+
+            // Upload new files if any
+            if (files.length > 0) {
+                await ContractsService.uploadDocuments(params.id, files);
+            }
+
+            toast.success("Contract Updated", {
+                description: "Contract has been updated successfully",
+            });
             router.push(`/contracts/${params.id}`);
         } catch (err) {
             const message =
                 err instanceof Error
                     ? err.message
                     : "Failed to update contract";
-            showContractActionError("Update Contract", message);
+            toast.error("Update Contract Failed", {
+                description: message,
+            });
             setError(message);
             setIsSubmitting(false);
+        }
+    }
+
+    async function handleRemoveDocument(documentId: string) {
+        try {
+            await ContractsService.deleteDocument(params.id, documentId);
+            setExistingDocuments((prev) =>
+                prev.filter((doc) => doc._id !== documentId)
+            );
+            toast.success("Document Removed", {
+                description: "Document has been removed successfully",
+            });
+        } catch (err) {
+            const message =
+                err instanceof Error
+                    ? err.message
+                    : "Failed to remove document";
+            toast.error("Remove Document Failed", {
+                description: message,
+            });
+        }
+    }
+
+    async function handleDownloadDocument(
+        documentId: string,
+        filename: string
+    ) {
+        try {
+            await ContractsService.triggerDocumentDownload(
+                params.id,
+                documentId,
+                filename
+            );
+        } catch (err) {
+            const message =
+                err instanceof Error
+                    ? err.message
+                    : "Failed to download document";
+            toast.error("Download Document Failed", {
+                description: message,
+            });
         }
     }
 
@@ -126,6 +179,12 @@ export default function ContractEditPage({
                     onCancel={handleCancel}
                     isSubmitting={isSubmitting}
                     submitLabel="Update Contract"
+                    files={files}
+                    onFilesChange={setFiles}
+                    existingDocuments={existingDocuments}
+                    onRemoveDocument={handleRemoveDocument}
+                    onDownloadDocument={handleDownloadDocument}
+                    isEditMode={true}
                 />
             </main>
         </ProtectedRoute>

@@ -6,7 +6,6 @@ import { AuthorizationProvider } from "@/lib/authz/AuthorizationProvider";
 import { Toaster } from "@/components/ui/sonner";
 import ApiErrorListener from "@/components/ApiErrorListener";
 import { ThemeScript } from "@/components/navigation/ThemeScript";
-import { NotificationsProvider } from "@/lib/contexts/notifications-context";
 import { SWRProvider } from "@/lib/contexts/swr-config";
 
 const geistSans = Geist({
@@ -43,10 +42,8 @@ export default function RootLayout({
                 <SWRProvider>
                     <AuthorizationProvider>
                         <AuthProvider>
-                            <NotificationsProvider>
-                                <ApiErrorListener />
-                                {children}
-                            </NotificationsProvider>
+                            <ApiErrorListener />
+                            {children}
                         </AuthProvider>
                     </AuthorizationProvider>
                 </SWRProvider>

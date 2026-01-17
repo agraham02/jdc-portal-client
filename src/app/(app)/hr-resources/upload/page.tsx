@@ -2,7 +2,6 @@
 
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { PermissionName as P } from "@/lib/constants/permission-names";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -15,48 +14,58 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { useState } from "react";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { HrDocumentsService } from "@/lib/services/file";
+import type { HrCategory } from "@/lib/types/file";
 import {
     FileUpload,
     type UploadingFileMetadata,
 } from "@/components/common/FileUpload";
+import {
+    FileUploadCategory,
+    getAllowedFileTypes,
+    getFileSizeLimitMB,
+} from "@/lib/constants/file-upload";
 import { toast } from "sonner";
 import { Upload, AlertCircle, FileIcon, ArrowLeft } from "lucide-react";
 import Link from "next/link";
-
-const ALLOWED_TYPES = [
-    "application/pdf",
-    "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "application/vnd.ms-excel",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "image/png",
-    "image/jpeg",
-    "text/plain",
-];
-
-const TYPE_LABELS: Record<string, string> = {
-    "application/pdf": "PDF",
-    "application/msword": "DOC",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-        "DOCX",
-    "application/vnd.ms-excel": "XLS",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "XLSX",
-    "image/png": "PNG",
-    "image/jpeg": "JPEG",
-    "text/plain": "TXT",
-};
 
 export default function HRUploadPage() {
     const [uploadingFiles, setUploadingFiles] = useState<
         UploadingFileMetadata[]
     >([]);
     const [description, setDescription] = useState("");
-    const [tags, setTags] = useState("");
+    const [category, setCategory] = useState<string>("");
     const [isPublic, setIsPublic] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [categories, setCategories] = useState<HrCategory[]>([]);
+    const [loadingCategories, setLoadingCategories] = useState(true);
+
+    // Fetch categories on mount
+    useEffect(() => {
+        HrDocumentsService.getCategories({ limit: 100, isActive: true })
+            .then((res) => {
+                setCategories(res.categories);
+                // Set default to "other" if available
+                const otherCat = res.categories.find((c) => c.slug === "other");
+                if (otherCat) {
+                    setCategory(otherCat._id);
+                } else if (res.categories.length > 0) {
+                    setCategory(res.categories[0]._id);
+                }
+            })
+            .catch(console.error)
+            .finally(() => setLoadingCategories(false));
+    }, []);
 
     const onSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -69,35 +78,31 @@ export default function HRUploadPage() {
 
         setSubmitting(true);
 
-        // Simulate progress updates since HrDocumentsService doesn't provide progress callbacks
-        const progressInterval = setInterval(() => {
+        try {
+            await HrDocumentsService.uploadFile(
+                file,
+                {
+                    description: description.trim() || undefined,
+                    category: "hr_document", // Fixed category for HR documents
+                    hrCategory: category || undefined, // HR category selection
+                    isPublic: isPublic,
+                },
+                // Real progress callback
+                (percent) => {
+                    setUploadingFiles((prev) =>
+                        prev.map((uf) =>
+                            uf.file === file ? { ...uf, progress: percent } : uf
+                        )
+                    );
+                }
+            );
+
+            // Mark upload as complete
             setUploadingFiles((prev) =>
                 prev.map((uf) =>
                     uf.file === file
-                        ? { ...uf, progress: Math.min(uf.progress + 10, 90) }
+                        ? { ...uf, progress: 100, uploadComplete: true }
                         : uf
-                )
-            );
-        }, 200);
-
-        try {
-            await HrDocumentsService.uploadFile(file, {
-                description: description.trim() || undefined,
-                tags: tags
-                    ? tags
-                          .split(",")
-                          .map((t) => t.trim())
-                          .filter(Boolean)
-                    : undefined,
-                isPublic: isPublic,
-            });
-
-            clearInterval(progressInterval);
-
-            // Set progress to 100%
-            setUploadingFiles((prev) =>
-                prev.map((uf) =>
-                    uf.file === file ? { ...uf, progress: 100 } : uf
                 )
             );
 
@@ -107,12 +112,14 @@ export default function HRUploadPage() {
             setTimeout(() => {
                 setUploadingFiles([]);
                 setDescription("");
-                setTags("");
+                setCategory(
+                    categories.find((c) => c.slug === "other")?._id ||
+                        categories[0]?._id ||
+                        ""
+                );
                 setIsPublic(false);
             }, 1000);
         } catch (err: unknown) {
-            clearInterval(progressInterval);
-
             // Set error state
             setUploadingFiles((prev) =>
                 prev.map((uf) =>
@@ -204,13 +211,13 @@ export default function HRUploadPage() {
                                     <div className="space-y-2">
                                         <Label>File *</Label>
                                         <FileUpload
+                                            category={
+                                                FileUploadCategory.HR_DOCUMENT
+                                            }
                                             uploadingFiles={uploadingFiles}
                                             onUploadingFilesChange={
                                                 setUploadingFiles
                                             }
-                                            acceptedFileTypes={ALLOWED_TYPES}
-                                            maxFiles={1}
-                                            maxFileSizeMB={100}
                                         />
                                     </div>
 
@@ -231,21 +238,33 @@ export default function HRUploadPage() {
                                         />
                                     </div>
 
-                                    {/* Tags */}
+                                    {/* Category */}
                                     <div className="space-y-2">
-                                        <Label htmlFor="tags">Tags</Label>
-                                        <Input
-                                            id="tags"
-                                            placeholder="e.g. policy, benefits, handbook (comma separated)"
-                                            value={tags}
-                                            onChange={(e) =>
-                                                setTags(e.target.value)
-                                            }
-                                        />
-                                        <p className="text-sm text-muted-foreground">
-                                            Add tags to help categorize and find
-                                            documents later
-                                        </p>
+                                        <Label htmlFor="category">
+                                            Category
+                                        </Label>
+                                        {loadingCategories ? (
+                                            <Skeleton className="h-10 w-full" />
+                                        ) : (
+                                            <Select
+                                                value={category}
+                                                onValueChange={setCategory}
+                                            >
+                                                <SelectTrigger id="category">
+                                                    <SelectValue placeholder="Select category" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {categories.map((cat) => (
+                                                        <SelectItem
+                                                            key={cat._id}
+                                                            value={cat._id}
+                                                        >
+                                                            {cat.name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        )}
                                     </div>
 
                                     {/* Public Access Toggle */}
@@ -258,10 +277,10 @@ export default function HRUploadPage() {
                                                 Public Access
                                             </Label>
                                             <p className="text-sm text-muted-foreground">
-                                                Make this document visible to all
-                                                users. If disabled, only users
-                                                with FILE_READ permission can see
-                                                it.
+                                                Make this document visible to
+                                                all users. If disabled, only
+                                                users with FILE_READ permission
+                                                can see it.
                                             </p>
                                         </div>
                                         <Switch
@@ -299,7 +318,14 @@ export default function HRUploadPage() {
                                             onClick={() => {
                                                 setUploadingFiles([]);
                                                 setDescription("");
-                                                setTags("");
+                                                setCategory(
+                                                    categories.find(
+                                                        (c) =>
+                                                            c.slug === "other"
+                                                    )?._id ||
+                                                        categories[0]?._id ||
+                                                        ""
+                                                );
                                                 setIsPublic(false);
                                             }}
                                         >
@@ -332,17 +358,19 @@ export default function HRUploadPage() {
                                         Supported formats:
                                     </p>
                                     <div className="flex flex-wrap gap-1">
-                                        {Object.values(TYPE_LABELS).map(
-                                            (label) => (
-                                                <Badge
-                                                    key={label}
-                                                    variant="secondary"
-                                                    className="text-xs"
-                                                >
-                                                    {label}
-                                                </Badge>
-                                            )
-                                        )}
+                                        {getAllowedFileTypes(
+                                            FileUploadCategory.HR_DOCUMENT
+                                        ).extensions.map((ext) => (
+                                            <Badge
+                                                key={ext}
+                                                variant="secondary"
+                                                className="text-xs"
+                                            >
+                                                {ext
+                                                    .toUpperCase()
+                                                    .replace(".", "")}
+                                            </Badge>
+                                        ))}
                                     </div>
                                 </div>
 
@@ -351,7 +379,10 @@ export default function HRUploadPage() {
                                         Maximum size:
                                     </p>
                                     <p className="text-sm text-muted-foreground">
-                                        100MB per file
+                                        {getFileSizeLimitMB(
+                                            FileUploadCategory.HR_DOCUMENT
+                                        )}
+                                        MB per file
                                     </p>
                                 </div>
 
@@ -386,8 +417,8 @@ export default function HRUploadPage() {
                                 <div className="flex items-start gap-2">
                                     <div className="w-1.5 h-1.5 bg-primary rounded-full mt-2 flex-shrink-0" />
                                     <p>
-                                        Add relevant tags to improve
-                                        searchability
+                                        Select the appropriate category for
+                                        easier discovery
                                     </p>
                                 </div>
                                 <div className="flex items-start gap-2">

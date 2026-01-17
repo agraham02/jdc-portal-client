@@ -3,20 +3,12 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
-import { PermissionName as P } from "@/lib/constants/permission-names";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { HrDocumentsService } from "@/lib/services/file";
 import { HRDocument } from "@/lib/types/file";
-import {
-    FileText,
-    Clock,
-    Download,
-    Link as LinkIcon,
-} from "lucide-react";
+import { FileText, Clock, Download, Link as LinkIcon } from "lucide-react";
 import { HrDocumentsTable } from "@/components/documents/HrDocumentsTable";
 import { HrLinksTable } from "@/components/documents/HrLinksTable";
-
-// TODO: update page to align with new isPublic logic structure
 
 export default function HRResourcesPage() {
     const [activeTab, setActiveTab] = useState<"documents" | "links">(
@@ -99,7 +91,7 @@ export default function HRResourcesPage() {
     ];
 
     return (
-        <ProtectedRoute anyOf={[P.HR_DOCUMENT_READ]}>
+        <ProtectedRoute requireAuth={true}>
             <main className="space-y-6 p-6 max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

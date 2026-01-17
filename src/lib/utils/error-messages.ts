@@ -1,10 +1,10 @@
 /**
  * Domain-specific error messages for consistent user feedback
- * 
+ *
  * Usage:
  * ```typescript
  * import { errorMessages } from '@/lib/utils/error-messages';
- * 
+ *
  * apiToast.error(errorMessages.contracts.create, error);
  * ```
  */
@@ -19,6 +19,7 @@ export const errorMessages = {
         delete: "Failed to delete contract",
         publish: "Failed to publish contract",
         close: "Failed to close contract",
+        reopen: "Failed to reopen contract",
         award: "Failed to award contract",
         notFound: "Contract not found",
         uploadDocuments: "Failed to upload documents",
@@ -128,9 +129,32 @@ export const errorMessages = {
     // HR Documents
     hrDocuments: {
         load: "Failed to load documents",
+        loadSingle: "Failed to load document",
         upload: "Failed to upload document",
+        replace: "Failed to replace document",
         delete: "Failed to delete document",
         download: "Failed to download document",
+    },
+
+    // HR Categories
+    hrCategories: {
+        load: "Failed to load categories",
+        loadSingle: "Failed to load category",
+        create: "Failed to create category",
+        update: "Failed to update category",
+        delete: "Failed to delete category",
+        deleteInUse: "Cannot delete category that is in use by links",
+    },
+
+    // HR Links
+    hrLinks: {
+        load: "Failed to load links",
+        loadSingle: "Failed to load link",
+        create: "Failed to create link",
+        update: "Failed to update link",
+        delete: "Failed to delete link",
+        activate: "Failed to activate link",
+        deactivate: "Failed to deactivate link",
     },
 
     // Generic
@@ -158,6 +182,7 @@ export const successMessages = {
         deleted: "Contract deleted successfully",
         published: "Contract published successfully",
         closed: "Contract closed successfully",
+        reopened: "Contract reopened successfully",
         awarded: "Contract awarded successfully",
         documentsUploaded: "Documents uploaded successfully",
         documentDeleted: "Document deleted successfully",
@@ -232,14 +257,29 @@ export const successMessages = {
 
     hrDocuments: {
         uploaded: "Document uploaded successfully",
+        replaced: "Document replaced successfully",
         deleted: "Document deleted successfully",
+    },
+
+    hrCategories: {
+        created: "Category created successfully",
+        updated: "Category updated successfully",
+        deleted: "Category deleted successfully",
+    },
+
+    hrLinks: {
+        created: "Link created successfully",
+        updated: "Link updated successfully",
+        deleted: "Link deleted successfully",
+        activated: "Link activated successfully",
+        deactivated: "Link deactivated successfully",
     },
 };
 
 /**
  * Get user-friendly error message from error object
  * Falls back to provided fallback message
- * 
+ *
  * @param error - Error object (StandardError, Error, or unknown)
  * @param fallback - Fallback message if error message can't be extracted
  * @returns User-friendly error message
@@ -272,7 +312,7 @@ export function getErrorMessage(error: unknown, fallback: string): string {
 
 /**
  * Get error code from error object
- * 
+ *
  * @param error - Error object
  * @returns Error code or undefined
  */
@@ -290,7 +330,7 @@ export function getErrorCode(error: unknown): string | undefined {
 
 /**
  * Check if error is a specific type
- * 
+ *
  * @param error - Error object
  * @param code - Error code to check
  * @returns True if error matches code
@@ -326,11 +366,7 @@ export function isNotFoundError(error: unknown): boolean {
  * Check if error is a validation error
  */
 export function isValidationError(error: unknown): boolean {
-    if (
-        typeof error === "object" &&
-        error !== null &&
-        "fieldErrors" in error
-    ) {
+    if (typeof error === "object" && error !== null && "fieldErrors" in error) {
         return Array.isArray((error as { fieldErrors: unknown }).fieldErrors);
     }
     return false;

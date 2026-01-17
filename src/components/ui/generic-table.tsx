@@ -2,6 +2,7 @@
 
 import {
     useEffect,
+    useCallback,
     useMemo,
     useState,
     ReactNode,
@@ -141,9 +142,25 @@ interface UseTableStateOptions {
     onChange?: (state: TableStateSnapshot) => void;
 }
 
-export function useTableState<T extends BaseEntity>(
-    config: GenericTableConfig<T>,
-    options: UseTableStateOptions = {}
+interface UseTableStateConfig {
+    filters?: TableFilter[];
+    defaultPageSize?: number;
+}
+
+/**
+ * Hook for managing table pagination and filter state.
+ *
+ * This hook is intentionally not generic over any entity type. It only tracks
+ * the current page, page size, and string-based filter values via
+ * {@link TableStateSnapshot}, and exposes setters via {@link TableStateControls}.
+ *
+ * @param config   Static configuration for table filters and default page size.
+ * @param options  Optional callbacks, e.g. {@link UseTableStateOptions.onChange}
+ *                 for reacting to state changes.
+ */
+export function useTableState(
+    config: UseTableStateConfig,
+    options: UseTableStateOptions = {},
 ): TableStateControls {
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(config.defaultPageSize || 25);
@@ -155,23 +172,23 @@ export function useTableState<T extends BaseEntity>(
         return initialFilters;
     });
 
-    const updateFilter = (key: string, value: string) => {
+    const updateFilter = useCallback((key: string, value: string) => {
         setFilters((prev) => ({ ...prev, [key]: value }));
         setPage(1); // Reset to first page when filtering
-    };
+    }, []);
 
-    const resetFilters = () => {
+    const resetFilters = useCallback(() => {
         const resetFilters: Record<string, string> = {};
         config.filters?.forEach((filter) => {
             resetFilters[filter.key] = filter.type === "select" ? "all" : "";
         });
         setFilters(resetFilters);
         setPage(1);
-    };
+    }, [config.filters]);
 
     const snapshot: TableStateSnapshot = useMemo(
         () => ({ page, pageSize, filters }),
-        [page, pageSize, filters]
+        [page, pageSize, filters],
     );
 
     const { onChange } = options;
@@ -190,6 +207,189 @@ export function useTableState<T extends BaseEntity>(
 }
 
 // Main GenericTable component
+function getSearchableValue(rawValue: unknown): string | null {
+    if (rawValue === undefined || rawValue === null) return null;
+    if (
+        typeof rawValue === "string" ||
+        typeof rawValue === "number" ||
+        typeof rawValue === "boolean"
+    ) {
+        return String(rawValue);
+    }
+    if (Array.isArray(rawValue)) {
+        return rawValue
+            .map((value) => getSearchableValue(value))
+            .filter(Boolean)
+            .join(" ");
+    }
+    return null;
+}
+
+function filterTableData<T extends BaseEntity>(
+    data: T[],
+    filters: Record<string, string>,
+    searchFields: SearchField<T>[],
+    tableFilters: TableFilter[],
+    customFilter?: (item: T, filters: Record<string, string>) => boolean,
+): T[] {
+    const searchFilter = filters.search?.trim() ?? "";
+    const loweredQuery = searchFilter.toLowerCase();
+
+    return data.filter((item) => {
+        if (searchFilter && searchFields.length > 0) {
+            const searchMatch = searchFields.some((field) => {
+                const rawValue =
+                    typeof field === "function" ? field(item) : item[field];
+                const searchValue = getSearchableValue(rawValue);
+                if (!searchValue) return false;
+                return searchValue.toLowerCase().includes(loweredQuery);
+            });
+            if (!searchMatch) return false;
+        }
+
+        if (customFilter && !customFilter(item, filters)) {
+            return false;
+        }
+
+        return (
+            tableFilters.every((filter) => {
+                if (filter.type === "search") return true;
+
+                const filterValue = filters[filter.key];
+                if (!filterValue || filterValue === "all") return true;
+
+                const itemValue = item[filter.key];
+                return itemValue === filterValue;
+            }) ?? true
+        );
+    });
+}
+
+interface TableBodyArgs<T extends BaseEntity> {
+    loading: boolean;
+    config: GenericTableConfig<T>;
+    filteredData: T[];
+    pageItems: T[];
+    renderCell: (column: TableColumn<T>, item: T) => ReactNode;
+    getVisibleActions: (item: T) => TableAction<T>[];
+    handleAction: (action: TableAction<T>, item: T) => Promise<void> | void;
+    busyIds: Set<string>;
+}
+
+function buildTableBody<T extends BaseEntity>({
+    loading,
+    config,
+    filteredData,
+    pageItems,
+    renderCell,
+    getVisibleActions,
+    handleAction,
+    busyIds,
+}: TableBodyArgs<T>): ReactNode {
+    if (loading) {
+        return (
+            <TableRow>
+                <TableCell
+                    colSpan={
+                        config.columns.length + (config.actions?.length ? 1 : 0)
+                    }
+                    className="text-sm text-muted-foreground text-center py-8"
+                >
+                    {config.loadingMessage || "Loading…"}
+                </TableCell>
+            </TableRow>
+        );
+    }
+
+    if (filteredData.length === 0) {
+        return (
+            <TableRow>
+                <TableCell
+                    colSpan={
+                        config.columns.length + (config.actions?.length ? 1 : 0)
+                    }
+                    className="text-sm text-muted-foreground text-center py-8"
+                >
+                    {config.emptyMessage || "No items found"}
+                </TableCell>
+            </TableRow>
+        );
+    }
+
+    return pageItems.map((item) => {
+        const visibleActions = getVisibleActions(item);
+        return (
+            <TableRow
+                key={item._id}
+                className={
+                    config.onRowClick ? "cursor-pointer hover:bg-muted/50" : ""
+                }
+                onClick={() => config.onRowClick?.(item)}
+            >
+                {config.columns.map((column) => (
+                    <TableCell key={column.key} className={column.className}>
+                        {renderCell(column, item)}
+                    </TableCell>
+                ))}
+                {config.actions && config.actions.length > 0 && (
+                    <TableCell className="text-right">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger
+                                asChild
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    aria-label="More actions"
+                                >
+                                    <MoreHorizontal className="w-4 h-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                                {visibleActions.map((action) => {
+                                    const disabled =
+                                        busyIds.has(item._id) ||
+                                        Boolean(action.disabled?.(item));
+
+                                    if (action.render) {
+                                        return (
+                                            <DropdownMenuItem
+                                                key={action.key}
+                                                onSelect={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                }}
+                                            >
+                                                {action.render(item)}
+                                            </DropdownMenuItem>
+                                        );
+                                    }
+
+                                    return (
+                                        <DropdownMenuItem
+                                            key={action.key}
+                                            onSelect={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                if (disabled) return;
+                                                handleAction(action, item);
+                                            }}
+                                            disabled={disabled}
+                                        >
+                                            {action.label}
+                                        </DropdownMenuItem>
+                                    );
+                                })}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </TableCell>
+                )}
+            </TableRow>
+        );
+    });
+}
+
 export function GenericTable<T extends BaseEntity>({
     data,
     loading,
@@ -199,7 +399,7 @@ export function GenericTable<T extends BaseEntity>({
     className = "",
     state,
     totalItems,
-}: GenericTableProps<T>) {
+}: Readonly<GenericTableProps<T>>) {
     const internalState = useTableState(config);
     const { page, setPage, pageSize, setPageSize, filters, updateFilter } =
         state ?? internalState;
@@ -208,7 +408,7 @@ export function GenericTable<T extends BaseEntity>({
 
     const searchFields = useMemo(
         () => config.searchFields ?? [],
-        [config.searchFields]
+        [config.searchFields],
     );
     const tableFilters = useMemo(() => config.filters ?? [], [config.filters]);
     const manualFiltering = config.manualFiltering ?? false;
@@ -222,41 +422,13 @@ export function GenericTable<T extends BaseEntity>({
             return data;
         }
 
-        return data.filter((item) => {
-            const searchFilter = filters.search?.trim() ?? "";
-            if (searchFilter && searchFields.length > 0) {
-                const loweredQuery = searchFilter.toLowerCase();
-                const searchMatch = searchFields.some((field) => {
-                    const rawValue =
-                        typeof field === "function" ? field(item) : item[field];
-                    if (rawValue === undefined || rawValue === null) {
-                        return false;
-                    }
-                    return String(rawValue)
-                        .toLowerCase()
-                        .includes(loweredQuery);
-                });
-                if (!searchMatch) {
-                    return false;
-                }
-            }
-
-            if (customFilter) {
-                return customFilter(item, filters);
-            }
-
-            return (
-                tableFilters.every((filter) => {
-                    if (filter.type === "search") return true;
-
-                    const filterValue = filters[filter.key];
-                    if (!filterValue || filterValue === "all") return true;
-
-                    const itemValue = item[filter.key];
-                    return itemValue === filterValue;
-                }) ?? true
-            );
-        });
+        return filterTableData(
+            data,
+            filters,
+            searchFields,
+            tableFilters,
+            customFilter,
+        );
     }, [
         data,
         filters,
@@ -268,26 +440,32 @@ export function GenericTable<T extends BaseEntity>({
 
     // Pagination
     const total = manualPagination
-        ? totalItems ?? filteredData.length
+        ? (totalItems ?? filteredData.length)
         : filteredData.length;
     const totalPages = enablePagination
         ? Math.max(1, Math.ceil(total / pageSize))
         : 1;
     const currentPage = Math.min(page, totalPages);
     const start = enablePagination ? (currentPage - 1) * pageSize : 0;
-    const pageItems = enablePagination
-        ? manualPagination
+
+    let pageItems = filteredData;
+    if (enablePagination) {
+        pageItems = manualPagination
             ? data
-            : filteredData.slice(start, start + pageSize)
-        : filteredData;
-    const startDisplay =
-        total > 0 ? (enablePagination ? Math.min(total, start + 1) : 1) : 0;
-    const endDisplay =
-        total > 0
-            ? enablePagination
-                ? Math.min(total, start + pageItems.length)
-                : pageItems.length
-            : 0;
+            : filteredData.slice(start, start + pageSize);
+    }
+
+    let startDisplay = 0;
+    let endDisplay = 0;
+    if (total > 0) {
+        if (enablePagination) {
+            startDisplay = Math.min(total, start + 1);
+            endDisplay = Math.min(total, start + pageItems.length);
+        } else {
+            startDisplay = 1;
+            endDisplay = pageItems.length;
+        }
+    }
 
     // Handle action clicks with loading state
     const handleAction = async (action: TableAction<T>, item: T) => {
@@ -329,6 +507,17 @@ export function GenericTable<T extends BaseEntity>({
     const getVisibleActions = (item: T) => {
         return config.actions?.filter((action) => !action.hidden?.(item)) || [];
     };
+
+    const tableBody = buildTableBody({
+        loading,
+        config,
+        filteredData,
+        pageItems,
+        renderCell,
+        getVisibleActions,
+        handleAction,
+        busyIds,
+    });
 
     return (
         <div className={`space-y-4 ${className}`}>
@@ -445,145 +634,7 @@ export function GenericTable<T extends BaseEntity>({
                             )}
                         </TableRow>
                     </TableHeader>
-                    <TableBody>
-                        {loading ? (
-                            <TableRow>
-                                <TableCell
-                                    colSpan={
-                                        config.columns.length +
-                                        (config.actions?.length ? 1 : 0)
-                                    }
-                                    className="text-sm text-muted-foreground text-center py-8"
-                                >
-                                    {config.loadingMessage || "Loading…"}
-                                </TableCell>
-                            </TableRow>
-                        ) : filteredData.length === 0 ? (
-                            <TableRow>
-                                <TableCell
-                                    colSpan={
-                                        config.columns.length +
-                                        (config.actions?.length ? 1 : 0)
-                                    }
-                                    className="text-sm text-muted-foreground text-center py-8"
-                                >
-                                    {config.emptyMessage || "No items found"}
-                                </TableCell>
-                            </TableRow>
-                        ) : (
-                            pageItems.map((item) => {
-                                const visibleActions = getVisibleActions(item);
-                                return (
-                                    <TableRow
-                                        key={item._id}
-                                        className={
-                                            config.onRowClick
-                                                ? "cursor-pointer hover:bg-muted/50"
-                                                : ""
-                                        }
-                                        onClick={() =>
-                                            config.onRowClick?.(item)
-                                        }
-                                    >
-                                        {config.columns.map((column) => (
-                                            <TableCell
-                                                key={column.key}
-                                                className={column.className}
-                                            >
-                                                {renderCell(column, item)}
-                                            </TableCell>
-                                        ))}
-                                        {config.actions &&
-                                            config.actions.length > 0 && (
-                                                <TableCell className="text-right">
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger
-                                                            asChild
-                                                            onClick={(e) =>
-                                                                e.stopPropagation()
-                                                            }
-                                                        >
-                                                            <Button
-                                                                size="sm"
-                                                                variant="ghost"
-                                                                aria-label="More actions"
-                                                            >
-                                                                <MoreHorizontal className="w-4 h-4" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent>
-                                                            {visibleActions.map(
-                                                                (action) => {
-                                                                    const disabled =
-                                                                        busyIds.has(
-                                                                            item._id
-                                                                        ) ||
-                                                                        Boolean(
-                                                                            action.disabled?.(
-                                                                                item
-                                                                            )
-                                                                        );
-
-                                                                    // If action provides a custom render, render it and don't wire onSelect
-                                                                    if (
-                                                                        action.render
-                                                                    ) {
-                                                                        return (
-                                                                            <div
-                                                                                key={
-                                                                                    action.key
-                                                                                }
-                                                                                onClick={(
-                                                                                    e
-                                                                                ) =>
-                                                                                    e.stopPropagation()
-                                                                                }
-                                                                            >
-                                                                                {action.render(
-                                                                                    item
-                                                                                )}
-                                                                            </div>
-                                                                        );
-                                                                    }
-
-                                                                    return (
-                                                                        <DropdownMenuItem
-                                                                            key={
-                                                                                action.key
-                                                                            }
-                                                                            onSelect={(
-                                                                                e
-                                                                            ) => {
-                                                                                e.preventDefault();
-                                                                                if (
-                                                                                    disabled
-                                                                                )
-                                                                                    return;
-                                                                                handleAction(
-                                                                                    action,
-                                                                                    item
-                                                                                );
-                                                                            }}
-                                                                            disabled={
-                                                                                disabled
-                                                                            }
-                                                                        >
-                                                                            {
-                                                                                action.label
-                                                                            }
-                                                                        </DropdownMenuItem>
-                                                                    );
-                                                                }
-                                                            )}
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </TableCell>
-                                            )}
-                                    </TableRow>
-                                );
-                            })
-                        )}
-                    </TableBody>
+                    <TableBody>{tableBody}</TableBody>
                 </Table>
             </div>
 

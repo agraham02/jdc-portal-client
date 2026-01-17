@@ -24,6 +24,8 @@ export interface UpdateVendorDto {
     companyName?: string;
     website?: string;
     contactName?: string;
+    contactEmail?: string;
+    contactPhone?: string;
     servicesOffered?: string[];
     notes?: string;
 }

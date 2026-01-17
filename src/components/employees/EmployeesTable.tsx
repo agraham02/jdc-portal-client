@@ -13,6 +13,7 @@ import {
 import { AuthService } from "@/lib/services/auth";
 import { useAuthz } from "@/lib/authz/useAuthz";
 import { PermissionName as P } from "@/lib/constants/permission-names";
+import { DEPARTMENT_OPTIONS } from "@/lib/constants/departments";
 import { useErrorState } from "@/lib/hooks/useErrorState";
 import { apiToast } from "@/lib/utils/toast-helpers";
 import { errorMessages, successMessages } from "@/lib/utils/error-messages";
@@ -52,7 +53,9 @@ export function EmployeesTable() {
                 options: [
                     { value: UserStatus.ACTIVE, label: "Active" },
                     { value: UserStatus.PENDING, label: "Pending" },
+                    { value: UserStatus.ONBOARDING, label: "Onboarding" },
                     { value: UserStatus.INACTIVE, label: "Inactive" },
+                    { value: UserStatus.TERMINATED, label: "Terminated" },
                 ],
             },
             {
@@ -60,24 +63,16 @@ export function EmployeesTable() {
                 label: "Department",
                 type: "select",
                 className: "w-48",
-                options: [
-                    { value: "Engineering", label: "Engineering" },
-                    { value: "HR", label: "Human Resources" },
-                    { value: "Sales", label: "Sales" },
-                    { value: "Marketing", label: "Marketing" },
-                    { value: "Finance", label: "Finance" },
-                    { value: "Operations", label: "Operations" },
-                ],
+                options: DEPARTMENT_OPTIONS,
             },
         ],
         []
     );
 
-    const tableState = useTableState<EmployeeWithUser>({
+    const tableState = useTableState({
         filters: filterDefinitions,
         defaultPageSize: 25,
-        enablePagination: true,
-    } as GenericTableConfig<EmployeeWithUser>);
+    });
 
     const {
         page,
@@ -243,23 +238,13 @@ export function EmployeesTable() {
                                   }
                               },
                               hidden: (employee: EmployeeWithUser) => {
-                                  // Only show for pending accounts whose activation likely expired (older than 7 days)
-                                  if (
-                                      !(
-                                          employee.userId.status ===
-                                              UserStatus.PENDING ||
-                                          employee.userId.status ===
-                                              UserStatus.ONBOARDING
-                                      )
-                                  )
-                                      return true;
-                                  const created = employee.userId.createdAt
-                                      ? new Date(employee.userId.createdAt)
-                                      : null;
-                                  if (!created) return true;
-                                  const ageMs = Date.now() - created.getTime();
-                                  const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-                                  return ageMs <= sevenDaysMs;
+                                  // Show for pending/onboarding accounts (activation not yet complete)
+                                  return !(
+                                      employee.userId.status ===
+                                          UserStatus.PENDING ||
+                                      employee.userId.status ===
+                                          UserStatus.ONBOARDING
+                                  );
                               },
                           },
                       ]

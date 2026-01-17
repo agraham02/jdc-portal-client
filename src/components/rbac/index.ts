@@ -5,3 +5,4 @@ export * from "./PermissionSelector";
 export * from "./PermissionsBrowser";
 export * from "./PermissionBadge";
 export * from "./PermissionRequiredBanner";
+export * from "./PermissionGate";
