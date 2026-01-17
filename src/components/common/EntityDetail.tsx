@@ -30,7 +30,7 @@ import { UserStatus } from "@/lib/types/auth";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { PhoneInput } from "../ui/phone-input";
-import { AddressForm, DateInput, ServicesInput, StatusBadge } from ".";
+import { AddressForm, DateInput, EmployeeCombobox, ServicesInput, StatusBadge } from ".";
 import { AuthService } from "@/lib/services/auth";
 import { useAuthz } from "@/lib/authz/useAuthz";
 import { PermissionName as P } from "@/lib/constants/permission-names";
@@ -56,7 +56,6 @@ export function EntityDetail({ entityType, id, canUpdate }: Props) {
         null
     );
     const [form, setForm] = useState<Record<string, unknown>>({});
-    const [allEmployees, setAllEmployees] = useState<EmployeeWithUser[]>([]);
 
     // Status options available for employees (managers/admins can set these)
     const employeeStatusOptions = useMemo(
@@ -69,52 +68,7 @@ export function EntityDetail({ entityType, id, canUpdate }: Props) {
         []
     );
 
-    // Filtered list of potential managers (exclude current employee)
-    const managerOptions = useMemo(() => {
-        return allEmployees
-            .filter((emp) => emp._id !== id)
-            .filter((emp) => emp.userId?.status === UserStatus.ACTIVE)
-            .map((emp) => ({
-                value: emp._id,
-                label:
-                    `${emp.userId?.firstName ?? ""} ${
-                        emp.userId?.lastName ?? ""
-                    }`.trim() ||
-                    emp.userId?.email ||
-                    "Unknown",
-            }));
-    }, [allEmployees, id]);
 
-    // Get current manager name for display
-    const currentManagerName = useMemo(() => {
-        const managerId = form.managerId as string;
-        if (!managerId) return "No Manager";
-        const manager = allEmployees.find((emp) => emp._id === managerId);
-        if (!manager) return "Unknown Manager";
-        return (
-            `${manager.userId?.firstName ?? ""} ${
-                manager.userId?.lastName ?? ""
-            }`.trim() ||
-            manager.userId?.email ||
-            "Unknown"
-        );
-    }, [form.managerId, allEmployees]);
-
-    // Load employees list for manager selection (only for employee entity type)
-    useEffect(() => {
-        if (entityType !== "employee") return;
-
-        async function loadEmployees() {
-            try {
-                const resp = await EmployeeService.getEmployees({ limit: 100 });
-                setAllEmployees(resp.data);
-            } catch {
-                // Silently fail - manager selection just won't be available
-                console.warn("Failed to load employees for manager selection");
-            }
-        }
-        loadEmployees();
-    }, [entityType]);
 
     useEffect(() => {
         let cancelled = false;
@@ -542,45 +496,17 @@ export function EntityDetail({ entityType, id, canUpdate }: Props) {
                         </div>
                         <div>
                             <Label htmlFor="managerId">Manager</Label>
-                            {editing ? (
-                                <>
-                                    <Select
-                                        value={(form.managerId as string) ?? ""}
-                                        onValueChange={(value) =>
-                                            onChange(
-                                                "managerId",
-                                                value === "none" ? "" : value
-                                            )
-                                        }
-                                    >
-                                        <SelectTrigger id="managerId">
-                                            <SelectValue placeholder="Select manager" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="none">
-                                                No Manager
-                                            </SelectItem>
-                                            {managerOptions.map((option) => (
-                                                <SelectItem
-                                                    key={option.value}
-                                                    value={option.value}
-                                                >
-                                                    {option.label}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                        Only active employees can be selected as
-                                        managers
-                                    </p>
-                                </>
-                            ) : (
-                                <Input
-                                    id="managerId"
-                                    value={currentManagerName}
-                                    disabled
-                                />
+                            <EmployeeCombobox
+                                value={(form.managerId as string) ?? ""}
+                                onChange={(value) => onChange("managerId", value)}
+                                disabled={!editing}
+                                excludeEmployeeId={id}
+                                placeholder={editing ? "Select manager..." : (form.managerId as string) ? "Loading..." : "No Manager"}
+                            />
+                            {editing && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Search by name, email, ID, department, or job title
+                                </p>
                             )}
                         </div>
                     </div>
