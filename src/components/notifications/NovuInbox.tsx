@@ -15,7 +15,7 @@ export function NovuInbox() {
     if (!applicationIdentifier) {
         if (process.env.NODE_ENV === "development") {
             console.warn(
-                "[NovuInbox] NEXT_PUBLIC_NOVU_APP_ID is not configured"
+                "[NovuInbox] NEXT_PUBLIC_NOVU_APP_ID is not configured",
             );
         }
         return null;

@@ -62,7 +62,7 @@ export interface FileUploadProps<TMetadata = Record<string, never>> {
      * If not provided, will attempt to POST files to uploadEndpoint
      */
     onUpload?: (
-        files: UploadingFileMetadata<TMetadata>[]
+        files: UploadingFileMetadata<TMetadata>[],
     ) => Promise<Array<{ _id: string }>>;
 
     /**
@@ -101,7 +101,7 @@ export interface FileUploadProps<TMetadata = Record<string, never>> {
      * Controlled mode: callback to update uploading files
      */
     onUploadingFilesChange?: (
-        files: UploadingFileMetadata<TMetadata>[]
+        files: UploadingFileMetadata<TMetadata>[],
     ) => void;
 
     /**
@@ -168,22 +168,22 @@ export function FileUpload<TMetadata = Record<string, never>>({
             updater:
                 | UploadingFileMetadata<TMetadata>[]
                 | ((
-                      prev: UploadingFileMetadata<TMetadata>[]
-                  ) => UploadingFileMetadata<TMetadata>[])
+                      prev: UploadingFileMetadata<TMetadata>[],
+                  ) => UploadingFileMetadata<TMetadata>[]),
         ) => {
-            if (onUploadingFilesChange) {
-                // Controlled mode
-                const newFiles =
-                    typeof updater === "function"
-                        ? updater(controlledUploadingFiles ?? [])
-                        : updater;
-                onUploadingFilesChange(newFiles);
+            if (typeof updater === "function") {
+                setInternalUploadingFiles((prev) =>
+                    (
+                        updater as (
+                            prev: UploadingFileMetadata<TMetadata>[],
+                        ) => UploadingFileMetadata<TMetadata>[]
+                    )(prev),
+                );
             } else {
-                // Uncontrolled mode
                 setInternalUploadingFiles(updater);
             }
         },
-        [onUploadingFilesChange, controlledUploadingFiles]
+        [onUploadingFilesChange, controlledUploadingFiles],
     );
 
     const validateFile = useCallback(
@@ -200,13 +200,13 @@ export function FileUpload<TMetadata = Record<string, never>>({
                     .pop()
                     ?.toLowerCase()}`;
                 return `File type ${fileExtension} is not supported. Allowed: ${extensions.join(
-                    ", "
+                    ", ",
                 )}`;
             }
 
             return null;
         },
-        [category, maxFileSize, extensions]
+        [category, maxFileSize, extensions],
     );
 
     const uploadFilesToServer = useCallback(
@@ -227,8 +227,8 @@ export function FileUpload<TMetadata = Record<string, never>>({
                                       progress: 100,
                                       uploadComplete: true,
                                   }
-                                : uf
-                        )
+                                : uf,
+                        ),
                     );
                 } else if (uploadEndpoint) {
                     // Default XMLHttpRequest upload with progress tracking
@@ -247,14 +247,14 @@ export function FileUpload<TMetadata = Record<string, never>>({
                                 setUploadingFiles((prev) =>
                                     prev.map((uf) =>
                                         filesToUpload.some(
-                                            (f) => f.file === uf.file
+                                            (f) => f.file === uf.file,
                                         )
                                             ? {
                                                   ...uf,
                                                   progress: percentComplete,
                                               }
-                                            : uf
-                                    )
+                                            : uf,
+                                    ),
                                 );
                             }
                         });
@@ -263,37 +263,37 @@ export function FileUpload<TMetadata = Record<string, never>>({
                             if (xhr.status >= 200 && xhr.status < 300) {
                                 try {
                                     const data = JSON.parse(
-                                        xhr.responseText
+                                        xhr.responseText,
                                     ) as Array<{ _id: string }>;
 
                                     // Mark files as upload complete
                                     setUploadingFiles((prev) =>
                                         prev.map((uf) =>
                                             filesToUpload.some(
-                                                (f) => f.file === uf.file
+                                                (f) => f.file === uf.file,
                                             )
                                                 ? {
                                                       ...uf,
                                                       progress: 100,
                                                       uploadComplete: true,
                                                   }
-                                                : uf
-                                        )
+                                                : uf,
+                                        ),
                                     );
 
                                     resolve(data);
                                 } catch {
                                     reject(
                                         new Error(
-                                            "Invalid response from server"
-                                        )
+                                            "Invalid response from server",
+                                        ),
                                     );
                                 }
                             } else {
                                 reject(
                                     new Error(
-                                        `Upload failed: ${xhr.statusText}`
-                                    )
+                                        `Upload failed: ${xhr.statusText}`,
+                                    ),
                                 );
                             }
                         });
@@ -308,7 +308,7 @@ export function FileUpload<TMetadata = Record<string, never>>({
                     });
                 } else {
                     throw new Error(
-                        "Either onUpload or uploadEndpoint must be provided"
+                        "Either onUpload or uploadEndpoint must be provided",
                     );
                 }
 
@@ -318,8 +318,8 @@ export function FileUpload<TMetadata = Record<string, never>>({
                 // Remove uploaded files from state
                 setUploadingFiles((prev) =>
                     prev.filter(
-                        (uf) => !filesToUpload.some((f) => f.file === uf.file)
-                    )
+                        (uf) => !filesToUpload.some((f) => f.file === uf.file),
+                    ),
                 );
 
                 onUploadComplete?.(fileIds, files);
@@ -330,8 +330,8 @@ export function FileUpload<TMetadata = Record<string, never>>({
                     prev.map((uf) =>
                         filesToUpload.some((f) => f.file === uf.file)
                             ? { ...uf, error: err.message }
-                            : uf
-                    )
+                            : uf,
+                    ),
                 );
                 onUploadError?.(err);
             }
@@ -342,7 +342,7 @@ export function FileUpload<TMetadata = Record<string, never>>({
             onUploadComplete,
             onUploadError,
             setUploadingFiles,
-        ]
+        ],
     );
 
     const handleFiles = useCallback(
@@ -355,7 +355,7 @@ export function FileUpload<TMetadata = Record<string, never>>({
             // Check max files limit
             if (uploadingFiles.length + fileArray.length > maxFiles) {
                 setGeneralError(
-                    `Cannot upload more than ${maxFiles} files at once`
+                    `Cannot upload more than ${maxFiles} files at once`,
                 );
                 return;
             }
@@ -394,13 +394,13 @@ export function FileUpload<TMetadata = Record<string, never>>({
             onUpload,
             uploadFilesToServer,
             setUploadingFiles,
-        ]
+        ],
     );
 
     const removeFile = (fileToRemove: File) => {
         if (disabled) return;
         setUploadingFiles((prev) =>
-            prev.filter((uf) => uf.file !== fileToRemove)
+            prev.filter((uf) => uf.file !== fileToRemove),
         );
     };
 
@@ -467,7 +467,7 @@ export function FileUpload<TMetadata = Record<string, never>>({
                         ? "border-primary bg-primary/5"
                         : "border-muted-foreground/25 hover:border-muted-foreground/50",
                     disabled && "cursor-not-allowed opacity-50",
-                    validationError && "border-destructive"
+                    validationError && "border-destructive",
                 )}
                 onDragEnter={handleDragEnter}
                 onDragOver={handleDragOver}
@@ -478,7 +478,7 @@ export function FileUpload<TMetadata = Record<string, never>>({
                     <Upload
                         className={cn(
                             "mb-4 h-12 w-12 text-muted-foreground",
-                            disabled && "opacity-50"
+                            disabled && "opacity-50",
                         )}
                     />
                     <h3 className="mb-2 text-lg font-semibold">
@@ -580,7 +580,7 @@ export function FileUpload<TMetadata = Record<string, never>>({
                                                     {progress === 100
                                                         ? "Complete"
                                                         : `${Math.round(
-                                                              progress
+                                                              progress,
                                                           )}%`}
                                                 </p>
                                             </div>

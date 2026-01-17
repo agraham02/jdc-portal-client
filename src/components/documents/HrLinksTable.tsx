@@ -234,7 +234,7 @@ export function HrLinksTable() {
                             value={`${limit}`}
                             onValueChange={(v) => {
                                 setPage(1);
-                                setLimit(Number.parseInt(v, 10));
+                                setLimit(Number.parseInt(v));
                             }}
                         >
                             <SelectTrigger className="w-[120px]">

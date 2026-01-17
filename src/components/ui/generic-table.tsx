@@ -147,9 +147,20 @@ interface UseTableStateConfig {
     defaultPageSize?: number;
 }
 
+/**
+ * Hook for managing table pagination and filter state.
+ *
+ * This hook is intentionally not generic over any entity type. It only tracks
+ * the current page, page size, and string-based filter values via
+ * {@link TableStateSnapshot}, and exposes setters via {@link TableStateControls}.
+ *
+ * @param config   Static configuration for table filters and default page size.
+ * @param options  Optional callbacks, e.g. {@link UseTableStateOptions.onChange}
+ *                 for reacting to state changes.
+ */
 export function useTableState(
     config: UseTableStateConfig,
-    options: UseTableStateOptions = {}
+    options: UseTableStateOptions = {},
 ): TableStateControls {
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(config.defaultPageSize || 25);
@@ -177,7 +188,7 @@ export function useTableState(
 
     const snapshot: TableStateSnapshot = useMemo(
         () => ({ page, pageSize, filters }),
-        [page, pageSize, filters]
+        [page, pageSize, filters],
     );
 
     const { onChange } = options;
@@ -219,7 +230,7 @@ function filterTableData<T extends BaseEntity>(
     filters: Record<string, string>,
     searchFields: SearchField<T>[],
     tableFilters: TableFilter[],
-    customFilter?: (item: T, filters: Record<string, string>) => boolean
+    customFilter?: (item: T, filters: Record<string, string>) => boolean,
 ): T[] {
     const searchFilter = filters.search?.trim() ?? "";
     const loweredQuery = searchFilter.toLowerCase();
@@ -397,7 +408,7 @@ export function GenericTable<T extends BaseEntity>({
 
     const searchFields = useMemo(
         () => config.searchFields ?? [],
-        [config.searchFields]
+        [config.searchFields],
     );
     const tableFilters = useMemo(() => config.filters ?? [], [config.filters]);
     const manualFiltering = config.manualFiltering ?? false;
@@ -416,7 +427,7 @@ export function GenericTable<T extends BaseEntity>({
             filters,
             searchFields,
             tableFilters,
-            customFilter
+            customFilter,
         );
     }, [
         data,
@@ -429,7 +440,7 @@ export function GenericTable<T extends BaseEntity>({
 
     // Pagination
     const total = manualPagination
-        ? totalItems ?? filteredData.length
+        ? (totalItems ?? filteredData.length)
         : filteredData.length;
     const totalPages = enablePagination
         ? Math.max(1, Math.ceil(total / pageSize))

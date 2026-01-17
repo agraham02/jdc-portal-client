@@ -24,6 +24,7 @@ import {
     getFileTypeLabel,
 } from "@/lib/utils/document-actions";
 import { formatBytes } from "@/lib/utils/formatters";
+import Image from "next/image";
 
 export interface DocumentPreviewModalProps {
     open: boolean;
@@ -218,8 +219,7 @@ export function DocumentPreviewModal({
                                 )}
                                 {mimeType?.startsWith("image/") && (
                                     <div className="flex items-center justify-center p-4 h-[70vh]">
-                                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                                        <img
+                                        <Image
                                             src={previewUrl}
                                             alt={filename}
                                             className="max-w-full max-h-full object-contain"

@@ -93,7 +93,7 @@ export function ContractDetail({
         title: string,
         description: string,
         action: () => Promise<void>,
-        variant: "default" | "destructive" = "default"
+        variant: "default" | "destructive" = "default",
     ) {
         setConfirmDialog({
             open: true,
@@ -109,7 +109,7 @@ export function ContractDetail({
             await ContractsService.triggerDocumentDownload(
                 contract._id,
                 fileId,
-                filename
+                filename,
             );
             toast.success("Download started");
         } catch (err) {
@@ -121,29 +121,25 @@ export function ContractDetail({
         try {
             const blob = await ContractsService.downloadDocumentAsBlob(
                 contract._id,
-                file._id
+                file._id,
             );
             const url = globalThis.URL.createObjectURL(blob);
             const newWindow = globalThis.open(url, "_blank");
 
-            // Clean up blob URL after sufficient delay to ensure the new tab has loaded
-            // Use a longer timeout (3s) to account for slower networks or heavy documents
-            const timeoutId = setTimeout(
-                () => globalThis.URL.revokeObjectURL(url),
-                3000
-            );
-
-            // If the new window closes, clean up immediately
+            // Revoke the blob URL as soon as it's no longer needed
             if (newWindow) {
-                const unloadHandler = () => {
-                    clearTimeout(timeoutId);
-                    globalThis.URL.revokeObjectURL(url);
-                };
                 try {
-                    newWindow.addEventListener("unload", unloadHandler);
+                    // Revoke after the new window has finished loading the blob
+                    newWindow.addEventListener("load", () => {
+                        globalThis.URL.revokeObjectURL(url);
+                    });
                 } catch {
-                    // Cross-origin or popup blocked; rely on timeout
+                    // If we can't attach listeners (e.g. popup blocked), fall back to immediate revoke
+                    globalThis.URL.revokeObjectURL(url);
                 }
+            } else {
+                // Popup blocked; URL is not used, so revoke immediately
+                globalThis.URL.revokeObjectURL(url);
             }
         } catch (err) {
             apiToast.error("Failed to open document", err);
@@ -200,7 +196,7 @@ export function ContractDetail({
                                                     "Publish Contract",
                                                     "This will make the contract visible to vendors and open it for applications. You will not be able to edit it afterwards.",
                                                     () =>
-                                                        handleAction(onPublish)
+                                                        handleAction(onPublish),
                                                 )
                                             }
                                             disabled={isLoading}
@@ -220,7 +216,7 @@ export function ContractDetail({
                                                 openConfirmDialog(
                                                     "Close Contract",
                                                     "This will permanently stop accepting new applications. This action cannot be undone.",
-                                                    () => handleAction(onClose)
+                                                    () => handleAction(onClose),
                                                 )
                                             }
                                             disabled={isLoading}
@@ -238,7 +234,7 @@ export function ContractDetail({
                                             variant="default"
                                             onClick={() =>
                                                 router.push(
-                                                    `/contracts/${contract._id}/apply`
+                                                    `/contracts/${contract._id}/apply`,
                                                 )
                                             }
                                             disabled={isLoading}
@@ -262,7 +258,7 @@ export function ContractDetail({
                                                     "This action cannot be undone. All associated data will be permanently deleted.",
                                                     () =>
                                                         handleAction(onDelete),
-                                                    "destructive"
+                                                    "destructive",
                                                 )
                                             }
                                             disabled={isLoading}
@@ -301,7 +297,7 @@ export function ContractDetail({
                                 <p className="text-2xl font-bold">
                                     {formatCurrency(
                                         contract.budget,
-                                        contract.currency || "USD"
+                                        contract.currency || "USD",
                                     )}
                                 </p>
                             </CardContent>
@@ -321,13 +317,13 @@ export function ContractDetail({
                                 <p className="text-2xl font-bold">
                                     {format(
                                         new Date(contract.deadline),
-                                        "MMM d, yyyy"
+                                        "MMM d, yyyy",
                                     )}
                                 </p>
                                 <p className="text-sm text-muted-foreground mt-1">
                                     {format(
                                         new Date(contract.deadline),
-                                        "h:mm a"
+                                        "h:mm a",
                                     )}
                                 </p>
                             </CardContent>
@@ -349,7 +345,7 @@ export function ContractDetail({
                             <p className="text-sm text-muted-foreground mt-1">
                                 {format(
                                     new Date(contract.createdAt),
-                                    "MMM d, yyyy"
+                                    "MMM d, yyyy",
                                 )}
                             </p>
                         </CardContent>
@@ -376,7 +372,7 @@ export function ContractDetail({
                                             <p className="text-sm text-muted-foreground">
                                                 {format(
                                                     new Date(contract.openedAt),
-                                                    "MMM d, yyyy 'at' h:mm a"
+                                                    "MMM d, yyyy 'at' h:mm a",
                                                 )}
                                             </p>
                                         </div>
@@ -392,7 +388,7 @@ export function ContractDetail({
                                             <p className="text-sm text-muted-foreground">
                                                 {format(
                                                     new Date(contract.closedAt),
-                                                    "MMM d, yyyy 'at' h:mm a"
+                                                    "MMM d, yyyy 'at' h:mm a",
                                                 )}
                                             </p>
                                         </div>
@@ -408,9 +404,9 @@ export function ContractDetail({
                                             <p className="text-sm text-muted-foreground">
                                                 {format(
                                                     new Date(
-                                                        contract.awardedAt
+                                                        contract.awardedAt,
                                                     ),
-                                                    "MMM d, yyyy 'at' h:mm a"
+                                                    "MMM d, yyyy 'at' h:mm a",
                                                 )}
                                             </p>
                                         </div>
@@ -474,7 +470,7 @@ export function ContractDetail({
                                 onDownload={(file) =>
                                     handleDownload(
                                         file._id,
-                                        getDocumentFilename(file)
+                                        getDocumentFilename(file),
                                     )
                                 }
                             />
