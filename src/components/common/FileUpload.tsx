@@ -163,6 +163,9 @@ export function FileUpload<TMetadata = Record<string, never>>({
 
     // Use controlled or uncontrolled mode
     const uploadingFiles = controlledUploadingFiles ?? internalUploadingFiles;
+
+    const isControlled = controlledUploadingFiles !== undefined;
+
     const setUploadingFiles = useCallback(
         (
             updater:
@@ -171,19 +174,29 @@ export function FileUpload<TMetadata = Record<string, never>>({
                       prev: UploadingFileMetadata<TMetadata>[],
                   ) => UploadingFileMetadata<TMetadata>[]),
         ) => {
-            if (typeof updater === "function") {
-                setInternalUploadingFiles((prev) =>
-                    (
-                        updater as (
-                            prev: UploadingFileMetadata<TMetadata>[],
-                        ) => UploadingFileMetadata<TMetadata>[]
-                    )(prev),
-                );
+            // Compute next value based on updater
+            const computeNext = (base: UploadingFileMetadata<TMetadata>[]) =>
+                typeof updater === "function"
+                    ? (
+                          updater as (
+                              prev: UploadingFileMetadata<TMetadata>[],
+                          ) => UploadingFileMetadata<TMetadata>[]
+                      )(base)
+                    : updater;
+
+            if (isControlled) {
+                // In controlled mode, notify parent and do not update internal state
+                const next = computeNext(controlledUploadingFiles ?? []);
+                onUploadingFilesChange?.(next);
             } else {
-                setInternalUploadingFiles(updater);
+                // Uncontrolled: update internal state as usual
+                setInternalUploadingFiles((prev) => {
+                    const next = computeNext(prev);
+                    return next;
+                });
             }
         },
-        [onUploadingFilesChange, controlledUploadingFiles],
+        [isControlled, controlledUploadingFiles, onUploadingFilesChange],
     );
 
     const validateFile = useCallback(
@@ -469,6 +482,8 @@ export function FileUpload<TMetadata = Record<string, never>>({
                     disabled && "cursor-not-allowed opacity-50",
                     validationError && "border-destructive",
                 )}
+                onClick={openFilePicker}
+                tabIndex={0}
                 onDragEnter={handleDragEnter}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
@@ -493,7 +508,10 @@ export function FileUpload<TMetadata = Record<string, never>>({
                     </p>
                     {showUploadButton && (
                         <Button
-                            onClick={openFilePicker}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                openFilePicker();
+                            }}
                             type="button"
                             disabled={disabled}
                         >
