@@ -115,7 +115,7 @@ export default function HRResourcesPage() {
                 </div>
 
                 {/* Stats Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6" data-tour="hr-stats">
                     {statsCards.map((stat, index) => (
                         <motion.div
                             key={stat.title}
@@ -160,6 +160,7 @@ export default function HRResourcesPage() {
                             <div className="flex items-center gap-4 border-b">
                                 <button
                                     onClick={() => setActiveTab("documents")}
+                                    data-tour="hr-documents-tab"
                                     className={`pb-3 px-4 font-medium transition-colors relative ${
                                         activeTab === "documents"
                                             ? "text-primary"
@@ -176,6 +177,7 @@ export default function HRResourcesPage() {
                                 </button>
                                 <button
                                     onClick={() => setActiveTab("links")}
+                                    data-tour="hr-links-tab"
                                     className={`pb-3 px-4 font-medium transition-colors relative ${
                                         activeTab === "links"
                                             ? "text-primary"

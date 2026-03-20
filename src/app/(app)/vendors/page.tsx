@@ -22,7 +22,9 @@ export default function VendorsPage() {
                     </Can>
                 </div>
                 <Suspense fallback={<LoadingSpinner />}>
-                    <VendorsTable />
+                    <div data-tour="vendors-list">
+                        <VendorsTable />
+                    </div>
                 </Suspense>
             </main>
         </ProtectedRoute>

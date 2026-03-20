@@ -1,6 +1,7 @@
 import {
     Activity,
     Bell,
+    BookOpen,
     Bug,
     Building2,
     Database,
@@ -9,6 +10,7 @@ import {
     HardDrive,
     LayoutDashboard,
     Mail,
+    Map,
     Settings,
     Shield,
     User,
@@ -19,8 +21,8 @@ import { PermissionName as P } from "@/lib/constants/permission-names";
 
 export const menu = {
     application: [
-        { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-        { title: "Notifications", url: "/notifications", icon: Bell },
+        { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, dataTour: "nav-dashboard" },
+        { title: "Notifications", url: "/notifications", icon: Bell, dataTour: "nav-notifications" },
     ] satisfies MenuItem[],
 
     procurement: [
@@ -29,6 +31,7 @@ export const menu = {
             url: "/contracts",
             icon: FileText,
             anyOf: [P.CONTRACT_READ, P.CONTRACT_READ_ALL],
+            dataTour: "nav-contracts",
         },
         {
             title: "My Applications",
@@ -43,6 +46,7 @@ export const menu = {
             title: "HR Resources",
             url: "/hr-resources",
             icon: FileText,
+            dataTour: "nav-hr-resources",
             // No permission required - public resources visible to all authenticated users
         },
         {
@@ -59,12 +63,14 @@ export const menu = {
             url: "/employees",
             icon: Users,
             anyOf: [P.EMPLOYEE_READ, P.EMPLOYEE_READ_ALL],
+            dataTour: "nav-employees",
         },
         {
             title: "Vendors",
             url: "/vendors",
             icon: Building2,
             anyOf: [P.VENDOR_READ_ALL],
+            dataTour: "nav-vendors",
         },
     ] satisfies MenuItem[],
 
@@ -126,9 +132,23 @@ export const menu = {
         },
     ] satisfies MenuItem[],
 
+    help: [
+        {
+            title: "Help & Guides",
+            url: "/help",
+            icon: BookOpen,
+            dataTour: "nav-help",
+        },
+        {
+            title: "Interactive Tours",
+            url: "/help/tours",
+            icon: Map,
+        },
+    ] satisfies MenuItem[],
+
     account: [
         { title: "Profile", url: "/profile", icon: User },
-        { title: "Settings", url: "/settings", icon: Settings },
+        { title: "Settings", url: "/settings", icon: Settings, dataTour: "nav-settings" },
     ] satisfies MenuItem[],
 } as const;
 

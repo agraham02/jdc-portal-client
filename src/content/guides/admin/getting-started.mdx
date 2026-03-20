@@ -1,0 +1,67 @@
+---
+title: "Getting Started as Admin"
+description: "Overview of the Admin dashboard, key responsibilities, and the Admin Control Panel."
+role: "admin"
+order: 1
+tags: ["admin", "dashboard", "control panel", "getting started"]
+estimatedMinutes: 4
+---
+
+## Welcome, Admin
+
+As an **Admin**, you have full access to manage the JDC Portal. This guide gives you an overview of your dashboard and the tools at your disposal.
+
+## Your Dashboard
+
+When you log in, you'll land on the **Admin Dashboard**, which provides a high-level overview of the portal:
+
+- **User Statistics** — Total users, pending approvals, recent registrations
+- **Quick Actions** — Fast access to common admin tasks
+- **System Health** — Key metrics about the portal's operation
+
+<Callout variant="info" title="Role-Specific Dashboard">
+  The dashboard automatically displays the admin view based on your role. Other users see a simpler dashboard tailored to their needs.
+</Callout>
+
+## Key Admin Responsibilities
+
+As an Admin, you are responsible for:
+
+1. **User Management** — Creating, editing, and managing user accounts  
+2. **Role & Permission Management** — Assigning roles and configuring access permissions
+3. **System Oversight** — Monitoring the Admin Control Panel for system health
+4. **Vendor Approvals** — Reviewing and approving vendor registrations
+5. **HR Resource Management** — Overseeing uploaded documents and categories
+
+## The Admin Control Panel
+
+The Admin Control Panel is your advanced management hub. Access it from the **Admin Control Panel** section in the sidebar.
+
+<StepList>
+  <Step number={1} title="Overview">
+    The main control panel dashboard shows system-wide statistics and health metrics.
+  </Step>
+  <Step number={2} title="Observability">
+    Monitor application metrics, logs, and performance data in real time.
+  </Step>
+  <Step number={3} title="Storage Manager">
+    Browse and manage files stored in the S3 storage system.
+  </Step>
+  <Step number={4} title="Database Sandbox">
+    Run read-only queries against the database for debugging or reporting purposes.
+  </Step>
+  <Step number={5} title="Mail Testing">
+    Send test emails to verify the email notification system is working correctly.
+  </Step>
+  <Step number={6} title="Debug Console">
+    Access advanced debugging tools for troubleshooting system issues.
+  </Step>
+</StepList>
+
+<Callout variant="warning" title="Use Caution">
+  The Admin Control Panel provides powerful tools. Always double-check operations in the Database Sandbox and Storage Manager before executing them.
+</Callout>
+
+## Next Steps
+
+- **[Managing Users & Roles](/help/guides/admin/managing-users)** — Learn how to create users and assign roles

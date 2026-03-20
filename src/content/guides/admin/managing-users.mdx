@@ -1,0 +1,80 @@
+---
+title: "Managing Users & Roles"
+description: "Step-by-step instructions for creating user accounts, assigning roles, and managing permissions."
+role: "admin"
+order: 2
+tags: ["admin", "users", "roles", "permissions", "RBAC"]
+estimatedMinutes: 5
+---
+
+## User Management Overview
+
+The JDC Portal uses a **Role-Based Access Control (RBAC)** system. Each user is assigned one or more roles, and each role grants a specific set of permissions. This ensures users only see and do what they're authorized to.
+
+## Viewing Users
+
+<StepList>
+  <Step number={1} title="Navigate to Users">
+    Go to **Users** in the **User Management** sidebar section. You'll see a paginated list of all user accounts in the system.
+  </Step>
+  <Step number={2} title="Search & Filter">
+    Use the search bar to find users by name or email. You can also filter by status (Active, Pending, Inactive, etc.).
+  </Step>
+  <Step number={3} title="View User Details">
+    Click on any user row to view their full profile, including account information, assigned roles, and activity history.
+  </Step>
+</StepList>
+
+## Creating a New User
+
+<StepList>
+  <Step number={1} title="Open the Creation Form">
+    From the Users page, click the **Create User** or **New** button in the top-right corner.
+  </Step>
+  <Step number={2} title="Fill in Account Details">
+    Enter the user's email address and select the appropriate **Account Type** (Admin, Employee, or Vendor). Each account type determines the default role.
+  </Step>
+  <Step number={3} title="Assign Roles">
+    Select one or more roles to assign to the user. Roles determine what permissions the user has within the portal.
+  </Step>
+  <Step number={4} title="Save & Send Invitation">
+    Click **Save** to create the account. If it's an Employee account, the system will send an onboarding invitation email with instructions to set up their password.
+  </Step>
+</StepList>
+
+<Callout variant="tip" title="Account Types">
+  - **Admin** — Full system access
+  - **Employee** — Internal staff with role-based permissions
+  - **Vendor** — External vendors with limited portal access
+</Callout>
+
+## Managing Roles
+
+Roles are collections of permissions that can be assigned to users.
+
+<StepList>
+  <Step number={1} title="Navigate to Roles">
+    Go to **Roles** in the **User Management** sidebar section.
+  </Step>
+  <Step number={2} title="View Existing Roles">
+    You'll see all roles in the system with their names, descriptions, and permission counts.
+  </Step>
+  <Step number={3} title="Edit a Role">
+    Click on a role to view and modify its permissions. You can add or remove individual permissions to fine-tune access.
+  </Step>
+</StepList>
+
+## Common Role Assignments
+
+| Role | Best For | Key Capabilities |
+|---|---|---|
+| **Admin** | System administrators | Full access to all features |
+| **Employee** | General staff | View own profile, access HR resources |
+| **Management** | Senior staff / managers | Manage employees, view reports |
+| **External Affairs** | Procurement team | Manage contracts, approve vendors |
+| **HR** | Human Resources staff | Upload HR documents, manage categories |
+| **Vendor** | External vendors | View contracts, submit applications |
+
+<Callout variant="warning" title="Permission Changes Take Effect Immediately">
+  When you modify a role's permissions, the change applies immediately to all users with that role. Users may need to refresh or re-login to see the updated permissions.
+</Callout>
