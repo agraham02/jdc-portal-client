@@ -19,7 +19,7 @@ export default function ContractCreatePage() {
     const [error, setError] = useState<string>();
     const [files, setFiles] = useState<File[]>([]);
     const [autoFillData, setAutoFillData] = useState<CreateContractDto | null>(
-        null
+        null,
     );
 
     async function handleSubmit(data: CreateContractDto) {
@@ -100,7 +100,10 @@ export default function ContractCreatePage() {
         <ProtectedRoute anyOf={[P.CONTRACT_CREATE]}>
             <main className="container mx-auto max-w-4xl space-y-6 py-6">
                 <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
+                    <div
+                        className="flex items-center gap-4"
+                        data-tour="create-contract-header"
+                    >
                         <Button
                             variant="ghost"
                             size="icon"

@@ -7,6 +7,10 @@ export const employeesTour: TourDefinition = {
         "Learn how to view, create, and manage employee records in the portal.",
     roles: ["Admin", "Management", "HR"],
     startPath: "/employees",
+    stepMeta: {
+        2: { navigateTo: "/employees" },
+        3: { navigateTo: "/employees" },
+    },
     steps: [
         {
             popover: {

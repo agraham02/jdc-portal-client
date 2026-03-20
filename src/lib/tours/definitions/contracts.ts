@@ -7,6 +7,10 @@ export const contractsTour: TourDefinition = {
         "Learn how to create, manage, and review contracts in the procurement system.",
     roles: ["Admin", "External Affairs"],
     startPath: "/contracts",
+    stepMeta: {
+        2: { navigateTo: "/contracts" },
+        3: { navigateTo: "/contracts" },
+    },
     steps: [
         {
             popover: {

@@ -9,13 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { GuideCard } from "@/components/help/GuideCard";
-import {
-    BookOpen,
-    Search,
-    Map,
-    Sparkles,
-    FileText,
-} from "lucide-react";
+import { useTour } from "@/lib/tours/tour-provider";
+import { BookOpen, Search, Map, Sparkles, FileText } from "lucide-react";
 import type { GuideMetadata, GuideRole } from "@/lib/guides/types";
 
 interface HelpHubClientProps {
@@ -32,6 +27,7 @@ export function HelpHubClient({
 }: HelpHubClientProps) {
     const [search, setSearch] = useState("");
     const [activeFilter, setActiveFilter] = useState<string | null>(null);
+    const { startTour } = useTour();
 
     const filteredGuides = useMemo(() => {
         let guides = allGuides;
@@ -46,7 +42,7 @@ export function HelpHubClient({
                 (g) =>
                     g.title.toLowerCase().includes(query) ||
                     g.description.toLowerCase().includes(query) ||
-                    g.tags?.some((t) => t.toLowerCase().includes(query))
+                    g.tags?.some((t) => t.toLowerCase().includes(query)),
             );
         }
 
@@ -54,7 +50,7 @@ export function HelpHubClient({
     }, [allGuides, search, activeFilter]);
 
     const roleFilters = Object.keys(guidesByRole).filter(
-        (role) => guidesByRole[role].length > 0
+        (role) => guidesByRole[role].length > 0,
     );
 
     return (
@@ -106,13 +102,16 @@ export function HelpHubClient({
                         </Card>
                     </Link>
 
-                    <Card className="border-dashed">
+                    <Card
+                        className="group hover:shadow-md transition-all hover:border-green-500/30 cursor-pointer"
+                        onClick={() => startTour("orientation")}
+                    >
                         <CardHeader className="flex flex-row items-center gap-3 pb-2">
                             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-500/10">
                                 <Sparkles className="h-5 w-5 text-green-600" />
                             </div>
                             <div>
-                                <CardTitle className="text-sm font-semibold">
+                                <CardTitle className="text-sm font-semibold group-hover:text-green-600 transition-colors">
                                     Quick Start
                                 </CardTitle>
                                 <p className="text-xs text-muted-foreground">
@@ -122,7 +121,7 @@ export function HelpHubClient({
                         </CardHeader>
                     </Card>
 
-                    <Card className="border-dashed">
+                    <Card className="hover:shadow-md transition-all">
                         <CardHeader className="flex flex-row items-center gap-3 pb-2">
                             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-500/10">
                                 <FileText className="h-5 w-5 text-purple-600" />
@@ -177,7 +176,7 @@ export function HelpHubClient({
                                 size="sm"
                                 onClick={() =>
                                     setActiveFilter(
-                                        activeFilter === role ? null : role
+                                        activeFilter === role ? null : role,
                                     )
                                 }
                             >
@@ -220,7 +219,7 @@ export function HelpHubClient({
                                 {roleFilters.map((role) => {
                                     const guides = search.trim()
                                         ? filteredGuides.filter(
-                                              (g) => g.role === role
+                                              (g) => g.role === role,
                                           )
                                         : guidesByRole[role];
                                     if (guides.length === 0) return null;

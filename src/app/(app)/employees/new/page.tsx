@@ -61,7 +61,7 @@ export default function EmployeeInvitePage() {
     return (
         <ProtectedRoute anyOf={[P.EMPLOYEE_CREATE]}>
             <main className="space-y-4">
-                <div>
+                <div data-tour="invite-employee-header">
                     <h1 className="text-2xl font-semibold">
                         Invite New Employee
                     </h1>
@@ -70,13 +70,15 @@ export default function EmployeeInvitePage() {
                         complete their profile and set their password.
                     </p>
                 </div>
-                <EntityCreateForm
-                    sections={sections}
-                    fields={[]}
-                    apiPath="/employees"
-                    onSuccessPath="/employees"
-                    submitLabel="Send Invitation"
-                />
+                <div data-tour="invite-employee-form">
+                    <EntityCreateForm
+                        sections={sections}
+                        fields={[]}
+                        apiPath="/employees"
+                        onSuccessPath="/employees"
+                        submitLabel="Send Invitation"
+                    />
+                </div>
             </main>
         </ProtectedRoute>
     );

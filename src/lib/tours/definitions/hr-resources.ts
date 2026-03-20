@@ -7,6 +7,11 @@ export const hrResourcesTour: TourDefinition = {
         "Learn how to browse, upload, and manage HR documents and resource links.",
     roles: ["Admin", "HR", "Employee", "Management"],
     startPath: "/hr-resources",
+    stepMeta: {
+        2: { navigateTo: "/hr-resources" },
+        3: { navigateTo: "/hr-resources" },
+        4: { navigateTo: "/hr-resources" },
+    },
     steps: [
         {
             popover: {

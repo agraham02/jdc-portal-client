@@ -71,7 +71,7 @@ const contractSchema = z.object({
                 const date = new Date(val);
                 return date > new Date();
             },
-            { message: "Deadline must be in the future" }
+            { message: "Deadline must be in the future" },
         )
         .optional()
         .nullable(),
@@ -85,7 +85,7 @@ const contractSchema = z.object({
                     .max(500, "Description must not exceed 500 characters")
                     .optional(),
                 required: z.boolean().optional(),
-            })
+            }),
         )
         .optional(),
 });
@@ -110,7 +110,7 @@ interface ContractEditorProps {
     /** Callback to download an existing document */
     onDownloadDocument?: (
         documentId: string,
-        filename: string
+        filename: string,
     ) => Promise<void>;
     /** Whether we're in edit mode (affects deadline validation) */
     isEditMode?: boolean;
@@ -136,7 +136,7 @@ export function ContractEditor({
         (initialData?.requiredDocuments || []).map((d) => ({
             ...d,
             clientId: createClientId(),
-        }))
+        })),
     );
     const [removingDocId, setRemovingDocId] = useState<string | null>(null);
 
@@ -147,7 +147,7 @@ export function ContractEditor({
                 initialData.requiredDocuments.map((d) => ({
                     ...d,
                     clientId: createClientId(),
-                }))
+                })),
             );
         }
     }, [initialData?.requiredDocuments]);
@@ -218,7 +218,7 @@ export function ContractEditor({
     function updateRequiredDocument(
         index: number,
         field: keyof RequiredDocument,
-        value: string | boolean
+        value: string | boolean,
     ) {
         const updated = [...requiredDocs];
         updated[index] = { ...updated[index], [field]: value };
@@ -236,7 +236,7 @@ export function ContractEditor({
                 className={`space-y-6 ${className || ""}`}
             >
                 {/* Basic Information */}
-                <Card>
+                <Card data-tour="contract-basic-info">
                     <CardHeader>
                         <CardTitle>Basic Information</CardTitle>
                     </CardHeader>
@@ -430,7 +430,7 @@ export function ContractEditor({
                 </Card>
 
                 {/* Required Documents */}
-                <Card>
+                <Card data-tour="contract-required-docs">
                     <CardHeader>
                         <div className="flex items-center justify-between">
                             <div>
@@ -493,7 +493,7 @@ export function ContractEditor({
                                                                         index,
                                                                         "name",
                                                                         e.target
-                                                                            .value
+                                                                            .value,
                                                                     )
                                                                 }
                                                                 disabled={
@@ -524,7 +524,7 @@ export function ContractEditor({
                                                                         index,
                                                                         "description",
                                                                         e.target
-                                                                            .value
+                                                                            .value,
                                                                     )
                                                                 }
                                                                 disabled={
@@ -541,12 +541,12 @@ export function ContractEditor({
                                                                     doc.required
                                                                 }
                                                                 onCheckedChange={(
-                                                                    checked
+                                                                    checked,
                                                                 ) =>
                                                                     updateRequiredDocument(
                                                                         index,
                                                                         "required",
-                                                                        checked
+                                                                        checked,
                                                                     )
                                                                 }
                                                                 disabled={
@@ -571,7 +571,7 @@ export function ContractEditor({
                                                         size="icon"
                                                         onClick={() =>
                                                             removeRequiredDocument(
-                                                                index
+                                                                index,
                                                             )
                                                         }
                                                         disabled={isSubmitting}
@@ -590,7 +590,7 @@ export function ContractEditor({
                 </Card>
 
                 {/* Supporting Documents */}
-                <Card>
+                <Card data-tour="contract-supporting-docs">
                     <CardHeader>
                         <CardTitle>Supporting Documents (Optional)</CardTitle>
                         <p className="text-sm text-muted-foreground">
@@ -628,8 +628,8 @@ export function ContractEditor({
                                                         onDownloadDocument(
                                                             doc._id,
                                                             getDocumentFilename(
-                                                                doc
-                                                            )
+                                                                doc,
+                                                            ),
                                                         )
                                                     }
                                                     disabled={isSubmitting}
@@ -644,15 +644,15 @@ export function ContractEditor({
                                                     size="icon"
                                                     onClick={async () => {
                                                         setRemovingDocId(
-                                                            doc._id
+                                                            doc._id,
                                                         );
                                                         try {
                                                             await onRemoveDocument(
-                                                                doc._id
+                                                                doc._id,
                                                             );
                                                         } finally {
                                                             setRemovingDocId(
-                                                                null
+                                                                null,
                                                             );
                                                         }
                                                     }}
@@ -688,7 +688,7 @@ export function ContractEditor({
                                 }))}
                                 onUploadingFilesChange={(uploadingFiles) =>
                                     onFilesChange?.(
-                                        uploadingFiles.map((uf) => uf.file)
+                                        uploadingFiles.map((uf) => uf.file),
                                     )
                                 }
                                 showUploadButton={true}
@@ -699,7 +699,10 @@ export function ContractEditor({
                 </Card>
 
                 {/* Form Actions */}
-                <div className="flex items-center justify-end gap-4">
+                <div
+                    className="flex items-center justify-end gap-4"
+                    data-tour="contract-form-actions"
+                >
                     {onCancel && (
                         <Button
                             type="button"

@@ -4,16 +4,25 @@ import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { HrDocumentsService } from "@/lib/services/file";
 import { HRDocument } from "@/lib/types/file";
-import { FileText, Clock, Download, Link as LinkIcon } from "lucide-react";
+import {
+    FileText,
+    Clock,
+    Download,
+    Link as LinkIcon,
+    HelpCircle,
+} from "lucide-react";
 import { HrDocumentsTable } from "@/components/documents/HrDocumentsTable";
 import { HrLinksTable } from "@/components/documents/HrLinksTable";
+import { useTour } from "@/lib/tours/tour-provider";
 
 export default function HRResourcesPage() {
     const [activeTab, setActiveTab] = useState<"documents" | "links">(
-        "documents"
+        "documents",
     );
+    const { startTour } = useTour();
     const [stats, setStats] = useState<{
         totalDocuments: number;
         recentUploads: number;
@@ -48,7 +57,7 @@ export default function HRResourcesPage() {
                 sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
                 const recentUploads = recentResponse.files.filter(
                     (file: HRDocument) =>
-                        new Date(file.createdAt) > sevenDaysAgo
+                        new Date(file.createdAt) > sevenDaysAgo,
                 ).length;
 
                 setStats({
@@ -112,10 +121,21 @@ export default function HRResourcesPage() {
                             Manage and access HR documents, links, and resources
                         </motion.p>
                     </div>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => startTour("hr-resources")}
+                    >
+                        <HelpCircle className="h-4 w-4 mr-1" />
+                        Take a Tour
+                    </Button>
                 </div>
 
                 {/* Stats Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6" data-tour="hr-stats">
+                <div
+                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
+                    data-tour="hr-stats"
+                >
                     {statsCards.map((stat, index) => (
                         <motion.div
                             key={stat.title}

@@ -91,10 +91,12 @@ export default function HRUploadPage() {
                 (percent) => {
                     setUploadingFiles((prev) =>
                         prev.map((uf) =>
-                            uf.file === file ? { ...uf, progress: percent } : uf
-                        )
+                            uf.file === file
+                                ? { ...uf, progress: percent }
+                                : uf,
+                        ),
                     );
-                }
+                },
             );
 
             // Mark upload as complete
@@ -102,8 +104,8 @@ export default function HRUploadPage() {
                 prev.map((uf) =>
                     uf.file === file
                         ? { ...uf, progress: 100, uploadComplete: true }
-                        : uf
-                )
+                        : uf,
+                ),
             );
 
             toast.success("HR document uploaded successfully!");
@@ -115,7 +117,7 @@ export default function HRUploadPage() {
                 setCategory(
                     categories.find((c) => c.slug === "other")?._id ||
                         categories[0]?._id ||
-                        ""
+                        "",
                 );
                 setIsPublic(false);
             }, 1000);
@@ -132,12 +134,12 @@ export default function HRUploadPage() {
                                   "message" in err
                                       ? String(
                                             (err as { message?: string })
-                                                .message
+                                                .message,
                                         )
                                       : "Upload failed",
                           }
-                        : uf
-                )
+                        : uf,
+                ),
             );
 
             const msg =
@@ -194,7 +196,7 @@ export default function HRUploadPage() {
                         transition={{ delay: 0.2 }}
                         className="lg:col-span-2"
                     >
-                        <Card>
+                        <Card data-tour="hr-upload-form">
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
                                     <Upload className="w-5 h-5" />
@@ -208,7 +210,10 @@ export default function HRUploadPage() {
                             <CardContent>
                                 <form onSubmit={onSubmit} className="space-y-6">
                                     {/* File Upload Area */}
-                                    <div className="space-y-2">
+                                    <div
+                                        className="space-y-2"
+                                        data-tour="hr-upload-file-area"
+                                    >
                                         <Label>File *</Label>
                                         <FileUpload
                                             category={
@@ -239,7 +244,10 @@ export default function HRUploadPage() {
                                     </div>
 
                                     {/* Category */}
-                                    <div className="space-y-2">
+                                    <div
+                                        className="space-y-2"
+                                        data-tour="hr-upload-category"
+                                    >
                                         <Label htmlFor="category">
                                             Category
                                         </Label>
@@ -268,7 +276,10 @@ export default function HRUploadPage() {
                                     </div>
 
                                     {/* Public Access Toggle */}
-                                    <div className="flex items-center justify-between rounded-lg border p-4">
+                                    <div
+                                        className="flex items-center justify-between rounded-lg border p-4"
+                                        data-tour="hr-upload-visibility"
+                                    >
                                         <div className="space-y-0.5">
                                             <Label
                                                 htmlFor="isPublic"
@@ -321,10 +332,10 @@ export default function HRUploadPage() {
                                                 setCategory(
                                                     categories.find(
                                                         (c) =>
-                                                            c.slug === "other"
+                                                            c.slug === "other",
                                                     )?._id ||
                                                         categories[0]?._id ||
-                                                        ""
+                                                        "",
                                                 );
                                                 setIsPublic(false);
                                             }}
@@ -359,7 +370,7 @@ export default function HRUploadPage() {
                                     </p>
                                     <div className="flex flex-wrap gap-1">
                                         {getAllowedFileTypes(
-                                            FileUploadCategory.HR_DOCUMENT
+                                            FileUploadCategory.HR_DOCUMENT,
                                         ).extensions.map((ext) => (
                                             <Badge
                                                 key={ext}
@@ -380,7 +391,7 @@ export default function HRUploadPage() {
                                     </p>
                                     <p className="text-sm text-muted-foreground">
                                         {getFileSizeLimitMB(
-                                            FileUploadCategory.HR_DOCUMENT
+                                            FileUploadCategory.HR_DOCUMENT,
                                         )}
                                         MB per file
                                     </p>

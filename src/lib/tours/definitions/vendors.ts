@@ -7,6 +7,9 @@ export const vendorsTour: TourDefinition = {
         "Learn how to view vendor profiles and manage the vendor approval workflow.",
     roles: ["Admin", "External Affairs", "Management"],
     startPath: "/vendors",
+    stepMeta: {
+        2: { navigateTo: "/vendors" },
+    },
     steps: [
         {
             popover: {
