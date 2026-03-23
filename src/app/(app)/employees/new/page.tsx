@@ -1,6 +1,10 @@
+"use client";
+
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 import EntityCreateForm from "@/components/common/EntityCreateForm";
+import { motion } from "motion/react";
+import { pageTransition } from "@/lib/animations";
 
 /**
  * Employee invitation page.
@@ -60,7 +64,12 @@ export default function EmployeeInvitePage() {
 
     return (
         <ProtectedRoute anyOf={[P.EMPLOYEE_CREATE]}>
-            <main className="space-y-4">
+            <motion.main
+                className="space-y-4"
+                variants={pageTransition}
+                initial="hidden"
+                animate="visible"
+            >
                 <div data-tour="invite-employee-header">
                     <h1 className="text-2xl font-semibold">
                         Invite New Employee
@@ -79,7 +88,7 @@ export default function EmployeeInvitePage() {
                         submitLabel="Send Invitation"
                     />
                 </div>
-            </main>
+            </motion.main>
         </ProtectedRoute>
     );
 }

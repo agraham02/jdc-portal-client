@@ -1,11 +1,13 @@
 "use client";
 
 import { AlertTriangle, Clock, XCircle, Archive, Ban } from "lucide-react";
+import { motion } from "motion/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/contexts/auth-context";
 import { UserStatus, type User } from "@/lib/types/auth";
 import { UserStatusHelper } from "@/lib/utils/user-status-helper";
+import { pageTransition } from "@/lib/animations";
 
 interface AccountStatusProps {
     user: User | null;
@@ -77,7 +79,12 @@ export function AccountStatusPage({ user }: AccountStatusProps) {
     const { icon: Icon, title, message, variant } = config;
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-4">
+        <motion.div
+            variants={pageTransition}
+            initial="hidden"
+            animate="visible"
+            className="min-h-screen flex items-center justify-center p-4"
+        >
             <Card className="w-full max-w-md">
                 <CardHeader className="text-center">
                     <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-muted flex items-center justify-center">
@@ -107,6 +114,6 @@ export function AccountStatusPage({ user }: AccountStatusProps) {
                     </div>
                 </CardContent>
             </Card>
-        </div>
+        </motion.div>
     );
 }

@@ -30,6 +30,8 @@ export default function GlobalError({
                         gap: "24px",
                         padding: "16px",
                         fontFamily: "system-ui, -apple-system, sans-serif",
+                        background: "#fafafa",
+                        color: "#111",
                     }}
                 >
                     <div
@@ -41,20 +43,49 @@ export default function GlobalError({
                             textAlign: "center",
                         }}
                     >
+                        <div
+                            style={{
+                                width: "64px",
+                                height: "64px",
+                                borderRadius: "50%",
+                                backgroundColor: "#fee2e2",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                            }}
+                        >
+                            <svg
+                                width="32"
+                                height="32"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="#dc2626"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            >
+                                <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" />
+                                <path d="M12 9v4" />
+                                <path d="M12 17h.01" />
+                            </svg>
+                        </div>
                         <h1
                             style={{
-                                fontSize: "32px",
-                                fontWeight: "bold",
+                                fontSize: "28px",
+                                fontWeight: "700",
                                 margin: 0,
+                                letterSpacing: "-0.02em",
                             }}
                         >
                             Critical Error
                         </h1>
                         <p
                             style={{
-                                maxWidth: "500px",
-                                color: "#666",
+                                maxWidth: "440px",
+                                color: "#555",
                                 margin: 0,
+                                lineHeight: "1.6",
+                                fontSize: "15px",
                             }}
                         >
                             A critical error occurred and the application cannot
@@ -64,9 +95,10 @@ export default function GlobalError({
                         {error.digest && (
                             <p
                                 style={{
-                                    fontSize: "14px",
+                                    fontSize: "13px",
                                     color: "#999",
                                     margin: 0,
+                                    fontFamily: "monospace",
                                 }}
                             >
                                 Error ID: {error.digest}
@@ -77,10 +109,10 @@ export default function GlobalError({
                         <button
                             onClick={reset}
                             style={{
-                                padding: "10px 20px",
-                                borderRadius: "6px",
+                                padding: "10px 24px",
+                                borderRadius: "8px",
                                 border: "none",
-                                backgroundColor: "#000",
+                                backgroundColor: "#111",
                                 color: "#fff",
                                 cursor: "pointer",
                                 fontSize: "14px",
@@ -92,11 +124,11 @@ export default function GlobalError({
                         <button
                             onClick={() => (window.location.href = "/")}
                             style={{
-                                padding: "10px 20px",
-                                borderRadius: "6px",
+                                padding: "10px 24px",
+                                borderRadius: "8px",
                                 border: "1px solid #ddd",
                                 backgroundColor: "#fff",
-                                color: "#000",
+                                color: "#111",
                                 cursor: "pointer",
                                 fontSize: "14px",
                                 fontWeight: "500",

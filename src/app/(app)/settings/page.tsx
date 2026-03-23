@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import {
     Card,
@@ -38,7 +38,7 @@ export default function SettingsPage() {
             const response = await AuthService.requestAccountDeletion();
             toast.success(
                 response.message ||
-                    "Account deletion requested. An administrator will review your request."
+                    "Account deletion requested. An administrator will review your request.",
             );
             // Optionally log out after requesting deletion
             router.push("/dashboard");
@@ -46,7 +46,7 @@ export default function SettingsPage() {
             const error = e as { message?: string };
             toast.error(
                 error.message ||
-                    "Failed to request account deletion. Please try again."
+                    "Failed to request account deletion. Please try again.",
             );
         } finally {
             setIsDeleting(false);

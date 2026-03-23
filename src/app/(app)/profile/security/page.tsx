@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
+import { pageTransition } from "@/lib/animations";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -52,7 +53,7 @@ export default function SecurityPage() {
                 setError(
                     typeof std.message === "string" && std.message.length > 0
                         ? std.message
-                        : "Unable to update password right now."
+                        : "Unable to update password right now.",
                 );
             }
         } finally {
@@ -63,9 +64,9 @@ export default function SecurityPage() {
     return (
         <div className="p-4">
             <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
+                variants={pageTransition}
+                initial="hidden"
+                animate="visible"
                 className="max-w-xl"
             >
                 <Card>
@@ -78,7 +79,7 @@ export default function SecurityPage() {
                             className="space-y-4"
                         >
                             {success && (
-                                <p className="text-sm text-green-600 dark:text-green-400">
+                                <p className="text-sm text-emerald-600 dark:text-emerald-400">
                                     {success} All sessions were logged out for
                                     security.
                                 </p>

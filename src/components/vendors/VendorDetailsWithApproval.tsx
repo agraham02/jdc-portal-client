@@ -51,9 +51,11 @@ import {
 } from "@/components/rbac";
 import { ServicesInput } from "@/components/common/ServicesInput";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { motion } from "motion/react";
+import { pageTransition } from "@/lib/animations";
 
 function getStatusBadgeVariant(
-    status: UserStatus
+    status: UserStatus,
 ): "default" | "secondary" | "destructive" | "outline" {
     switch (status) {
         case UserStatus.ACTIVE:
@@ -113,7 +115,7 @@ export function VendorDetailsWithApproval({
                     ...vendor,
                     userId: { ...vendor.userId, status: UserStatus.ACTIVE },
                 },
-                false // Don't revalidate immediately
+                false, // Don't revalidate immediately
             );
 
             // Perform the actual API call
@@ -146,7 +148,7 @@ export function VendorDetailsWithApproval({
                     ...vendor,
                     userId: { ...vendor.userId, status: UserStatus.REJECTED },
                 },
-                false // Don't revalidate immediately
+                false, // Don't revalidate immediately
             );
 
             // Perform the actual API call
@@ -257,7 +259,12 @@ export function VendorDetailsWithApproval({
     const isPending = UserStatusHelper.isPending(user.status);
 
     return (
-        <div className="container py-8 space-y-6">
+        <motion.div
+            className="container py-8 space-y-6"
+            variants={pageTransition}
+            initial="hidden"
+            animate="visible"
+        >
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -543,7 +550,7 @@ export function VendorDetailsWithApproval({
                                             </p>
                                             <p className="text-sm text-muted-foreground">
                                                 {new Date(
-                                                    user.createdAt
+                                                    user.createdAt,
                                                 ).toLocaleDateString()}
                                             </p>
                                         </div>
@@ -592,7 +599,7 @@ export function VendorDetailsWithApproval({
                                                         >
                                                             {service}
                                                         </Badge>
-                                                    )
+                                                    ),
                                                 )}
                                             </div>
                                         </div>
@@ -740,6 +747,6 @@ export function VendorDetailsWithApproval({
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </div>
+        </motion.div>
     );
 }

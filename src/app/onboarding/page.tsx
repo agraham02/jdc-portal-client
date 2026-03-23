@@ -24,7 +24,7 @@ import {
     Mail,
     Phone,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 
 function OnboardingForm() {
     const searchParams = useSearchParams();
@@ -48,7 +48,7 @@ function OnboardingForm() {
     useEffect(() => {
         if (!token) {
             setGeneralError(
-                "Invalid activation link. Please contact your administrator."
+                "Invalid activation link. Please contact your administrator.",
             );
         }
     }, [token]);
@@ -169,14 +169,14 @@ function OnboardingForm() {
 
     if (success) {
         return (
-            <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 p-4">
+            <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/5 via-primary/3 to-background dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 p-4">
                 <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.5, ease: "easeOut" }}
                     className="w-full max-w-md"
                 >
-                    <Card className="border-green-200 dark:border-green-900 shadow-lg">
+                    <Card className="border-emerald-200 dark:border-emerald-900 shadow-lg">
                         <CardHeader className="text-center space-y-4 pb-8">
                             <motion.div
                                 initial={{ scale: 0 }}
@@ -186,12 +186,12 @@ function OnboardingForm() {
                                     type: "spring",
                                     stiffness: 200,
                                 }}
-                                className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-green-400 to-emerald-500 shadow-lg"
+                                className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-emerald-500 shadow-lg"
                             >
                                 <CheckCircle2 className="h-12 w-12 text-white" />
                             </motion.div>
                             <div className="space-y-2">
-                                <CardTitle className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 bg-clip-text text-transparent">
+                                <CardTitle className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-600 dark:from-emerald-400 dark:to-emerald-400 bg-clip-text text-transparent">
                                     Welcome Aboard!
                                 </CardTitle>
                                 <CardDescription className="text-base">
@@ -215,14 +215,14 @@ function OnboardingForm() {
     }
 
     return (
-        <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 p-4">
+        <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/5 via-primary/3 to-background dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 p-4">
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
                 className="w-full max-w-md"
             >
-                <Card className="shadow-xl border-gray-200 dark:border-gray-800">
+                <Card className="shadow-xl border-border">
                     <CardHeader className="text-center space-y-3 pb-6">
                         <motion.div
                             initial={{ scale: 0 }}
@@ -232,7 +232,7 @@ function OnboardingForm() {
                                 type: "spring",
                                 stiffness: 200,
                             }}
-                            className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg"
+                            className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/80 shadow-lg"
                         >
                             <UserCircle className="h-9 w-9 text-white" />
                         </motion.div>
@@ -272,7 +272,7 @@ function OnboardingForm() {
                         <form onSubmit={handleSubmit} className="space-y-5">
                             {/* Personal Information Section */}
                             <div className="space-y-4">
-                                <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 border-b pb-2">
+                                <div className="flex items-center gap-2 text-sm font-semibold text-foreground/80 border-b pb-2">
                                     <UserCircle className="h-4 w-4" />
                                     <span>Personal Information</span>
                                 </div>
@@ -296,12 +296,12 @@ function OnboardingForm() {
                                             onChange={(e) =>
                                                 handleChange(
                                                     "firstName",
-                                                    e.target.value
+                                                    e.target.value,
                                                 )
                                             }
                                             disabled={isLoading || !token}
                                             required
-                                            className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+                                            className="transition-all duration-200 focus:ring-2 focus:ring-primary"
                                         />
                                         <AnimatePresence>
                                             {errors.firstName && (
@@ -345,12 +345,12 @@ function OnboardingForm() {
                                             onChange={(e) =>
                                                 handleChange(
                                                     "lastName",
-                                                    e.target.value
+                                                    e.target.value,
                                                 )
                                             }
                                             disabled={isLoading || !token}
                                             required
-                                            className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+                                            className="transition-all duration-200 focus:ring-2 focus:ring-primary"
                                         />
                                         <AnimatePresence>
                                             {errors.lastName && (
@@ -391,13 +391,13 @@ function OnboardingForm() {
                                         onChange={(e) =>
                                             handleChange(
                                                 "password",
-                                                e.target.value
+                                                e.target.value,
                                             )
                                         }
                                         disabled={isLoading || !token}
                                         required
                                         showPasswordHint={true}
-                                        className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+                                        className="transition-all duration-200 focus:ring-2 focus:ring-primary"
                                     />
                                     <AnimatePresence>
                                         {errors.password && (
@@ -428,13 +428,13 @@ function OnboardingForm() {
                                         onChange={(e) =>
                                             handleChange(
                                                 "confirmPassword",
-                                                e.target.value
+                                                e.target.value,
                                             )
                                         }
                                         disabled={isLoading || !token}
                                         required
                                         showPasswordHint={false}
-                                        className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+                                        className="transition-all duration-200 focus:ring-2 focus:ring-primary"
                                     />
                                     <AnimatePresence>
                                         {errors.confirmPassword && (
@@ -454,7 +454,7 @@ function OnboardingForm() {
 
                             {/* Contact Information Section */}
                             <div className="space-y-4">
-                                <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 border-b pb-2">
+                                <div className="flex items-center gap-2 text-sm font-semibold text-foreground/80 border-b pb-2">
                                     <Mail className="h-4 w-4" />
                                     <span>Contact Information</span>
                                     <span className="text-xs font-normal text-muted-foreground ml-auto">
@@ -475,7 +475,7 @@ function OnboardingForm() {
                                         onChange={(value) =>
                                             handleChange(
                                                 "contactPhone",
-                                                value || ""
+                                                value || "",
                                             )
                                         }
                                         disabled={isLoading || !token}
@@ -516,12 +516,12 @@ function OnboardingForm() {
                                         onChange={(e) =>
                                             handleChange(
                                                 "contactEmail",
-                                                e.target.value
+                                                e.target.value,
                                             )
                                         }
                                         disabled={isLoading || !token}
                                         placeholder="personal@example.com"
-                                        className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+                                        className="transition-all duration-200 focus:ring-2 focus:ring-primary"
                                     />
                                     <AnimatePresence>
                                         {errors.contactEmail && (
@@ -550,7 +550,7 @@ function OnboardingForm() {
                                 <Button
                                     type="submit"
                                     disabled={isLoading || !token}
-                                    className="w-full h-11 text-base font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md transition-all duration-200"
+                                    className="w-full h-11 text-base font-semibold bg-primary hover:bg-primary/90 shadow-md transition-all duration-200"
                                 >
                                     {isLoading ? (
                                         <>
@@ -587,8 +587,8 @@ export default function EmployeeOnboardingPage() {
     return (
         <Suspense
             fallback={
-                <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
-                    <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/5 via-primary/3 to-background dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
             }
         >

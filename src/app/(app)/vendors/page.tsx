@@ -10,13 +10,20 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useTour } from "@/lib/tours/tour-provider";
 import { Button } from "@/components/ui/button";
 import { HelpCircle } from "lucide-react";
+import { motion } from "motion/react";
+import { pageTransition } from "@/lib/animations";
 
 export default function VendorsPage() {
     const { startTour } = useTour();
 
     return (
         <ProtectedRoute anyOf={[P.VENDOR_READ, P.VENDOR_READ_ALL]}>
-            <main className="space-y-4">
+            <motion.main
+                className="space-y-4"
+                variants={pageTransition}
+                initial="hidden"
+                animate="visible"
+            >
                 <div className="flex items-center justify-between">
                     <h1 className="text-2xl font-semibold">Vendors</h1>
                     <div className="flex items-center gap-2">
@@ -43,7 +50,7 @@ export default function VendorsPage() {
                         <VendorsTable />
                     </div>
                 </Suspense>
-            </main>
+            </motion.main>
         </ProtectedRoute>
     );
 }

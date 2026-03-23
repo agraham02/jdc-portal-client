@@ -13,6 +13,8 @@ import type {
     UpdateContractDto,
     FileDocument,
 } from "@/lib/types/contracts";
+import { motion } from "motion/react";
+import { pageTransition } from "@/lib/animations";
 import { toast } from "sonner";
 
 export default function ContractEditPage() {
@@ -24,7 +26,7 @@ export default function ContractEditPage() {
     const [error, setError] = useState<string>();
     const [files, setFiles] = useState<File[]>([]);
     const [existingDocuments, setExistingDocuments] = useState<FileDocument[]>(
-        []
+        [],
     );
 
     useEffect(() => {
@@ -38,7 +40,7 @@ export default function ContractEditPage() {
                 setError(
                     err instanceof Error
                         ? err.message
-                        : "Failed to load contract"
+                        : "Failed to load contract",
                 );
             } finally {
                 setIsLoading(false);
@@ -82,7 +84,7 @@ export default function ContractEditPage() {
         try {
             await ContractsService.deleteDocument(params.id, documentId);
             setExistingDocuments((prev) =>
-                prev.filter((doc) => doc._id !== documentId)
+                prev.filter((doc) => doc._id !== documentId),
             );
             toast.success("Document Removed", {
                 description: "Document has been removed successfully",
@@ -100,13 +102,13 @@ export default function ContractEditPage() {
 
     async function handleDownloadDocument(
         documentId: string,
-        filename: string
+        filename: string,
     ) {
         try {
             await ContractsService.triggerDocumentDownload(
                 params.id,
                 documentId,
-                filename
+                filename,
             );
         } catch (err) {
             const message =
@@ -154,7 +156,12 @@ export default function ContractEditPage() {
 
     return (
         <ProtectedRoute anyOf={[P.CONTRACT_UPDATE]}>
-            <main className="container mx-auto max-w-4xl space-y-6 py-6">
+            <motion.main
+                className="container mx-auto max-w-4xl space-y-6 py-6"
+                variants={pageTransition}
+                initial="hidden"
+                animate="visible"
+            >
                 <div className="flex items-center gap-4">
                     <Button variant="ghost" size="icon" onClick={handleCancel}>
                         <ArrowLeft className="h-4 w-4" />
@@ -186,7 +193,7 @@ export default function ContractEditPage() {
                     onDownloadDocument={handleDownloadDocument}
                     isEditMode={true}
                 />
-            </main>
+            </motion.main>
         </ProtectedRoute>
     );
 }

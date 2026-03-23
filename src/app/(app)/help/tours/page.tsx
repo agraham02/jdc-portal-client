@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
+import { pageTransition } from "@/lib/animations";
 import Link from "next/link";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,13 +14,7 @@ import {
     resetAllTours,
     getCompletedTourIds,
 } from "@/lib/tours/tour-storage";
-import {
-    ArrowLeft,
-    Play,
-    CheckCircle,
-    RotateCcw,
-    Map,
-} from "lucide-react";
+import { ArrowLeft, Play, CheckCircle, RotateCcw, Map } from "lucide-react";
 
 export default function ToursPage() {
     const { getAllTours, startTour } = useTour();
@@ -45,7 +40,12 @@ export default function ToursPage() {
 
     return (
         <ProtectedRoute requireAuth={true}>
-            <main className="space-y-6 p-6 max-w-5xl mx-auto">
+            <motion.main
+                className="space-y-6 p-6 max-w-5xl mx-auto"
+                variants={pageTransition}
+                initial="hidden"
+                animate="visible"
+            >
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
@@ -56,28 +56,16 @@ export default function ToursPage() {
                             <ArrowLeft className="h-4 w-4" />
                             Back to Help & Guides
                         </Link>
-                        <motion.h1
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="text-3xl font-bold"
-                        >
+                        <h1 className="text-3xl font-bold">
                             Interactive Tours
-                        </motion.h1>
-                        <motion.p
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.1 }}
-                            className="text-muted-foreground mt-1"
-                        >
+                        </h1>
+                        <p className="text-muted-foreground mt-1">
                             Guided walkthroughs that highlight features directly
                             in the app
-                        </motion.p>
+                        </p>
                     </div>
                     {completedIds.length > 0 && (
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                        >
+                        <div>
                             <Button
                                 variant="outline"
                                 size="sm"
@@ -86,16 +74,12 @@ export default function ToursPage() {
                                 <RotateCcw className="h-4 w-4 mr-1" />
                                 Reset All Tours
                             </Button>
-                        </motion.div>
+                        </div>
                     )}
                 </div>
 
                 {/* Progress */}
-                <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.15 }}
-                >
+                <div>
                     <Card>
                         <CardHeader className="flex flex-row items-center gap-3 pb-2">
                             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
@@ -122,7 +106,7 @@ export default function ToursPage() {
                             </div>
                         </CardContent>
                     </Card>
-                </motion.div>
+                </div>
 
                 {/* Tour Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -136,7 +120,7 @@ export default function ToursPage() {
                                 transition={{ delay: 0.05 * (i + 1) }}
                             >
                                 <Card
-                                    className={`h-full ${completed ? "border-green-200 dark:border-green-800/50" : ""}`}
+                                    className={`h-full ${completed ? "border-emerald-200 dark:border-emerald-800/50" : ""}`}
                                 >
                                     <CardHeader className="pb-2">
                                         <div className="flex items-start justify-between gap-2">
@@ -144,7 +128,7 @@ export default function ToursPage() {
                                                 {tour.title}
                                             </CardTitle>
                                             {completed && (
-                                                <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                                                <CheckCircle className="h-5 w-5 text-emerald-600 flex-shrink-0" />
                                             )}
                                         </div>
                                         {tour.roles.length > 0 && (
@@ -195,7 +179,7 @@ export default function ToursPage() {
                         );
                     })}
                 </div>
-            </main>
+            </motion.main>
         </ProtectedRoute>
     );
 }

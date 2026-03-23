@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect } from "react";
+import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, Home, RefreshCw } from "lucide-react";
+import { pageTransition } from "@/lib/animations";
 
 export default function RootError({
     error,
@@ -22,7 +24,12 @@ export default function RootError({
     }, [error]);
 
     return (
-        <div className="flex min-h-screen flex-col items-center justify-center gap-6 px-4">
+        <motion.div
+            variants={pageTransition}
+            initial="hidden"
+            animate="visible"
+            className="flex min-h-screen flex-col items-center justify-center gap-6 px-4"
+        >
             <div className="flex flex-col items-center gap-4 text-center">
                 <div className="rounded-full bg-destructive/10 p-3">
                     <AlertTriangle className="h-10 w-10 text-destructive" />
@@ -51,6 +58,6 @@ export default function RootError({
                     Go Home
                 </Button>
             </div>
-        </div>
+        </motion.div>
     );
 }

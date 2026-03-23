@@ -3,6 +3,8 @@
 import { useCallback, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import { motion } from "motion/react";
+import { pageTransition } from "@/lib/animations";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { ContractErrorBoundary } from "@/components/common/RouteErrorBoundary";
 import { Button } from "@/components/ui/button";
@@ -51,7 +53,7 @@ export default function ContractDetailsPage() {
         mutate: revalidateApplications,
     } = useConditionalApi<ApplicationListResponse>(
         `/contract-applications?contractId=${params.id}`,
-        canReadApplications
+        canReadApplications,
     );
 
     // Fetch internal notes (only if user has permission)
@@ -61,7 +63,7 @@ export default function ContractDetailsPage() {
         mutate: revalidateNotes,
     } = useConditionalApi<InternalNoteListResponse>(
         `/internal-notes?contractId=${params.id}`,
-        canReadNotes
+        canReadNotes,
     );
 
     const applications = applicationsResponse?.data || [];
@@ -171,7 +173,7 @@ export default function ContractDetailsPage() {
 
     async function handleRejectApplication(
         applicationId: string,
-        reason?: string
+        reason?: string,
     ) {
         try {
             await ApplicationsService.updateApplicationStatus(applicationId, {
@@ -278,7 +280,12 @@ export default function ContractDetailsPage() {
     return (
         <ProtectedRoute anyOf={[P.CONTRACT_READ, P.CONTRACT_READ_ALL]}>
             <ContractErrorBoundary>
-                <main className="container mx-auto space-y-6 py-6">
+                <motion.main
+                    className="container mx-auto space-y-6 py-6"
+                    variants={pageTransition}
+                    initial="hidden"
+                    animate="visible"
+                >
                     <Button
                         variant="ghost"
                         onClick={() => router.push("/contracts")}
@@ -288,7 +295,7 @@ export default function ContractDetailsPage() {
                     </Button>
 
                     {actionError && (
-                        <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-destructive">
+                        <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
                             {actionError.message}
                         </div>
                     )}
@@ -320,7 +327,7 @@ export default function ContractDetailsPage() {
                             onDelete={handleDeleteNote}
                         />
                     )}
-                </main>
+                </motion.main>
             </ContractErrorBoundary>
         </ProtectedRoute>
     );

@@ -2,6 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
+import {
+    pageTransition,
+    staggerContainer,
+    staggerItem,
+} from "@/lib/animations";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -81,45 +86,39 @@ export default function HRResourcesPage() {
             value: stats.totalDocuments,
             icon: FileText,
             description: "HR documents in library",
-            color: "text-blue-600",
+            color: "text-primary",
         },
         {
             title: "Recent Uploads",
             value: stats.recentUploads,
             icon: Clock,
             description: "New docs this week",
-            color: "text-green-600",
+            color: "text-emerald-600",
         },
         {
             title: "Total Downloads",
             value: stats.totalDownloads,
             icon: Download,
             description: "All-time downloads",
-            color: "text-purple-600",
+            color: "text-violet-600",
         },
     ];
 
     return (
         <ProtectedRoute requireAuth={true}>
-            <main className="space-y-6 p-6 max-w-7xl mx-auto">
+            <motion.main
+                className="space-y-6 p-6 max-w-7xl mx-auto"
+                variants={pageTransition}
+                initial="hidden"
+                animate="visible"
+            >
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
-                        <motion.h1
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="text-3xl font-bold"
-                        >
-                            HR Resources
-                        </motion.h1>
-                        <motion.p
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.1 }}
-                            className="text-muted-foreground mt-1"
-                        >
+                        <h1 className="text-3xl font-bold">HR Resources</h1>
+                        <p className="text-muted-foreground mt-1">
                             Manage and access HR documents, links, and resources
-                        </motion.p>
+                        </p>
                     </div>
                     <Button
                         variant="outline"
@@ -132,17 +131,15 @@ export default function HRResourcesPage() {
                 </div>
 
                 {/* Stats Cards */}
-                <div
+                <motion.div
                     className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
                     data-tour="hr-stats"
+                    variants={staggerContainer}
+                    initial="hidden"
+                    animate="visible"
                 >
-                    {statsCards.map((stat, index) => (
-                        <motion.div
-                            key={stat.title}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.1 * (index + 1) }}
-                        >
+                    {statsCards.map((stat) => (
+                        <motion.div key={stat.title} variants={staggerItem}>
                             <Card className="hover:shadow-md transition-shadow">
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                     <CardTitle className="text-sm font-medium">
@@ -167,14 +164,10 @@ export default function HRResourcesPage() {
                             </Card>
                         </motion.div>
                     ))}
-                </div>
+                </motion.div>
 
                 {/* Tabs for Documents and Links */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                >
+                <div>
                     <Card>
                         <CardHeader>
                             <div className="flex items-center gap-4 border-b">
@@ -219,8 +212,8 @@ export default function HRResourcesPage() {
                             {activeTab === "links" && <HrLinksTable />}
                         </CardContent>
                     </Card>
-                </motion.div>
-            </main>
+                </div>
+            </motion.main>
         </ProtectedRoute>
     );
 }

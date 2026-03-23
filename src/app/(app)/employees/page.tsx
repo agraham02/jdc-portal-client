@@ -8,13 +8,20 @@ import { EmployeesTable } from "@/components/employees/EmployeesTable";
 import { useTour } from "@/lib/tours/tour-provider";
 import { Button } from "@/components/ui/button";
 import { HelpCircle } from "lucide-react";
+import { motion } from "motion/react";
+import { pageTransition } from "@/lib/animations";
 
 export default function EmployeesPage() {
     const { startTour } = useTour();
 
     return (
         <ProtectedRoute anyOf={[P.EMPLOYEE_READ, P.EMPLOYEE_READ_ALL]}>
-            <main className="space-y-4">
+            <motion.main
+                className="space-y-4"
+                variants={pageTransition}
+                initial="hidden"
+                animate="visible"
+            >
                 <div className="flex items-center justify-between">
                     <h1 className="text-2xl font-semibold">Employees</h1>
                     <div className="flex items-center gap-2">
@@ -40,7 +47,7 @@ export default function EmployeesPage() {
                 <div data-tour="employees-list">
                     <EmployeesTable />
                 </div>
-            </main>
+            </motion.main>
         </ProtectedRoute>
     );
 }

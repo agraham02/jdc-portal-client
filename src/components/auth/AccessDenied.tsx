@@ -1,17 +1,24 @@
 import Link from "next/link";
+import { motion } from "motion/react";
 import { Shield, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { pageTransition } from "@/lib/animations";
 
 export function AccessDenied() {
     return (
-        <div className="min-h-screen flex items-center justify-center p-4">
+        <motion.div
+            variants={pageTransition}
+            initial="hidden"
+            animate="visible"
+            className="min-h-screen flex items-center justify-center p-4"
+        >
             <Card className="w-full max-w-md">
                 <CardHeader className="text-center">
-                    <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
-                        <Shield className="w-8 h-8 text-red-600 dark:text-red-400" />
+                    <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center">
+                        <Shield className="w-8 h-8 text-destructive" />
                     </div>
-                    <CardTitle className="text-red-600 dark:text-red-400">
+                    <CardTitle className="text-destructive">
                         Access Denied
                     </CardTitle>
                 </CardHeader>
@@ -31,6 +38,6 @@ export function AccessDenied() {
                     </div>
                 </CardContent>
             </Card>
-        </div>
+        </motion.div>
     );
 }

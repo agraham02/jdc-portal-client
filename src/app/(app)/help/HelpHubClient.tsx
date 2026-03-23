@@ -2,6 +2,11 @@
 
 import { useState, useMemo } from "react";
 import { motion } from "motion/react";
+import {
+    pageTransition,
+    staggerContainer,
+    staggerItem,
+} from "@/lib/animations";
 import Link from "next/link";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,33 +60,27 @@ export function HelpHubClient({
 
     return (
         <ProtectedRoute requireAuth={true}>
-            <main className="space-y-8 p-6 max-w-7xl mx-auto">
+            <motion.main
+                className="space-y-8 p-6 max-w-7xl mx-auto"
+                variants={pageTransition}
+                initial="hidden"
+                animate="visible"
+            >
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
-                        <motion.h1
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="text-3xl font-bold"
-                        >
-                            Help & Guides
-                        </motion.h1>
-                        <motion.p
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.1 }}
-                            className="text-muted-foreground mt-1"
-                        >
+                        <h1 className="text-3xl font-bold">Help & Guides</h1>
+                        <p className="text-muted-foreground mt-1">
                             Step-by-step instructions for using the JDC Portal
-                        </motion.p>
+                        </p>
                     </div>
                 </div>
 
                 {/* Quick Actions */}
                 <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.15 }}
+                    variants={staggerContainer}
+                    initial="hidden"
+                    animate="visible"
                     className="grid grid-cols-1 sm:grid-cols-3 gap-4"
                 >
                     <Link href="/help/tours">
@@ -103,15 +102,15 @@ export function HelpHubClient({
                     </Link>
 
                     <Card
-                        className="group hover:shadow-md transition-all hover:border-green-500/30 cursor-pointer"
+                        className="group hover:shadow-md transition-all hover:border-emerald-500/30 cursor-pointer"
                         onClick={() => startTour("orientation")}
                     >
                         <CardHeader className="flex flex-row items-center gap-3 pb-2">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-500/10">
-                                <Sparkles className="h-5 w-5 text-green-600" />
+                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10">
+                                <Sparkles className="h-5 w-5 text-emerald-600" />
                             </div>
                             <div>
-                                <CardTitle className="text-sm font-semibold group-hover:text-green-600 transition-colors">
+                                <CardTitle className="text-sm font-semibold group-hover:text-emerald-600 transition-colors">
                                     Quick Start
                                 </CardTitle>
                                 <p className="text-xs text-muted-foreground">
@@ -123,8 +122,8 @@ export function HelpHubClient({
 
                     <Card className="hover:shadow-md transition-all">
                         <CardHeader className="flex flex-row items-center gap-3 pb-2">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-500/10">
-                                <FileText className="h-5 w-5 text-purple-600" />
+                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-500/10">
+                                <FileText className="h-5 w-5 text-violet-600" />
                             </div>
                             <div>
                                 <CardTitle className="text-sm font-semibold">
@@ -139,12 +138,7 @@ export function HelpHubClient({
                 </motion.div>
 
                 {/* Search & Filters */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="space-y-3"
-                >
+                <div className="space-y-3">
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
@@ -190,29 +184,28 @@ export function HelpHubClient({
                             </Button>
                         ))}
                     </div>
-                </motion.div>
+                </div>
 
                 {/* Guide Cards */}
                 {filteredGuides.length > 0 ? (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.25 }}
-                    >
+                    <div>
                         {activeFilter ? (
                             // Flat grid when filtered
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {filteredGuides.map((guide, i) => (
+                            <motion.div
+                                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+                                variants={staggerContainer}
+                                initial="hidden"
+                                animate="visible"
+                            >
+                                {filteredGuides.map((guide) => (
                                     <motion.div
                                         key={guide.slug}
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: 0.05 * i }}
+                                        variants={staggerItem}
                                     >
                                         <GuideCard guide={guide} />
                                     </motion.div>
                                 ))}
-                            </div>
+                            </motion.div>
                         ) : (
                             // Grouped by role when showing all
                             <div className="space-y-8">
@@ -235,34 +228,29 @@ export function HelpHubClient({
                                                     {guides.length}
                                                 </Badge>
                                             </h2>
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                                {guides.map((guide, i) => (
+                                            <motion.div
+                                                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+                                                variants={staggerContainer}
+                                                initial="hidden"
+                                                animate="visible"
+                                            >
+                                                {guides.map((guide) => (
                                                     <motion.div
                                                         key={guide.slug}
-                                                        initial={{
-                                                            opacity: 0,
-                                                            y: 10,
-                                                        }}
-                                                        animate={{
-                                                            opacity: 1,
-                                                            y: 0,
-                                                        }}
-                                                        transition={{
-                                                            delay: 0.05 * i,
-                                                        }}
+                                                        variants={staggerItem}
                                                     >
                                                         <GuideCard
                                                             guide={guide}
                                                         />
                                                     </motion.div>
                                                 ))}
-                                            </div>
+                                            </motion.div>
                                         </div>
                                     );
                                 })}
                             </div>
                         )}
-                    </motion.div>
+                    </div>
                 ) : (
                     <Card className="py-12">
                         <CardContent className="flex flex-col items-center justify-center text-center">
@@ -276,7 +264,7 @@ export function HelpHubClient({
                         </CardContent>
                     </Card>
                 )}
-            </main>
+            </motion.main>
         </ProtectedRoute>
     );
 }

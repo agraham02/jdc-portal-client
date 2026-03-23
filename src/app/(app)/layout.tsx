@@ -21,37 +21,47 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
     return (
         <TourProvider>
-        <SidebarProvider>
-            <AppSidebar />
-            <SidebarInset>
-                <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-                    <div className="flex h-14 items-center gap-2 px-4">
-                        <SidebarTrigger data-tour="sidebar-trigger" />
-                        <div className="flex items-center gap-2" data-tour="header-logo">
-                            <div className="w-6 h-6 bg-primary rounded flex items-center justify-center">
-                                <Building2 className="w-4 h-4 text-primary-foreground" />
-                            </div>
-                            <span className="font-semibold">JDC Portal</span>
-                        </div>
-                        <div className="ml-auto flex items-center gap-2">
-                            <div data-tour="notifications"><NovuInbox /></div>
-                            <div data-tour="theme-toggle"><ThemeToggle /></div>
-                            <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => logout()}
+            <SidebarProvider>
+                <AppSidebar />
+                <SidebarInset>
+                    <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur-lg supports-[backdrop-filter]:bg-background/60">
+                        <div className="flex h-14 items-center gap-2 px-4">
+                            <SidebarTrigger data-tour="sidebar-trigger" />
+                            <div
+                                className="flex items-center gap-2"
+                                data-tour="header-logo"
                             >
-                                Logout
-                            </Button>
+                                <div className="w-7 h-7 bg-primary rounded-lg flex items-center justify-center shadow-sm">
+                                    <Building2 className="w-4 h-4 text-primary-foreground" />
+                                </div>
+                                <span className="font-semibold tracking-tight">
+                                    JDC Portal
+                                </span>
+                            </div>
+                            <div className="ml-auto flex items-center gap-1">
+                                <div data-tour="notifications">
+                                    <NovuInbox />
+                                </div>
+                                <div data-tour="theme-toggle">
+                                    <ThemeToggle />
+                                </div>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => logout()}
+                                    className="text-muted-foreground hover:text-destructive"
+                                >
+                                    Logout
+                                </Button>
+                            </div>
                         </div>
-                    </div>
-                </header>
-                <ProtectedRoute>
-                    <div className="p-4">{children}</div>
-                </ProtectedRoute>
-            </SidebarInset>
-        </SidebarProvider>
-        <HelpFAB />
+                    </header>
+                    <ProtectedRoute>
+                        <div className="p-4">{children}</div>
+                    </ProtectedRoute>
+                </SidebarInset>
+            </SidebarProvider>
+            <HelpFAB />
         </TourProvider>
     );
 }
