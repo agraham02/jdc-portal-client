@@ -33,7 +33,7 @@ export const inviteEmployeeTour: TourDefinition = {
             popover: {
                 title: "Invitation Form",
                 description:
-                    "The form has two sections: the required email field, and optional HR information like Employee ID, Job Title, Department, and Hire Date. Fill in the email to send the invitation.",
+                    "Enter the work email, pick a manager from the searchable dropdown, and mark the email as a Shared / role inbox if it's a shared mailbox (like hr@company.com) so it can be reused after future deletions.",
                 side: "top",
             },
         },
