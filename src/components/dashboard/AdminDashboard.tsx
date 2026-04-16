@@ -28,6 +28,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BaseDashboardCard } from "./BaseDashboardCard";
+import { QuickStartCard } from "./QuickStartCard";
 import {
     AdminService,
     type DashboardStats,
@@ -650,6 +651,9 @@ export function AdminDashboard() {
                 {/* Quick actions sidebar */}
                 <QuickActionsCard />
             </div>
+
+            {/* Quick Start Tour */}
+            <QuickStartCard />
 
             {/* Bottom row */}
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

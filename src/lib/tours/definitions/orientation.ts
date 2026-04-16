@@ -6,6 +6,7 @@ export const orientationTour: TourDefinition = {
     description:
         "A quick tour of the JDC Portal — learn where everything is and how to navigate the app.",
     roles: [],
+    startPath: "/dashboard",
     steps: [
         {
             popover: {
