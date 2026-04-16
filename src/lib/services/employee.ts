@@ -16,6 +16,11 @@ export interface CreateEmployeeDto {
     department?: string;
     hireDate?: string; // ISO date string
     managerId?: string;
+    /**
+     * Mark email as transferable/shared (e.g. role-based inbox). Anonymization
+     * will free this email for reuse when the account is deleted.
+     */
+    isTransferableEmail?: boolean;
 }
 
 export interface CompleteEmployeeOnboardingDto {
@@ -78,6 +83,21 @@ export class EmployeeService {
     }
 
     /**
+     * Get the current user's direct reports (one level). Returns an empty
+     * page when the caller has no reports or is not an employee.
+     */
+    static async getMyReports(params?: {
+        page?: number;
+        limit?: number;
+    }): Promise<EmployeeListResponse> {
+        const path = buildApiPath("/employees/me/reports", {
+            page: params?.page,
+            limit: params?.limit,
+        });
+        return apiClient.get<EmployeeListResponse>(path);
+    }
+
+    /**
      * Get employee by ID
      */
     static async getEmployee(id: string): Promise<EmployeeWithUser> {
@@ -88,11 +108,11 @@ export class EmployeeService {
      * Create a new employee
      */
     static async createEmployee(
-        employeeData: CreateEmployeeDto
+        employeeData: CreateEmployeeDto,
     ): Promise<{ message: string; employee: EmployeeWithUser }> {
         return apiClient.post<{ message: string; employee: EmployeeWithUser }>(
             "/employees",
-            employeeData
+            employeeData,
         );
     }
 
@@ -101,11 +121,11 @@ export class EmployeeService {
      */
     static async updateEmployee(
         id: string,
-        employeeData: UpdateEmployeeDto
+        employeeData: UpdateEmployeeDto,
     ): Promise<{ message: string; employee: EmployeeWithUser }> {
         return apiClient.patch<{ message: string; employee: EmployeeWithUser }>(
             `/employees/${id}`,
-            employeeData
+            employeeData,
         );
     }
 
@@ -121,7 +141,7 @@ export class EmployeeService {
      * Public endpoint - no auth required
      */
     static async completeOnboarding(
-        data: CompleteEmployeeOnboardingDto
+        data: CompleteEmployeeOnboardingDto,
     ): Promise<{ message: string; userId: string; email: string }> {
         return apiClient.post<{
             message: string;

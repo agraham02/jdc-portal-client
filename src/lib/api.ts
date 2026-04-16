@@ -39,7 +39,7 @@ class ApiClient {
 
         this.deviceFingerprint = this.ensureFingerprint();
         this.defaultTimeoutMs = Number(
-            process.env.NEXT_PUBLIC_API_TIMEOUT_MS || 20000
+            process.env.NEXT_PUBLIC_API_TIMEOUT_MS || 20000,
         );
     }
 
@@ -88,7 +88,7 @@ class ApiClient {
     private parseStandardError = async (
         res: Response,
         fallbackPath: string,
-        method: string
+        method: string,
     ): Promise<StandardError> => {
         let body: unknown = null;
         try {
@@ -107,16 +107,16 @@ class ApiClient {
             (status === 401
                 ? "Unauthorized"
                 : status === 403
-                ? "Forbidden"
-                : status === 404
-                ? "NotFound"
-                : status === 409
-                ? "Conflict"
-                : status === 429
-                ? "TooManyRequests"
-                : status >= 500
-                ? "ServerError"
-                : "HttpError");
+                  ? "Forbidden"
+                  : status === 404
+                    ? "NotFound"
+                    : status === 409
+                      ? "Conflict"
+                      : status === 429
+                        ? "TooManyRequests"
+                        : status >= 500
+                          ? "ServerError"
+                          : "HttpError");
 
         // Extract message from backend response or use default
         const message =
@@ -168,7 +168,7 @@ class ApiClient {
         method: HttpMethod,
         path: string,
         body?: unknown,
-        options?: RequestOptions
+        options?: RequestOptions,
     ): Promise<T> {
         const url = `${this.baseUrl}${path}`;
         const headers = this.buildHeaders({
@@ -185,7 +185,7 @@ class ApiClient {
         const timeoutMs = options?.timeoutMs ?? this.defaultTimeoutMs;
         let timer: NodeJS.Timeout | null = setTimeout(
             () => ac.abort(),
-            timeoutMs
+            timeoutMs,
         );
 
         let res: Response;
@@ -198,8 +198,8 @@ class ApiClient {
                     body instanceof FormData
                         ? body
                         : body != null
-                        ? JSON.stringify(body)
-                        : undefined,
+                          ? JSON.stringify(body)
+                          : undefined,
                 signal: options?.signal ?? ac.signal,
             });
         } catch (e) {
@@ -261,7 +261,7 @@ class ApiClient {
                 // Log the refresh error for debugging
                 console.error(
                     "[ApiClient] Token refresh failed:",
-                    refreshError
+                    refreshError,
                 );
 
                 // Ensure we clear session on hard 401
@@ -327,7 +327,7 @@ class ApiClient {
     postFormData<T>(
         path: string,
         formData: FormData,
-        options?: RequestOptions
+        options?: RequestOptions,
     ) {
         const headers = { ...(options?.headers || {}) };
         // Let browser set multipart boundary
@@ -346,7 +346,7 @@ class ApiClient {
         path: string,
         formData: FormData,
         onProgress?: (percent: number) => void,
-        options?: RequestOptions
+        options?: RequestOptions,
     ): Promise<T> {
         return new Promise((resolve, reject) => {
             const url = `${this.baseUrl}${path}`;
@@ -378,7 +378,7 @@ class ApiClient {
                                 path,
                                 formData,
                                 onProgress,
-                                { ...options, skipAuthRetry: true }
+                                { ...options, skipAuthRetry: true },
                             )
                                 .then(resolve)
                                 .catch(reject);
@@ -387,8 +387,8 @@ class ApiClient {
                             session.clear();
                             reject(
                                 new Error(
-                                    "Session expired. Please log in again."
-                                )
+                                    "Session expired. Please log in again.",
+                                ),
                             );
                         });
                 } else {
@@ -417,7 +417,7 @@ class ApiClient {
             xhr.withCredentials = true;
             xhr.setRequestHeader(
                 "x-device-fingerprint",
-                this.deviceFingerprint
+                this.deviceFingerprint,
             );
 
             const token = session.getAccessToken();
@@ -435,8 +435,8 @@ class ApiClient {
     put<T>(path: string, body?: unknown, options?: RequestOptions) {
         return this.request<T>("PUT", path, body, options);
     }
-    delete<T>(path: string, options?: RequestOptions) {
-        return this.request<T>("DELETE", path, undefined, options);
+    delete<T>(path: string, options?: RequestOptions, body?: unknown) {
+        return this.request<T>("DELETE", path, body, options);
     }
 
     // Binary download helper (Blob)

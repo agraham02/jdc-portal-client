@@ -16,7 +16,6 @@ import type {
     RequestPasswordResetDto,
     ConfirmPasswordResetDto,
     UpdateProfileDto,
-    UploadAvatarResponse,
 } from "../types/auth";
 
 export const AuthService = {
@@ -37,7 +36,7 @@ export const AuthService = {
         return { user };
     },
     async registerEmployee(
-        data: EmployeeRegistrationFormData
+        data: EmployeeRegistrationFormData,
     ): Promise<{ message: string }> {
         // Remove confirmPassword before sending to backend
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -45,7 +44,7 @@ export const AuthService = {
 
         return apiClient.post<{ message: string }>(
             "/auth/register/employee",
-            registrationData
+            registrationData,
         );
     },
     logout() {
@@ -72,17 +71,62 @@ export const AuthService = {
     approveUser(userId: string): Promise<{ message: string }> {
         return apiClient.patch<{ message: string }>(
             `/auth/${encodeURIComponent(userId)}/approve`,
-            {}
+            {},
         );
     },
     rejectUser(userId: string, reason?: string): Promise<{ message: string }> {
         return apiClient.patch<{ message: string }>(
             `/auth/${encodeURIComponent(userId)}/reject`,
-            { reason }
+            { reason },
         );
     },
-    requestAccountDeletion() {
-        return apiClient.delete<{ message: string }>("/auth/me", {});
+    requestAccountDeletion(body?: {
+        confirmationPhrase?: string;
+        password?: string;
+    }): Promise<{
+        message: string;
+        status?: "scheduled" | "pending_approval";
+        scheduledFor?: string;
+        graceDays?: number;
+    }> {
+        return apiClient.delete<{
+            message: string;
+            status?: "scheduled" | "pending_approval";
+            scheduledFor?: string;
+            graceDays?: number;
+        }>("/auth/me", {}, body);
+    },
+    approveDeletion(userId: string) {
+        return apiClient.post<{
+            message: string;
+            status: string;
+            scheduledFor: string;
+            graceDays: number;
+            orphanedReports: number;
+        }>(`/users/${encodeURIComponent(userId)}/deletion-request/approve`, {});
+    },
+    cancelDeletion(userId: string) {
+        return apiClient.post<{ message: string; status: string }>(
+            `/users/${encodeURIComponent(userId)}/deletion-request/cancel`,
+            {},
+        );
+    },
+    listPendingDeletions(page = 1, limit = 25) {
+        return apiClient.get<{
+            data: Array<{
+                _id: string;
+                email: string;
+                firstName?: string;
+                lastName?: string;
+                status: string;
+                deleteRequested?: boolean;
+                deleteRequestedAt?: string;
+                roles?: Array<{ name?: string }>;
+            }>;
+            total: number;
+            page: number;
+            limit: number;
+        }>(`/users/deletion-requests?page=${page}&limit=${limit}`);
     },
     updateProfile(data: Partial<UpdateProfileDto>) {
         return apiClient.patch<{ message: string }>("/auth/me", data);
@@ -100,7 +144,7 @@ export const AuthService = {
         return apiClient.post<{ message: string; token?: string }>(
             "/auth/password-reset/request",
             requestDto,
-            { skipAuthRetry: true }
+            { skipAuthRetry: true },
         );
     },
     confirmPasswordReset(token: string, data: ResetPasswordFormData) {
@@ -111,7 +155,7 @@ export const AuthService = {
         return apiClient.post<{ message: string }>(
             "/auth/password-reset/confirm",
             confirmDto,
-            { skipAuthRetry: true }
+            { skipAuthRetry: true },
         );
     },
     changePassword(data: ChangePasswordFormData) {
@@ -124,26 +168,26 @@ export const AuthService = {
         };
         return apiClient.patch<{ message: string }>(
             "/auth/update-password",
-            updateDto
+            updateDto,
         );
     },
     // Admin user actions
     deactivateUser(userId: string) {
         return apiClient.patch<{ message: string }>(
             `/auth/${encodeURIComponent(userId)}/deactivate`,
-            {}
+            {},
         );
     },
     reactivateUser(userId: string) {
         return apiClient.patch<{ message: string }>(
             `/auth/${encodeURIComponent(userId)}/reactivate`,
-            {}
+            {},
         );
     },
     unlockUser(userId: string) {
         return apiClient.patch<{ message: string }>(
             `/auth/${encodeURIComponent(userId)}/unlock`,
-            {}
+            {},
         );
     },
     // Email verification
@@ -151,14 +195,14 @@ export const AuthService = {
         return apiClient.post<{ message: string }>(
             "/auth/verify-email",
             { token },
-            { skipAuthRetry: true }
+            { skipAuthRetry: true },
         );
     },
     resendVerification(email: string) {
         return apiClient.post<{ message: string }>(
             "/auth/resend-verification",
             { email },
-            { skipAuthRetry: true }
+            { skipAuthRetry: true },
         );
     },
     // Account activation
@@ -170,27 +214,15 @@ export const AuthService = {
             lastName?: string;
         }>(
             `/auth/validate-activation-token?token=${encodeURIComponent(
-                token
+                token,
             )}`,
-            { skipAuthRetry: true }
+            { skipAuthRetry: true },
         );
     },
     resendActivation(userId: string) {
         return apiClient.post<{ message: string }>(
             `/auth/resend-activation/${encodeURIComponent(userId)}`,
-            {}
+            {},
         );
-    },
-    // Avatar management
-    uploadAvatar(file: File) {
-        const formData = new FormData();
-        formData.append("avatar", file);
-        return apiClient.postFormData<UploadAvatarResponse>(
-            "/auth/me/avatar",
-            formData
-        );
-    },
-    deleteAvatar() {
-        return apiClient.delete<{ message: string }>("/auth/me/avatar");
     },
 };

@@ -11,7 +11,6 @@
 export enum FileUploadCategory {
     CONTRACT = "contract",
     HR_DOCUMENT = "hr_document",
-    PROFILE_IMAGE = "profile_image",
     VENDOR_DOCUMENT = "vendor_document",
     EMPLOYEE_DOCUMENT = "employee_document",
     OTHER = "other",
@@ -23,7 +22,6 @@ export enum FileUploadCategory {
 export const FILE_SIZE_LIMITS: Record<FileUploadCategory, number> = {
     [FileUploadCategory.CONTRACT]: 50 * 1024 * 1024, // 50MB
     [FileUploadCategory.HR_DOCUMENT]: 25 * 1024 * 1024, // 25MB
-    [FileUploadCategory.PROFILE_IMAGE]: 5 * 1024 * 1024, // 5MB
     [FileUploadCategory.VENDOR_DOCUMENT]: 50 * 1024 * 1024, // 50MB
     [FileUploadCategory.EMPLOYEE_DOCUMENT]: 25 * 1024 * 1024, // 25MB
     [FileUploadCategory.OTHER]: 25 * 1024 * 1024, // 25MB
@@ -35,7 +33,6 @@ export const FILE_SIZE_LIMITS: Record<FileUploadCategory, number> = {
 export const MAX_FILES_PER_UPLOAD: Record<FileUploadCategory, number> = {
     [FileUploadCategory.CONTRACT]: 10,
     [FileUploadCategory.HR_DOCUMENT]: 10,
-    [FileUploadCategory.PROFILE_IMAGE]: 1,
     [FileUploadCategory.VENDOR_DOCUMENT]: 10,
     [FileUploadCategory.EMPLOYEE_DOCUMENT]: 10,
     [FileUploadCategory.OTHER]: 10,
@@ -115,21 +112,6 @@ export const ALLOWED_FILE_TYPES: Record<
             ALLOWED_FILE_EXTENSIONS.JPG,
             ALLOWED_FILE_EXTENSIONS.PNG,
             ALLOWED_FILE_EXTENSIONS.GIF,
-        ],
-    },
-    [FileUploadCategory.PROFILE_IMAGE]: {
-        mimeTypes: [
-            ALLOWED_MIME_TYPES.JPEG,
-            ALLOWED_MIME_TYPES.PNG,
-            ALLOWED_MIME_TYPES.GIF,
-            ALLOWED_MIME_TYPES.WEBP,
-        ],
-        extensions: [
-            ALLOWED_FILE_EXTENSIONS.JPEG,
-            ALLOWED_FILE_EXTENSIONS.JPG,
-            ALLOWED_FILE_EXTENSIONS.PNG,
-            ALLOWED_FILE_EXTENSIONS.GIF,
-            ALLOWED_FILE_EXTENSIONS.WEBP,
         ],
     },
     [FileUploadCategory.VENDOR_DOCUMENT]: {
@@ -240,7 +222,7 @@ export function formatFileSize(bytes: number): string {
  */
 export function isValidFileSize(
     fileSize: number,
-    category: FileUploadCategory
+    category: FileUploadCategory,
 ): boolean {
     return fileSize <= FILE_SIZE_LIMITS[category];
 }
@@ -251,7 +233,7 @@ export function isValidFileSize(
 export function isValidFileType(
     fileName: string,
     mimeType: string,
-    category: FileUploadCategory
+    category: FileUploadCategory,
 ): boolean {
     const allowed = ALLOWED_FILE_TYPES[category];
     const extension = fileName

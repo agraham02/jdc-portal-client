@@ -60,7 +60,6 @@ function ProfileCompletionCard() {
             completed: !!user?.firstName && !!user?.lastName,
         },
         { label: "Email", completed: !!user?.email },
-        { label: "Profile Photo", completed: !!user?.profilePhotoUrl },
         { label: "Contact Phone", completed: !!user?.contactPhone },
     ];
 
