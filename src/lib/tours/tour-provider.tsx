@@ -26,7 +26,14 @@ interface TourContextValue {
 
 const TourContext = createContext<TourContextValue | undefined>(undefined);
 
-/** Wait for a DOM element to appear, with timeout */
+/** Delay used when navigating to a new route with no specific element to wait for. */
+const DEFAULT_NAVIGATION_DELAY_MS = 800;
+
+/**
+ * Wait for a DOM element matching `selector` to appear.
+ * Resolves with the element once found, or `null` if `timeoutMs` elapses
+ * before the element is present in the DOM.
+ */
 function waitForElement(
     selector: string,
     timeoutMs = 3000,
@@ -83,7 +90,9 @@ export function TourProvider({ children }: { children: ReactNode }) {
                     );
                 } else {
                     // Fallback: short delay for navigation to settle
-                    await new Promise((r) => setTimeout(r, 800));
+                    await new Promise((r) =>
+                        setTimeout(r, DEFAULT_NAVIGATION_DELAY_MS),
+                    );
                 }
             }
 
@@ -104,7 +113,9 @@ export function TourProvider({ children }: { children: ReactNode }) {
                 if (elementSelector) {
                     await waitForElement(elementSelector, 4000);
                 } else {
-                    await new Promise((r) => setTimeout(r, 800));
+                    await new Promise((r) =>
+                        setTimeout(r, DEFAULT_NAVIGATION_DELAY_MS),
+                    );
                 }
             };
 
@@ -128,8 +139,9 @@ export function TourProvider({ children }: { children: ReactNode }) {
                         stepDef?.element &&
                         !document.querySelector(stepDef.element as string)
                     ) {
-                        // Auto-skip missing-element steps
-                        setTimeout(() => driverInstance.moveNext(), 0);
+                        // Auto-skip missing-element steps after the current driver
+                        // callback completes, without deferring a full event-loop tick.
+                        queueMicrotask(() => driverInstance.moveNext());
                     }
                 },
                 onNextClick: (_element, _step, opts) => {

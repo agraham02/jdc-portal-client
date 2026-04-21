@@ -24,8 +24,8 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 
 To learn more about Next.js, take a look at the following resources:
 
--   [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
--   [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
@@ -37,12 +37,25 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 ## Design System & Theming
 
--   Tailwind CSS v4 is configured via `@tailwindcss/postcss` and tokens in `src/app/globals.css`.
--   shadcn/ui primitives live in `src/components/ui/*`.
--   Theme toggle uses a minimal localStorage + class strategy:
-    -   `ThemeScript` sets initial theme pre-hydration.
-    -   `ThemeToggle` toggles `document.documentElement.classList` and persists to localStorage.
--   Dark mode styling is handled with the custom variant `dark:` -> see `@custom-variant dark` in `globals.css` and CSS variables under `:root` and `.dark`.
--   App shell: `src/app/(app)/layout.tsx` with `AppSidebar` + `SidebarInset` and a sticky header.
+- Tailwind CSS v4 is configured via `@tailwindcss/postcss` and tokens in `src/app/globals.css`.
+- shadcn/ui primitives live in `src/components/ui/*`.
+- Theme toggle uses a minimal localStorage + class strategy:
+    - `ThemeScript` sets initial theme pre-hydration.
+    - `ThemeToggle` toggles `document.documentElement.classList` and persists to localStorage.
+- Dark mode styling is handled with the custom variant `dark:` -> see `@custom-variant dark` in `globals.css` and CSS variables under `:root` and `.dark`.
+- App shell: `src/app/(app)/layout.tsx` with `AppSidebar` + `SidebarInset` and a sticky header.
 
 To add new UI components, compose from `ui/` primitives and keep styles token-based for consistency
+
+## Key Dependencies
+
+| Package                   | Purpose                                                                                                                    |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `motion` (`motion/react`) | Animation library — used for page/element transitions throughout the app. Import from `motion/react`, not `framer-motion`. |
+| `driver.js`               | In-app guided tour engine — powers the onboarding and feature-discovery tours in `src/lib/tours/`.                         |
+| `gray-matter`             | Parses YAML/JSON front-matter from MDX guide files at build time (see `src/lib/guides/`).                                  |
+| `next-mdx-remote`         | Renders MDX content for the Help & Guides section at runtime.                                                              |
+| `swr`                     | Client-side data fetching with stale-while-revalidate caching.                                                             |
+| `jose`                    | JWT decoding / verification used in middleware and session helpers.                                                        |
+| `nookies`                 | Cookie helpers for SSR token reads.                                                                                        |
+| `dompurify`               | Sanitises any HTML before it is injected into the DOM to prevent XSS.                                                      |

@@ -58,7 +58,9 @@ export default function EmployeeInvitePage() {
                 employeeId: employeeId.trim() || undefined,
                 jobTitle: jobTitle.trim() || undefined,
                 department: department.trim() || undefined,
-                hireDate: hireDate ? hireDate.toISOString() : undefined,
+                hireDate: hireDate
+                    ? `${hireDate.getFullYear()}-${String(hireDate.getMonth() + 1).padStart(2, "0")}-${String(hireDate.getDate()).padStart(2, "0")}`
+                    : undefined,
                 managerId: managerId || undefined,
                 isTransferableEmail: isTransferableEmail || undefined,
             };

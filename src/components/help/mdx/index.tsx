@@ -45,10 +45,16 @@ export function getMDXComponents(): MDXComponents {
             />
         ),
         ul: (props) => (
-            <ul className="my-4 ml-6 list-disc space-y-2 text-muted-foreground" {...props} />
+            <ul
+                className="my-4 ml-6 list-disc space-y-2 text-muted-foreground"
+                {...props}
+            />
         ),
         ol: (props) => (
-            <ol className="my-4 ml-6 list-decimal space-y-2 text-muted-foreground" {...props} />
+            <ol
+                className="my-4 ml-6 list-decimal space-y-2 text-muted-foreground"
+                {...props}
+            />
         ),
         li: (props) => <li className="leading-7" {...props} />,
         blockquote: (props) => (
@@ -80,9 +86,7 @@ export function getMDXComponents(): MDXComponents {
                 {...props}
             />
         ),
-        td: (props) => (
-            <td className="border px-4 py-2 text-left" {...props} />
-        ),
+        td: (props) => <td className="border px-4 py-2 text-left" {...props} />,
         hr: () => <hr className="my-8 border-t" />,
         a: (props) => (
             <a
@@ -94,7 +98,7 @@ export function getMDXComponents(): MDXComponents {
             // eslint-disable-next-line @next/next/no-img-element
             <img
                 className="my-4 rounded-lg border shadow-sm max-w-full"
-                alt={props.alt || ""}
+                alt={props.alt || "Guide illustration"}
                 {...props}
             />
         ),

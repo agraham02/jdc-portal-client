@@ -80,8 +80,11 @@ export function DeleteAccountDialog({
             setPassword("");
             onSuccess?.();
         } catch (e: unknown) {
-            const err = e as { message?: string };
-            toast.error(err.message || "Failed to process deletion request");
+            const msg =
+                e instanceof Error
+                    ? e.message
+                    : "Failed to process deletion request";
+            toast.error(msg);
         } finally {
             setSubmitting(false);
         }
@@ -221,7 +224,10 @@ function extractRoleNames(roles: User["roles"]): string[] {
     if (!Array.isArray(roles)) return [];
     const names: string[] = [];
     for (const r of roles) {
-        if (typeof r === "string") continue;
+        if (typeof r === "string") {
+            names.push(r);
+            continue;
+        }
         const name = (r as Role).name;
         if (typeof name === "string") names.push(name);
     }
