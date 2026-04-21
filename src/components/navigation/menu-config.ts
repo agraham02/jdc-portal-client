@@ -15,14 +15,25 @@ import {
     Shield,
     User,
     Users,
+    UserX,
 } from "lucide-react";
 import type { MenuItem } from "./types";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 
 export const menu = {
     application: [
-        { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, dataTour: "nav-dashboard" },
-        { title: "Notifications", url: "/notifications", icon: Bell, dataTour: "nav-notifications" },
+        {
+            title: "Dashboard",
+            url: "/dashboard",
+            icon: LayoutDashboard,
+            dataTour: "nav-dashboard",
+        },
+        {
+            title: "Notifications",
+            url: "/notifications",
+            icon: Bell,
+            dataTour: "nav-notifications",
+        },
     ] satisfies MenuItem[],
 
     procurement: [
@@ -91,6 +102,20 @@ export const menu = {
                 P.RBAC_PERMISSION_READ,
             ],
         },
+        {
+            title: "Deletion Requests",
+            url: "/admin/deletion-requests",
+            icon: UserX,
+            // Admins with user:delete see all requests; managers also see their
+            // subordinates' requests via the page itself. We gate the menu entry
+            // more broadly so managers can discover it.
+            anyOf: [
+                P.USER_DELETE,
+                P.EMPLOYEE_DELETE,
+                P.VENDOR_DELETE,
+                P.EMPLOYEE_READ_ALL,
+            ],
+        },
     ] satisfies MenuItem[],
 
     adminControlPanel: [
@@ -148,7 +173,12 @@ export const menu = {
 
     account: [
         { title: "Profile", url: "/profile", icon: User },
-        { title: "Settings", url: "/settings", icon: Settings, dataTour: "nav-settings" },
+        {
+            title: "Settings",
+            url: "/settings",
+            icon: Settings,
+            dataTour: "nav-settings",
+        },
     ] satisfies MenuItem[],
 } as const;
 

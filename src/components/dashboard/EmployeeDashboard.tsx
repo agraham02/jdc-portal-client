@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { BaseDashboardCard } from "./BaseDashboardCard";
+import { QuickStartCard } from "./QuickStartCard";
 import { useAuth } from "@/lib/contexts/auth-context";
 import { staggerContainer, staggerItem } from "@/lib/animations";
 
@@ -59,7 +60,6 @@ function ProfileCompletionCard() {
             completed: !!user?.firstName && !!user?.lastName,
         },
         { label: "Email", completed: !!user?.email },
-        { label: "Profile Photo", completed: !!user?.profilePhotoUrl },
         { label: "Contact Phone", completed: !!user?.contactPhone },
     ];
 
@@ -249,6 +249,7 @@ export function EmployeeDashboard() {
 
                 <div className="space-y-6">
                     <ProfileCompletionCard />
+                    <QuickStartCard />
                     <UpcomingEventsCard />
                 </div>
             </div>

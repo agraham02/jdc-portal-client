@@ -11,47 +11,34 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { AuthService } from "@/lib/services/auth";
+import { DeleteAccountDialog } from "@/components/profile";
 import { useAuth } from "@/lib/contexts/auth-context";
+import { AuthService } from "@/lib/services/auth";
 import { toast } from "sonner";
-import { AlertTriangle, Trash2 } from "lucide-react";
+import { AlertTriangle, Trash2, Clock } from "lucide-react";
 
 export default function SettingsPage() {
-    const { user } = useAuth();
+    const { user, refresh } = useAuth();
     const router = useRouter();
-    const [isDeleting, setIsDeleting] = useState(false);
+    const [cancelling, setCancelling] = useState(false);
 
-    const handleRequestDeletion = async () => {
-        setIsDeleting(true);
+    async function handleCancel() {
+        if (!user?._id) return;
+        setCancelling(true);
         try {
-            const response = await AuthService.requestAccountDeletion();
-            toast.success(
-                response.message ||
-                    "Account deletion requested. An administrator will review your request.",
-            );
-            // Optionally log out after requesting deletion
-            router.push("/dashboard");
+            await AuthService.cancelDeletion(user._id);
+            toast.success("Deletion request cancelled");
+            await refresh();
         } catch (e: unknown) {
-            const error = e as { message?: string };
-            toast.error(
-                error.message ||
-                    "Failed to request account deletion. Please try again.",
-            );
+            const err = e as { message?: string };
+            toast.error(err.message || "Failed to cancel deletion request");
         } finally {
-            setIsDeleting(false);
+            setCancelling(false);
         }
-    };
+    }
+
+    const hasPendingDeletion =
+        !!user?.deleteRequested || !!user?.deletionScheduledFor;
 
     return (
         <main className="p-6 max-w-4xl mx-auto space-y-6">
@@ -62,7 +49,39 @@ export default function SettingsPage() {
                 </p>
             </div>
 
-            {/* Account Information */}
+            {hasPendingDeletion && (
+                <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="border border-amber-400/40 bg-amber-50 dark:bg-amber-950/30 rounded-lg p-4 flex items-start gap-3"
+                >
+                    <Clock className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1 space-y-1">
+                        <p className="font-semibold">
+                            Deletion{" "}
+                            {user?.deletionScheduledFor
+                                ? "scheduled"
+                                : "requested"}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                            {user?.deletionScheduledFor
+                                ? `Your account will be permanently anonymized on ${new Date(
+                                      user.deletionScheduledFor,
+                                  ).toLocaleDateString()}. You can cancel before then.`
+                                : "Your deletion request is pending approval. You can cancel it at any time."}
+                        </p>
+                    </div>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleCancel}
+                        disabled={cancelling}
+                    >
+                        {cancelling ? "Cancelling..." : "Cancel"}
+                    </Button>
+                </motion.div>
+            )}
+
             <Card>
                 <CardHeader>
                     <CardTitle>Account Information</CardTitle>
@@ -96,7 +115,6 @@ export default function SettingsPage() {
                 </CardContent>
             </Card>
 
-            {/* Quick Links */}
             <Card>
                 <CardHeader>
                     <CardTitle>Quick Links</CardTitle>
@@ -131,7 +149,6 @@ export default function SettingsPage() {
                 </CardContent>
             </Card>
 
-            {/* Danger Zone */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -151,51 +168,20 @@ export default function SettingsPage() {
                         <div className="p-4 border border-destructive/20 rounded-lg bg-destructive/5">
                             <h3 className="font-semibold mb-2 flex items-center gap-2">
                                 <Trash2 className="w-4 h-4" />
-                                Request Account Deletion
+                                Account Deletion
                             </h3>
                             <p className="text-sm text-muted-foreground mb-4">
-                                This will submit a request to permanently delete
-                                your account. An administrator will review your
-                                request. Once approved, all your data will be
-                                permanently removed and cannot be recovered.
+                                Close your account. Depending on your role,
+                                deletion may be immediate (with a grace period)
+                                or require administrative approval. Anonymized
+                                accounts cannot be recovered.
                             </p>
-                            <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button
-                                        variant="destructive"
-                                        disabled={isDeleting}
-                                    >
-                                        Request Account Deletion
-                                    </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>
-                                            Are you absolutely sure?
-                                        </AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                            This action will submit a request to
-                                            delete your account. An
-                                            administrator will review and
-                                            approve the deletion. Once approved,
-                                            this action cannot be undone. All
-                                            your data will be permanently
-                                            removed from our servers.
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel>
-                                            Cancel
-                                        </AlertDialogCancel>
-                                        <AlertDialogAction
-                                            onClick={handleRequestDeletion}
-                                            className="bg-destructive hover:bg-destructive/90"
-                                        >
-                                            Yes, Request Deletion
-                                        </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
+                            {user && (
+                                <DeleteAccountDialog
+                                    user={user}
+                                    onSuccess={() => refresh()}
+                                />
+                            )}
                         </div>
                     </CardContent>
                 </Card>

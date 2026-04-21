@@ -3,9 +3,9 @@ import type { TourDefinition } from "../types";
 export const notificationsTour: TourDefinition = {
     id: "notifications",
     title: "Notifications",
-    description:
-        "Learn how to manage your notification inbox and preferences.",
+    description: "Learn how to manage your notification inbox and preferences.",
     roles: [],
+    startPath: "/notifications",
     steps: [
         {
             popover: {

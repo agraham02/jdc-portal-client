@@ -17,6 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { BaseDashboardCard } from "./BaseDashboardCard";
+import { QuickStartCard } from "./QuickStartCard";
 import {
     ApplicationsService,
     ContractsService,
@@ -351,6 +352,9 @@ export function VendorDashboard() {
                 <UpcomingDeadlinesCard contracts={contracts ?? null} />
                 <QuickActionsCard />
             </div>
+
+            {/* Quick Start Tour */}
+            <QuickStartCard />
         </motion.div>
     );
 }

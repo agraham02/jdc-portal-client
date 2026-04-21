@@ -18,7 +18,6 @@ import {
     AccountInfoSection,
     EmployeeSection,
     VendorSection,
-    AvatarUpload,
     type ProfileFormData,
     type PasswordFormData,
 } from "@/components/profile";
@@ -189,14 +188,6 @@ export default function ProfilePage() {
                     Manage your personal information and account settings
                 </p>
             </div>
-
-            {/* Avatar Upload */}
-            <AvatarUpload
-                profilePhotoUrl={user.profilePhotoUrl}
-                firstName={user.firstName}
-                lastName={user.lastName}
-                onAvatarChange={refresh}
-            />
 
             {/* General Information */}
             <GeneralInfoSection

@@ -9,7 +9,7 @@ import ApiErrorListener from "@/components/ApiErrorListener";
 import { ThemeScript } from "@/components/navigation/ThemeScript";
 import { SWRProvider } from "@/lib/contexts/swr-config";
 
-const inter = Inter({
+const interFont = Inter({
     variable: "--font-inter",
     subsets: ["latin"],
     display: "swap",
@@ -39,7 +39,7 @@ export default function RootLayout({
                 <ThemeScript />
             </head>
             <body
-                className={`${inter.variable} ${geistMono.variable} antialiased`}
+                className={`${interFont.variable} ${geistMono.variable} antialiased`}
             >
                 <SWRProvider>
                     <AuthorizationProvider>
