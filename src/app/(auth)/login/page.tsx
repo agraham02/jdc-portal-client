@@ -5,7 +5,7 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Building2, AlertCircle } from "lucide-react";
+import { Building2, AlertCircle, RotateCcw } from "lucide-react";
 import { AnimatePresence } from "motion/react";
 
 import { Button } from "@/components/ui/button";
@@ -28,13 +28,18 @@ import type { StandardError } from "@/lib/types/errors";
 import { PasswordInput } from "@/components/ui/password-input";
 
 function LoginInner() {
-    const { login } = useAuth();
+    const { login, reinstate } = useAuth();
     const router = useRouter();
     const searchParams = useSearchParams();
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [requestId, setRequestId] = useState<string | undefined>();
     const [rememberMe, setRememberMe] = useState(false);
+    const [reinstatePrompt, setReinstatePrompt] = useState<{
+        email: string;
+        password: string;
+        scheduledFor?: string;
+    } | null>(null);
 
     const {
         register,
@@ -54,6 +59,7 @@ function LoginInner() {
         setIsLoading(true);
         setError(null);
         setRequestId(undefined);
+        setReinstatePrompt(null);
 
         try {
             const user = await login(data);
@@ -66,7 +72,16 @@ function LoginInner() {
             // Map backend standard errors to friendly messages
             const std = (e ?? {}) as Partial<StandardError>;
             setRequestId(std.requestId);
-            if (
+            if (std.code === "REINSTATEMENT_AVAILABLE") {
+                const scheduledFor =
+                    (std.details?.deletionScheduledFor as string | undefined) ??
+                    undefined;
+                setReinstatePrompt({
+                    email: data.email,
+                    password: data.password,
+                    scheduledFor,
+                });
+            } else if (
                 std.status === 401 &&
                 /locked|temporarily/i.test(String(std.message))
             ) {
@@ -90,6 +105,31 @@ function LoginInner() {
             } else {
                 setError("Login failed. Please try again.");
             }
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const onConfirmReinstate = async () => {
+        if (!reinstatePrompt) return;
+        setIsLoading(true);
+        setError(null);
+        setRequestId(undefined);
+        try {
+            const user = await reinstate({
+                email: reinstatePrompt.email,
+                password: reinstatePrompt.password,
+            });
+            if (!user) throw new Error("Reinstatement failed");
+            setReinstatePrompt(null);
+            router.push("/dashboard");
+        } catch (e: unknown) {
+            const std = (e ?? {}) as Partial<StandardError>;
+            setRequestId(std.requestId);
+            setError(
+                std.message ||
+                    (e instanceof Error ? e.message : "Reinstatement failed"),
+            );
         } finally {
             setIsLoading(false);
         }
@@ -153,6 +193,58 @@ function LoginInner() {
                             className="space-y-4"
                         >
                             <AnimatePresence mode="popLayout">
+                                {reinstatePrompt && (
+                                    <motion.div
+                                        key="reinstate-banner"
+                                        variants={fadeInUp}
+                                        initial="hidden"
+                                        animate="visible"
+                                        exit="hidden"
+                                        className="p-4 text-sm rounded-lg border border-amber-300/50 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800/50 space-y-3"
+                                    >
+                                        <div className="flex items-start gap-2">
+                                            <RotateCcw className="w-4 h-4 mt-0.5 shrink-0 text-amber-700 dark:text-amber-400" />
+                                            <div className="flex-1 space-y-1">
+                                                <p className="font-medium text-amber-900 dark:text-amber-200">
+                                                    This account is scheduled
+                                                    for deletion
+                                                </p>
+                                                <p className="text-amber-800/90 dark:text-amber-300/90">
+                                                    {reinstatePrompt.scheduledFor
+                                                        ? `It will be permanently removed on ${new Date(
+                                                              reinstatePrompt.scheduledFor,
+                                                          ).toLocaleDateString()}.`
+                                                        : "It will be permanently removed soon."}{" "}
+                                                    Reactivate it now to keep
+                                                    your data and continue using
+                                                    the portal.
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                onClick={onConfirmReinstate}
+                                                disabled={isLoading}
+                                            >
+                                                <RotateCcw className="w-4 h-4 mr-1" />
+                                                Reactivate Account
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() =>
+                                                    setReinstatePrompt(null)
+                                                }
+                                                disabled={isLoading}
+                                            >
+                                                Cancel
+                                            </Button>
+                                        </div>
+                                    </motion.div>
+                                )}
                                 {registeredBanner && (
                                     <motion.div
                                         key="registered-banner"

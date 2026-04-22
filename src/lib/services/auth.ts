@@ -35,6 +35,24 @@ export const AuthService = {
         const user = await AuthService.getProfile();
         return { user };
     },
+    /**
+     * Reinstate an account scheduled for deletion (Archived but not yet
+     * anonymized) and immediately log in. Requires the account's own
+     * credentials.
+     */
+    async reinstate(credentials: LoginFormData): Promise<{ user: User }> {
+        const loginDto: LoginDto = {
+            email: credentials.email,
+            password: credentials.password,
+        };
+        const { accessToken } = await apiClient.post<{
+            accessToken: string;
+            expiresIn: string;
+        }>("/auth/reinstate", loginDto);
+        session.setAccessToken(accessToken);
+        const user = await AuthService.getProfile();
+        return { user };
+    },
     async registerEmployee(
         data: EmployeeRegistrationFormData,
     ): Promise<{ message: string }> {
@@ -127,6 +145,24 @@ export const AuthService = {
             page: number;
             limit: number;
         }>(`/users/deletion-requests?page=${page}&limit=${limit}`);
+    },
+    listScheduledDeletions(page = 1, limit = 25) {
+        return apiClient.get<{
+            data: Array<{
+                _id: string;
+                email: string;
+                firstName?: string;
+                lastName?: string;
+                status: string;
+                deleteRequestedAt?: string;
+                deletionApprovedAt?: string;
+                deletionScheduledFor?: string;
+                roles?: Array<{ name?: string }>;
+            }>;
+            total: number;
+            page: number;
+            limit: number;
+        }>(`/users/scheduled-deletions?page=${page}&limit=${limit}`);
     },
     updateProfile(data: Partial<UpdateProfileDto>) {
         return apiClient.patch<{ message: string }>("/auth/me", data);

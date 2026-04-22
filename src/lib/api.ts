@@ -101,7 +101,11 @@ class ApiClient {
         const backendError = isBackendError(body) ? body : undefined;
 
         // Extract error code from backend or derive from HTTP status
+        // Prefer a structured `errorCode` (e.g. REINSTATEMENT_AVAILABLE) when
+        // present so callers can branch on application-level codes rather than
+        // generic HTTP error names.
         const code =
+            (backendError as unknown as { errorCode?: string })?.errorCode ||
             backendError?.error ||
             backendError?.code ||
             (status === 401
