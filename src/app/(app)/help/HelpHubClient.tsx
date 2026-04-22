@@ -16,13 +16,15 @@ import { Badge } from "@/components/ui/badge";
 import { GuideCard } from "@/components/help/GuideCard";
 import { useTour } from "@/lib/tours/tour-provider";
 import { BookOpen, Search, Map, Sparkles, FileText } from "lucide-react";
-import type { GuideMetadata, GuideRole } from "@/lib/guides/types";
+import type { GuideMetadata } from "@/lib/guides/types";
+import { useAuth } from "@/lib/contexts/auth-context";
+import { getAllowedGuideRoles } from "@/lib/guides/role-mapping";
+import type { Role } from "@/lib/types/auth";
 
 interface HelpHubClientProps {
     allGuides: GuideMetadata[];
     guidesByRole: Record<string, GuideMetadata[]>;
     roleLabels: Record<string, string>;
-    roleToGuideRoles: Record<string, GuideRole[]>;
 }
 
 export function HelpHubClient({
@@ -33,9 +35,34 @@ export function HelpHubClient({
     const [search, setSearch] = useState("");
     const [activeFilter, setActiveFilter] = useState<string | null>(null);
     const { startTour } = useTour();
+    const { user } = useAuth();
+
+    // Resolve which guide categories the current user is allowed to view based
+    // on their role(s). `shared` is always included by the helper.
+    const allowedRoles = useMemo(() => {
+        const roleNames = ((user?.roles ?? []) as (string | Role)[]).map((r) =>
+            typeof r === "string" ? r : r.name,
+        );
+        return new Set(getAllowedGuideRoles(roleNames));
+    }, [user]);
+
+    const visibleGuides = useMemo(
+        () => allGuides.filter((g) => allowedRoles.has(g.role)),
+        [allGuides, allowedRoles],
+    );
+
+    const visibleGuidesByRole = useMemo(() => {
+        const out: Record<string, GuideMetadata[]> = {};
+        for (const role of Object.keys(guidesByRole)) {
+            if (allowedRoles.has(role as GuideMetadata["role"])) {
+                out[role] = guidesByRole[role];
+            }
+        }
+        return out;
+    }, [guidesByRole, allowedRoles]);
 
     const filteredGuides = useMemo(() => {
-        let guides = allGuides;
+        let guides = visibleGuides;
 
         if (activeFilter) {
             guides = guides.filter((g) => g.role === activeFilter);
@@ -52,10 +79,10 @@ export function HelpHubClient({
         }
 
         return guides;
-    }, [allGuides, search, activeFilter]);
+    }, [visibleGuides, search, activeFilter]);
 
-    const roleFilters = Object.keys(guidesByRole).filter(
-        (role) => guidesByRole[role].length > 0,
+    const roleFilters = Object.keys(visibleGuidesByRole).filter(
+        (role) => visibleGuidesByRole[role].length > 0,
     );
 
     return (
@@ -127,7 +154,7 @@ export function HelpHubClient({
                             </div>
                             <div>
                                 <CardTitle className="text-sm font-semibold">
-                                    {allGuides.length} Guides Available
+                                    {visibleGuides.length} Guides Available
                                 </CardTitle>
                                 <p className="text-xs text-muted-foreground">
                                     Covering all portal features
@@ -179,7 +206,7 @@ export function HelpHubClient({
                                     variant="secondary"
                                     className="ml-1.5 px-1.5 text-xs"
                                 >
-                                    {guidesByRole[role].length}
+                                    {visibleGuidesByRole[role].length}
                                 </Badge>
                             </Button>
                         ))}
@@ -214,7 +241,7 @@ export function HelpHubClient({
                                         ? filteredGuides.filter(
                                               (g) => g.role === role,
                                           )
-                                        : guidesByRole[role];
+                                        : visibleGuidesByRole[role];
                                     if (guides.length === 0) return null;
                                     return (
                                         <div key={role}>
