@@ -112,7 +112,7 @@ export const AuthService = {
             status?: "scheduled" | "pending_approval";
             scheduledFor?: string;
             graceDays?: number;
-        }>("/auth/me", {}, body);
+        }>("/auth/me", body);
     },
     approveDeletion(userId: string) {
         return apiClient.post<{
@@ -120,7 +120,6 @@ export const AuthService = {
             status: string;
             scheduledFor: string;
             graceDays: number;
-            orphanedReports: number;
         }>(`/users/${encodeURIComponent(userId)}/deletion-request/approve`, {});
     },
     cancelDeletion(userId: string) {

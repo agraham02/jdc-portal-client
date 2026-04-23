@@ -71,11 +71,7 @@ export default function DeletionRequestsPage() {
         try {
             const res = await AuthService.approveDeletion(id);
             toast.success(
-                `Scheduled for ${new Date(res.scheduledFor).toLocaleDateString()}${
-                    res.orphanedReports
-                        ? ` — ${res.orphanedReports} report(s) orphaned`
-                        : ""
-                }`,
+                `Scheduled for deletion on ${new Date(res.scheduledFor).toLocaleDateString()}`,
             );
             refresh();
         } catch (e: unknown) {
