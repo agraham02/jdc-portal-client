@@ -31,6 +31,7 @@ import {
     getDocumentFilename,
 } from "@/lib/types/contracts";
 import { FileUpload } from "@/components/common/FileUpload";
+import type { UploadingFileMetadata } from "@/components/common/FileUpload";
 import { FileUploadCategory } from "@/lib/constants/file-upload";
 import { PlusIcon, TrashIcon, FileText, Download } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -139,6 +140,15 @@ export function ContractEditor({
         })),
     );
     const [removingDocId, setRemovingDocId] = useState<string | null>(null);
+
+    // Controlled uploading files state for FileUpload component
+    const [uploadingFilesState, setUploadingFilesState] = useState<
+        UploadingFileMetadata[]
+    >(() => (files ?? []).map((file) => ({ file, progress: 0 })));
+
+    useEffect(() => {
+        setUploadingFilesState((files ?? []).map((file) => ({ file, progress: 0 })));
+    }, [files]);
 
     // Sync requiredDocs when initialData changes (e.g., from auto-fill)
     useEffect(() => {
@@ -682,11 +692,9 @@ export function ContractEditor({
                             <FileUpload
                                 category={FileUploadCategory.CONTRACT}
                                 disabled={isSubmitting}
-                                uploadingFiles={files.map((file) => ({
-                                    file,
-                                    progress: 0,
-                                }))}
-                                onUploadingFilesChange={(uploadingFiles) =>
+                                uploadingFiles={uploadingFilesState}
+                                onUploadingFilesChange={(uploadingFiles) => {
+                                    setUploadingFilesState(uploadingFiles);
                                     onFilesChange?.(
                                         uploadingFiles.map((uf) => uf.file),
                                     )
