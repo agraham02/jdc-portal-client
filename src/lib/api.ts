@@ -439,7 +439,7 @@ class ApiClient {
     put<T>(path: string, body?: unknown, options?: RequestOptions) {
         return this.request<T>("PUT", path, body, options);
     }
-    delete<T>(path: string, options?: RequestOptions, body?: unknown) {
+    delete<T>(path: string, body?: unknown, options?: RequestOptions) {
         return this.request<T>("DELETE", path, body, options);
     }
 

@@ -147,7 +147,9 @@ export function ContractEditor({
     >(() => (files ?? []).map((file) => ({ file, progress: 0 })));
 
     useEffect(() => {
-        setUploadingFilesState((files ?? []).map((file) => ({ file, progress: 0 })));
+        setUploadingFilesState(
+            (files ?? []).map((file) => ({ file, progress: 0 })),
+        );
     }, [files]);
 
     // Sync requiredDocs when initialData changes (e.g., from auto-fill)
@@ -697,8 +699,8 @@ export function ContractEditor({
                                     setUploadingFilesState(uploadingFiles);
                                     onFilesChange?.(
                                         uploadingFiles.map((uf) => uf.file),
-                                    )
-                                }
+                                    );
+                                }}
                                 showUploadButton={true}
                                 uploadButtonText="Select Files"
                             />
