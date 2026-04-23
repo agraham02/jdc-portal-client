@@ -25,6 +25,8 @@ import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/lib/contexts/auth-context";
 import { apiClient } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { motion } from "motion/react";
+import { pageTransition } from "@/lib/animations";
 
 interface HealthResponse {
     status: "ok" | "error";
@@ -182,7 +184,7 @@ function SystemStatusCard({
                                     "text-lg font-bold",
                                     isHealthy
                                         ? "text-green-600"
-                                        : "text-red-600"
+                                        : "text-red-600",
                                 )}
                             >
                                 {isHealthy ? "Healthy" : "Unhealthy"}
@@ -274,7 +276,7 @@ function QuickInfoCard({ user }: { user: ReturnType<typeof useAuth>["user"] }) {
                         className={cn(
                             process.env.NODE_ENV === "production"
                                 ? "border-red-500/50 text-red-600"
-                                : "border-green-500/50 text-green-600"
+                                : "border-green-500/50 text-green-600",
                         )}
                     >
                         {process.env.NODE_ENV}
@@ -327,7 +329,7 @@ export default function ControlPanelPage() {
     } = useSWR(
         "/health/ready",
         () => apiClient.get<HealthResponse>("/health/ready"),
-        { refreshInterval: 30000 }
+        { refreshInterval: 30000 },
     );
 
     // Fetch system metrics
@@ -339,7 +341,7 @@ export default function ControlPanelPage() {
         "/admin/observability/metrics/system",
         () =>
             apiClient.get<SystemMetrics>("/admin/observability/metrics/system"),
-        { refreshInterval: 30000 }
+        { refreshInterval: 30000 },
     );
 
     const handleRefresh = () => {
@@ -411,7 +413,12 @@ export default function ControlPanelPage() {
     ];
 
     return (
-        <div className="space-y-6">
+        <motion.div
+            className="space-y-6"
+            variants={pageTransition}
+            initial="hidden"
+            animate="visible"
+        >
             {/* Header */}
             <div className="flex items-start justify-between">
                 <div>
@@ -427,8 +434,8 @@ export default function ControlPanelPage() {
                     className={cn(
                         "gap-1",
                         health?.status === "ok"
-                            ? "bg-green-500/10 text-green-600 border-green-500/20"
-                            : "bg-red-500/10 text-red-600 border-red-500/20"
+                            ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                            : "bg-red-500/10 text-red-600 border-red-500/20",
                     )}
                 >
                     {health?.status === "ok" ? (
@@ -486,13 +493,13 @@ export default function ControlPanelPage() {
                             Last updated:{" "}
                             {health?.timestamp
                                 ? new Date(
-                                      health.timestamp
+                                      health.timestamp,
                                   ).toLocaleTimeString()
                                 : "—"}
                         </span>
                     </div>
                 </CardContent>
             </Card>
-        </div>
+        </motion.div>
     );
 }

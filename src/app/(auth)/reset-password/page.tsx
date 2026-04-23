@@ -5,7 +5,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
+import { ShieldCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,13 +16,14 @@ import { AuthService } from "@/lib/services/auth";
 import { ResetPasswordFormData, resetPasswordSchema } from "@/lib/validations";
 import type { StandardError } from "@/lib/types/errors";
 import PasswordPolicyHints from "@/components/auth/PasswordPolicyHints";
+import { staggerContainer, staggerItem } from "@/lib/animations";
 
 function ResetPasswordInner() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const token = useMemo(
         () => searchParams?.get("token") || "",
-        [searchParams]
+        [searchParams],
     );
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [success, setSuccess] = useState<string | null>(null);
@@ -57,7 +59,7 @@ function ResetPasswordInner() {
             setError(
                 typeof std.message === "string" && std.message.length > 0
                     ? std.message
-                    : "Unable to reset password. Your link may be invalid or expired."
+                    : "Unable to reset password. Your link may be invalid or expired.",
             );
         } finally {
             setIsSubmitting(false);
@@ -65,16 +67,28 @@ function ResetPasswordInner() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-4">
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                className="w-full max-w-md"
-            >
+        <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            animate="visible"
+            className="w-full"
+        >
+            <motion.div variants={staggerItem} className="text-center mb-8">
+                <div className="inline-flex items-center justify-center w-14 h-14 bg-primary/10 rounded-xl mb-4">
+                    <ShieldCheck className="w-7 h-7 text-primary" />
+                </div>
+                <h1 className="text-2xl font-bold tracking-tight">
+                    Reset Password
+                </h1>
+                <p className="text-muted-foreground text-sm mt-1">
+                    Choose a new password for your account
+                </p>
+            </motion.div>
+
+            <motion.div variants={staggerItem}>
                 <Card>
                     <CardHeader>
-                        <CardTitle>Reset Password</CardTitle>
+                        <CardTitle>New Password</CardTitle>
                     </CardHeader>
                     <CardContent>
                         {!token ? (
@@ -157,7 +171,7 @@ function ResetPasswordInner() {
                     </CardContent>
                 </Card>
             </motion.div>
-        </div>
+        </motion.div>
     );
 }
 
@@ -165,7 +179,7 @@ export default function ResetPasswordPage() {
     return (
         <Suspense
             fallback={
-                <div className="min-h-screen flex items-center justify-center p-4">
+                <div className="flex items-center justify-center p-4">
                     Loading…
                 </div>
             }

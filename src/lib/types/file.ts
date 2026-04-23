@@ -14,7 +14,6 @@ export enum FileCategory {
     CONTRACT_DOCUMENT = "contract_document",
     VENDOR_DOCUMENT = "vendor_document",
     EMPLOYEE_DOCUMENT = "employee_document",
-    PROFILE_IMAGE = "profile_image",
     APPLICATION_DOCUMENT = "application_document",
     OTHER = "other",
 }

@@ -21,6 +21,10 @@ type AuthContextValue = {
     isAuthenticated: boolean;
     isLoading: boolean;
     login: (data: { email: string; password: string }) => Promise<User | null>;
+    reinstate: (data: {
+        email: string;
+        password: string;
+    }) => Promise<User | null>;
     logout: () => Promise<void>;
     refresh: () => Promise<void>;
     hasRole: (roles: string | string[]) => boolean;
@@ -111,7 +115,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             refreshPermissions().catch(() => {});
             return res.user ?? null;
         },
-        [refreshPermissions, fetchAccountType]
+        [refreshPermissions, fetchAccountType],
+    );
+
+    const reinstate = useCallback(
+        async (data: { email: string; password: string }) => {
+            const res = await AuthService.reinstate(data);
+            setUser(res.user);
+            await fetchAccountType();
+            refreshPermissions().catch(() => {});
+            return res.user ?? null;
+        },
+        [refreshPermissions, fetchAccountType],
     );
 
     const logout = useCallback(async () => {
@@ -142,18 +157,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 ? required
                 : [required];
             const roleNames = (user.roles as (string | Role)[]).map((r) =>
-                typeof r === "string" ? r : r.name
+                typeof r === "string" ? r : r.name,
             );
             return requiredList.some((r) => roleNames.includes(r));
         },
-        [user]
+        [user],
     );
 
     const hasPermission = useCallback(
         (perm: string) => {
             return hasAny(perm);
         },
-        [hasAny]
+        [hasAny],
     );
 
     const isAccountActive = useCallback(() => {
@@ -178,6 +193,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             isAuthenticated: !!user,
             isLoading: loading,
             login,
+            reinstate,
             logout,
             refresh,
             hasRole,
@@ -191,6 +207,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             accountType,
             loading,
             login,
+            reinstate,
             logout,
             refresh,
             hasRole,
@@ -198,7 +215,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             isAccountActive,
             isAccountPending,
             isAccountRejected,
-        ]
+        ],
     );
 
     return (

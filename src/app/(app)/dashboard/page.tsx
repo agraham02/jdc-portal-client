@@ -1,10 +1,12 @@
 "use client";
 
+import { motion } from "motion/react";
 import { useAuth } from "@/lib/contexts/auth-context";
 import { AdminDashboard } from "@/components/dashboard/AdminDashboard";
 import { EmployeeDashboard } from "@/components/dashboard/EmployeeDashboard";
 import { VendorDashboard } from "@/components/dashboard/VendorDashboard";
 import { Skeleton } from "@/components/ui/skeleton";
+import { pageTransition } from "@/lib/animations";
 
 /**
  * Dynamic dashboard page that renders account-specific layouts
@@ -32,7 +34,12 @@ export default function DashboardPage() {
 
     // Render account-specific dashboard
     return (
-        <main className="container mx-auto p-6">
+        <motion.main
+            variants={pageTransition}
+            initial="hidden"
+            animate="visible"
+            className="container mx-auto p-6"
+        >
             {accountType === "Admin" && <AdminDashboard />}
             {accountType === "Vendor" && <VendorDashboard />}
             {accountType === "Employee" && <EmployeeDashboard />}
@@ -45,6 +52,6 @@ export default function DashboardPage() {
                     </p>
                 </div>
             )}
-        </main>
+        </motion.main>
     );
 }

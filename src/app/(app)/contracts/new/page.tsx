@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Zap } from "lucide-react";
+import { motion } from "motion/react";
+import { pageTransition } from "@/lib/animations";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { Button } from "@/components/ui/button";
 import { ContractEditor } from "@/components/contracts";
@@ -19,7 +21,7 @@ export default function ContractCreatePage() {
     const [error, setError] = useState<string>();
     const [files, setFiles] = useState<File[]>([]);
     const [autoFillData, setAutoFillData] = useState<CreateContractDto | null>(
-        null
+        null,
     );
 
     async function handleSubmit(data: CreateContractDto) {
@@ -98,9 +100,17 @@ export default function ContractCreatePage() {
 
     return (
         <ProtectedRoute anyOf={[P.CONTRACT_CREATE]}>
-            <main className="container mx-auto max-w-4xl space-y-6 py-6">
+            <motion.main
+                className="container mx-auto max-w-4xl space-y-6 py-6"
+                variants={pageTransition}
+                initial="hidden"
+                animate="visible"
+            >
                 <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
+                    <div
+                        className="flex items-center gap-4"
+                        data-tour="create-contract-header"
+                    >
                         <Button
                             variant="ghost"
                             size="icon"
@@ -147,7 +157,7 @@ export default function ContractCreatePage() {
                     files={files}
                     onFilesChange={setFiles}
                 />
-            </main>
+            </motion.main>
         </ProtectedRoute>
     );
 }

@@ -14,6 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { apiClient } from "@/lib/api";
 import { apiToast } from "@/lib/utils/toast-helpers";
+import { motion } from "motion/react";
+import { pageTransition } from "@/lib/animations";
 
 export default function MailTestPage() {
     const [to, setTo] = useState("");
@@ -27,7 +29,7 @@ export default function MailTestPage() {
         setLoading(true);
         try {
             const res = await apiClient.get<{ message: string }>(
-                `/admin/mail/test?to=${encodeURIComponent(to)}`
+                `/admin/mail/test?to=${encodeURIComponent(to)}`,
             );
             apiToast.success(res?.message || "Test email requested");
         } catch (e: unknown) {
@@ -45,7 +47,12 @@ export default function MailTestPage() {
 
     return (
         <ProtectedRoute anyOf={[P.ADMIN_MAIL_TEST]}>
-            <div className="max-w-xl mx-auto">
+            <motion.div
+                className="max-w-xl mx-auto"
+                variants={pageTransition}
+                initial="hidden"
+                animate="visible"
+            >
                 <Card>
                     <CardHeader>
                         <CardTitle>Mail Test</CardTitle>
@@ -80,7 +87,7 @@ export default function MailTestPage() {
                         </p>
                     </CardContent>
                 </Card>
-            </div>
+            </motion.div>
         </ProtectedRoute>
     );
 }

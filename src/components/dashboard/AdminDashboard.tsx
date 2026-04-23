@@ -3,6 +3,7 @@
 import useSWR from "swr";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
+import { motion } from "motion/react";
 import {
     Users,
     Briefcase,
@@ -27,6 +28,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BaseDashboardCard } from "./BaseDashboardCard";
+import { QuickStartCard } from "./QuickStartCard";
 import {
     AdminService,
     type DashboardStats,
@@ -35,6 +37,7 @@ import {
 } from "@/lib/services/admin";
 import { useAuth } from "@/lib/contexts/auth-context";
 import { apiClient } from "@/lib/api";
+import { staggerContainer, staggerItem } from "@/lib/animations";
 
 interface StatItemProps {
     icon: React.ReactNode;
@@ -270,7 +273,7 @@ function StatsHeader({
     }
 
     return (
-        <div className="space-y-4">
+        <motion.div variants={staggerItem} className="space-y-4">
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">
@@ -329,7 +332,7 @@ function StatsHeader({
                     colorClass="bg-amber-500/10 text-amber-600 dark:text-amber-400"
                 />
             </div>
-        </div>
+        </motion.div>
     );
 }
 
@@ -372,7 +375,7 @@ function QuickActionsCard() {
 
     // Filter actions based on user permissions
     const actions = allActions.filter(
-        (action) => !action.permission || hasPermission(action.permission)
+        (action) => !action.permission || hasPermission(action.permission),
     );
 
     const variantClasses = {
@@ -428,7 +431,7 @@ function SystemHealthCard() {
                 };
             };
         },
-        { refreshInterval: 60000 } // Refresh every minute
+        { refreshInterval: 60000 }, // Refresh every minute
     );
 
     const healthItems = [
@@ -596,7 +599,7 @@ export function AdminDashboard() {
         isLoading: isLoadingTrends,
         mutate: mutateActivityTrends,
     } = useSWR("/admin-activity-trends", () =>
-        AdminService.getActivityTrends(7)
+        AdminService.getActivityTrends(7),
     );
 
     // Fetch recent activity
@@ -606,7 +609,7 @@ export function AdminDashboard() {
         isLoading: isLoadingActivity,
         mutate: mutateRecentActivity,
     } = useSWR("/admin-recent-activity", () =>
-        AdminService.getRecentActivity(8)
+        AdminService.getRecentActivity(8),
     );
 
     // Refresh all dashboard data
@@ -617,7 +620,12 @@ export function AdminDashboard() {
     };
 
     return (
-        <div className="space-y-6">
+        <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            animate="visible"
+            className="space-y-6"
+        >
             {/* Stats Header with 4 key metrics */}
             <StatsHeader
                 stats={stats}
@@ -644,6 +652,9 @@ export function AdminDashboard() {
                 <QuickActionsCard />
             </div>
 
+            {/* Quick Start Tour */}
+            <QuickStartCard />
+
             {/* Bottom row */}
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 <SystemHealthCard />
@@ -652,6 +663,6 @@ export function AdminDashboard() {
                     isLoading={isLoadingActivity}
                 />
             </div>
-        </div>
+        </motion.div>
     );
 }

@@ -10,13 +10,14 @@ import {
 } from "@/lib/services/employee";
 import { VendorService, type VendorWithUser } from "@/lib/services/vendor";
 import { apiToast } from "@/lib/utils/toast-helpers";
+import { motion } from "motion/react";
+import { pageTransition } from "@/lib/animations";
 import {
     GeneralInfoSection,
     PasswordSection,
     AccountInfoSection,
     EmployeeSection,
     VendorSection,
-    AvatarUpload,
     type ProfileFormData,
     type PasswordFormData,
 } from "@/components/profile";
@@ -31,7 +32,7 @@ export default function ProfilePage() {
         {
             revalidateOnFocus: false,
             shouldRetryOnError: false,
-        }
+        },
     );
 
     // Fetch employee data - only when user is an Employee
@@ -41,7 +42,7 @@ export default function ProfilePage() {
         {
             revalidateOnFocus: false,
             shouldRetryOnError: false,
-        }
+        },
     );
 
     const isLoading = loadingVendor || loadingEmployee;
@@ -55,7 +56,7 @@ export default function ProfilePage() {
             physicalAddress: user?.physicalAddress || undefined,
             mailingAddress: user?.mailingAddress || undefined,
         }),
-        [user]
+        [user],
     );
 
     const handleProfileSubmit = async (data: ProfileFormData) => {
@@ -63,7 +64,7 @@ export default function ProfilePage() {
             // Convert partial address to complete Address if all required fields present
             // The Zod schema validates "all or nothing", so if any field exists, all required do
             const toAddress = (
-                addr: typeof data.physicalAddress
+                addr: typeof data.physicalAddress,
             ):
                 | {
                       line1: string;
@@ -174,7 +175,12 @@ export default function ProfilePage() {
     }
 
     return (
-        <main className="max-w-5xl mx-auto p-6 space-y-6">
+        <motion.main
+            className="max-w-5xl mx-auto p-6 space-y-6"
+            variants={pageTransition}
+            initial="hidden"
+            animate="visible"
+        >
             {/* Header */}
             <div className="space-y-2">
                 <h1 className="text-3xl font-bold">My Profile</h1>
@@ -182,14 +188,6 @@ export default function ProfilePage() {
                     Manage your personal information and account settings
                 </p>
             </div>
-
-            {/* Avatar Upload */}
-            <AvatarUpload
-                profilePhotoUrl={user.profilePhotoUrl}
-                firstName={user.firstName}
-                lastName={user.lastName}
-                onAvatarChange={refresh}
-            />
 
             {/* General Information */}
             <GeneralInfoSection
@@ -222,6 +220,6 @@ export default function ProfilePage() {
 
             {/* Account Information */}
             <AccountInfoSection user={user} />
-        </main>
+        </motion.main>
     );
 }

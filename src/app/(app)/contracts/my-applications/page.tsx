@@ -37,13 +37,15 @@ import {
 import { StatusBadge } from "@/components/common";
 import { usePaginatedApi } from "@/lib/hooks/useApi";
 import { ConfirmDialog } from "@/components/contracts/ConfirmDialog";
+import { motion } from "motion/react";
+import { pageTransition } from "@/lib/animations";
 import { toast } from "sonner";
 
 export default function MyApplicationsPage() {
     const router = useRouter();
     const { accountType, hasPermission } = useAuth();
     const [statusFilter, setStatusFilter] = useState<ApplicationStatus | "all">(
-        "all"
+        "all",
     );
     const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
     const [selectedWithdraw, setSelectedWithdraw] = useState<{
@@ -64,7 +66,7 @@ export default function MyApplicationsPage() {
         mutate: revalidate,
     } = usePaginatedApi<ApplicationListResponse>(
         "/contract-applications/my-applications",
-        statusFilter === "all" ? {} : { status: statusFilter }
+        statusFilter === "all" ? {} : { status: statusFilter },
     );
 
     // Extract applications from response
@@ -91,7 +93,7 @@ export default function MyApplicationsPage() {
         if (!selectedWithdraw) return;
         try {
             await ApplicationsService.withdrawApplication(
-                selectedWithdraw.applicationId
+                selectedWithdraw.applicationId,
             );
             toast.success("Application Withdrawn", {
                 description: "Your application has been withdrawn successfully",
@@ -122,8 +124,8 @@ export default function MyApplicationsPage() {
         error instanceof Error
             ? error.message
             : error
-            ? "Failed to load applications"
-            : undefined;
+              ? "Failed to load applications"
+              : undefined;
 
     // Block access for employees (non-vendors, non-admins)
     if (!canAccessPage) {
@@ -136,7 +138,12 @@ export default function MyApplicationsPage() {
 
     return (
         <ProtectedRoute requireAuth>
-            <main className="container mx-auto space-y-6 py-6">
+            <motion.main
+                className="container mx-auto space-y-6 py-6"
+                variants={pageTransition}
+                initial="hidden"
+                animate="visible"
+            >
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-3xl font-bold">My Applications</h1>
@@ -168,7 +175,7 @@ export default function MyApplicationsPage() {
                                 value={statusFilter}
                                 onValueChange={(value) =>
                                     setStatusFilter(
-                                        value as ApplicationStatus | "all"
+                                        value as ApplicationStatus | "all",
                                     )
                                 }
                             >
@@ -247,17 +254,17 @@ export default function MyApplicationsPage() {
                                                         <div>
                                                             <p className="font-medium">
                                                                 {getContractTitle(
-                                                                    application
+                                                                    application,
                                                                 )}
                                                             </p>
                                                             {getContractStatus(
-                                                                application
+                                                                application,
                                                             ) && (
                                                                 <StatusBadge
                                                                     type="contract"
                                                                     status={
                                                                         getContractStatus(
-                                                                            application
+                                                                            application,
                                                                         )!
                                                                     }
                                                                     showIcon={
@@ -283,12 +290,11 @@ export default function MyApplicationsPage() {
                                                             {formatDistanceToNow(
                                                                 new Date(
                                                                     application.applicationDate ||
-                                                                        application.createdAt
+                                                                        application.createdAt,
                                                                 ),
                                                                 {
-                                                                    addSuffix:
-                                                                        true,
-                                                                }
+                                                                    addSuffix: true,
+                                                                },
                                                             )}
                                                         </div>
                                                     </TableCell>
@@ -306,7 +312,7 @@ export default function MyApplicationsPage() {
                                                                 size="icon"
                                                                 onClick={() =>
                                                                     handleViewApplication(
-                                                                        application._id
+                                                                        application._id,
                                                                     )
                                                                 }
                                                                 title="View Application Details"
@@ -324,8 +330,8 @@ export default function MyApplicationsPage() {
                                                                         openWithdrawDialog(
                                                                             application._id,
                                                                             getContractId(
-                                                                                application
-                                                                            )
+                                                                                application,
+                                                                            ),
                                                                         )
                                                                     }
                                                                 >
@@ -335,7 +341,7 @@ export default function MyApplicationsPage() {
                                                         </div>
                                                     </TableCell>
                                                 </TableRow>
-                                            )
+                                            ),
                                         )}
                                     </TableBody>
                                 </Table>
@@ -353,7 +359,7 @@ export default function MyApplicationsPage() {
                     onConfirm={handleWithdraw}
                     variant="destructive"
                 />
-            </main>
+            </motion.main>
         </ProtectedRoute>
     );
 }

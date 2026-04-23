@@ -7,4 +7,6 @@ export type MenuItem = {
     // Optional permission requirement(s) for visibility
     anyOf?: string[];
     allOf?: string[];
+    // Optional data-tour attribute for interactive tour targeting
+    dataTour?: string;
 };

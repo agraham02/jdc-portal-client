@@ -50,6 +50,8 @@ import type {
     FileDocument,
     ContractMinimal,
 } from "@/lib/types/contracts";
+import { motion } from "motion/react";
+import { pageTransition } from "@/lib/animations";
 import { toast } from "sonner";
 
 /**
@@ -58,7 +60,7 @@ import { toast } from "sonner";
  */
 function getStatusTransitionDate(
     statusHistory: ApplicationStatusHistory[] | undefined,
-    targetStatus: ApplicationStatus
+    targetStatus: ApplicationStatus,
 ): string | null {
     if (!statusHistory || statusHistory.length === 0) return null;
     const entry = statusHistory.find((h) => h.newStatus === targetStatus);
@@ -69,11 +71,11 @@ function getStatusTransitionDate(
  * Get the rejection reason (comments) from statusHistory when application was rejected
  */
 function getRejectionReason(
-    statusHistory: ApplicationStatusHistory[] | undefined
+    statusHistory: ApplicationStatusHistory[] | undefined,
 ): string | null {
     if (!statusHistory || statusHistory.length === 0) return null;
     const rejectionEntry = statusHistory.find(
-        (h) => h.newStatus === ApplicationStatus.REJECTED && h.comments
+        (h) => h.newStatus === ApplicationStatus.REJECTED && h.comments,
     );
     return rejectionEntry?.comments ?? null;
 }
@@ -141,7 +143,7 @@ export default function ApplicationDetailsPage() {
             const response =
                 await ApplicationsService.getApplicationDocumentViewUrl(
                     application._id,
-                    doc._id
+                    doc._id,
                 );
             globalThis.open(response.url, "_blank");
         } catch (err) {
@@ -156,7 +158,7 @@ export default function ApplicationDetailsPage() {
             const response =
                 await ApplicationsService.getApplicationDocumentDownloadUrl(
                     application._id,
-                    doc._id
+                    doc._id,
                 );
             // Use anchor element with download attribute to trigger download
             // This avoids CORS issues since it's a navigation, not a fetch
@@ -381,7 +383,12 @@ export default function ApplicationDetailsPage() {
     return (
         <ProtectedRoute requireAuth>
             <ContractErrorBoundary>
-                <main className="container mx-auto max-w-5xl space-y-6 py-6 px-4">
+                <motion.main
+                    className="container mx-auto max-w-5xl space-y-6 py-6 px-4"
+                    variants={pageTransition}
+                    initial="hidden"
+                    animate="visible"
+                >
                     {/* Header Navigation */}
                     <div className="flex items-center justify-between flex-wrap gap-4">
                         <Button variant="ghost" onClick={() => router.back()}>
@@ -579,7 +586,7 @@ export default function ApplicationDetailsPage() {
                                                 <DollarSign className="h-5 w-5 text-green-600 dark:text-green-400" />
                                                 <span className="text-2xl font-bold">
                                                     {formatCurrency(
-                                                        application.proposedBudget
+                                                        application.proposedBudget,
                                                     )}
                                                 </span>
                                             </div>
@@ -605,56 +612,56 @@ export default function ApplicationDetailsPage() {
                                         />
                                         {getStatusTransitionDate(
                                             application.statusHistory,
-                                            ApplicationStatus.REVIEWED
+                                            ApplicationStatus.REVIEWED,
                                         ) && (
                                             <TimelineItem
                                                 label="Reviewed"
                                                 date={
                                                     getStatusTransitionDate(
                                                         application.statusHistory,
-                                                        ApplicationStatus.REVIEWED
+                                                        ApplicationStatus.REVIEWED,
                                                     )!
                                                 }
                                             />
                                         )}
                                         {getStatusTransitionDate(
                                             application.statusHistory,
-                                            ApplicationStatus.ACCEPTED
+                                            ApplicationStatus.ACCEPTED,
                                         ) && (
                                             <TimelineItem
                                                 label="In Review"
                                                 date={
                                                     getStatusTransitionDate(
                                                         application.statusHistory,
-                                                        ApplicationStatus.ACCEPTED
+                                                        ApplicationStatus.ACCEPTED,
                                                     )!
                                                 }
                                             />
                                         )}
                                         {getStatusTransitionDate(
                                             application.statusHistory,
-                                            ApplicationStatus.AWARDED
+                                            ApplicationStatus.AWARDED,
                                         ) && (
                                             <TimelineItem
                                                 label="Awarded"
                                                 date={
                                                     getStatusTransitionDate(
                                                         application.statusHistory,
-                                                        ApplicationStatus.AWARDED
+                                                        ApplicationStatus.AWARDED,
                                                     )!
                                                 }
                                             />
                                         )}
                                         {getStatusTransitionDate(
                                             application.statusHistory,
-                                            ApplicationStatus.REJECTED
+                                            ApplicationStatus.REJECTED,
                                         ) && (
                                             <TimelineItem
                                                 label="Rejected"
                                                 date={
                                                     getStatusTransitionDate(
                                                         application.statusHistory,
-                                                        ApplicationStatus.REJECTED
+                                                        ApplicationStatus.REJECTED,
                                                     )!
                                                 }
                                             />
@@ -699,7 +706,7 @@ export default function ApplicationDetailsPage() {
                             {application.status ===
                                 ApplicationStatus.REJECTED &&
                                 getRejectionReason(
-                                    application.statusHistory
+                                    application.statusHistory,
                                 ) && (
                                     <Card className="border-destructive/50 dark:border-destructive/30">
                                         <CardHeader className="pb-3">
@@ -710,7 +717,7 @@ export default function ApplicationDetailsPage() {
                                         <CardContent>
                                             <p className="text-sm text-muted-foreground">
                                                 {getRejectionReason(
-                                                    application.statusHistory
+                                                    application.statusHistory,
                                                 )}
                                             </p>
                                         </CardContent>
@@ -754,7 +761,7 @@ export default function ApplicationDetailsPage() {
                         variant="destructive"
                         loading={actionLoading}
                     />
-                </main>
+                </motion.main>
             </ContractErrorBoundary>
         </ProtectedRoute>
     );

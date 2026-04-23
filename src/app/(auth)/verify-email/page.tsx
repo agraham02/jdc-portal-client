@@ -2,7 +2,8 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
+import { MailCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,6 +15,7 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import { AuthService } from "@/lib/services/auth";
+import { staggerContainer, staggerItem } from "@/lib/animations";
 
 function VerifyEmailInner() {
     const sp = useSearchParams();
@@ -70,7 +72,7 @@ function VerifyEmailInner() {
         try {
             const res = await AuthService.resendVerification(email);
             setMessage(
-                res?.message || "Verification email sent if account exists."
+                res?.message || "Verification email sent if account exists.",
             );
             // Respect server rate limit hints if provided
             // Our api client also exposes Retry-After seconds as details.retryAfterSeconds
@@ -82,7 +84,7 @@ function VerifyEmailInner() {
             };
             if (anyErr?.status === 404) {
                 setMessage(
-                    "Email verification is not enabled in this environment. If you submitted a registration, please await approval."
+                    "Email verification is not enabled in this environment. If you submitted a registration, please await approval.",
                 );
                 return;
             }
@@ -90,14 +92,14 @@ function VerifyEmailInner() {
             if (!Number.isNaN(retry) && retry > 0) {
                 setCooldown(retry);
                 setMessage(
-                    `Too many requests. Please try again in ${retry} seconds.`
+                    `Too many requests. Please try again in ${retry} seconds.`,
                 );
             } else {
                 setMessage(
                     (typeof anyErr?.message === "string"
                         ? anyErr.message
                         : undefined) ||
-                        "Could not resend verification. Try again later."
+                        "Could not resend verification. Try again later.",
                 );
             }
         } finally {
@@ -106,20 +108,34 @@ function VerifyEmailInner() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-4">
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                className="w-full max-w-md"
-            >
+        <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            animate="visible"
+            className="w-full"
+        >
+            <motion.div variants={staggerItem} className="text-center mb-8">
+                <div className="inline-flex items-center justify-center w-14 h-14 bg-primary/10 rounded-xl mb-4">
+                    <MailCheck className="w-7 h-7 text-primary" />
+                </div>
+                <h1 className="text-2xl font-bold tracking-tight">
+                    Email Verification
+                </h1>
+                <p className="text-muted-foreground text-sm mt-1">
+                    {hasToken
+                        ? "Confirming your email address"
+                        : "Enter your email to resend a verification link"}
+                </p>
+            </motion.div>
+
+            <motion.div variants={staggerItem}>
                 <Card>
                     <CardHeader>
-                        <CardTitle>Email Verification</CardTitle>
+                        <CardTitle>Verify Email</CardTitle>
                         <CardDescription>
                             {hasToken
-                                ? "Confirming your email address"
-                                : "Enter your email to resend a verification link"}
+                                ? "We're confirming your email address"
+                                : "Request a new verification link"}
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -158,8 +174,8 @@ function VerifyEmailInner() {
                                             {cooldown
                                                 ? `Try again in ${cooldown}s`
                                                 : resending
-                                                ? "Sending..."
-                                                : "Resend verification"}
+                                                  ? "Sending..."
+                                                  : "Resend verification"}
                                         </Button>
                                     </form>
                                 )}
@@ -191,15 +207,15 @@ function VerifyEmailInner() {
                                     {cooldown
                                         ? `Try again in ${cooldown}s`
                                         : resending
-                                        ? "Sending..."
-                                        : "Send verification link"}
+                                          ? "Sending..."
+                                          : "Send verification link"}
                                 </Button>
                             </form>
                         )}
                     </CardContent>
                 </Card>
             </motion.div>
-        </div>
+        </motion.div>
     );
 }
 
@@ -207,7 +223,7 @@ export default function VerifyEmailPage() {
     return (
         <Suspense
             fallback={
-                <div className="min-h-screen flex items-center justify-center p-4">
+                <div className="flex items-center justify-center p-4">
                     Loading…
                 </div>
             }

@@ -19,6 +19,9 @@ export enum RoleName {
     ADMIN = "Admin",
     EMPLOYEE = "Employee",
     VENDOR = "Vendor",
+    MANAGEMENT = "Management",
+    EXTERNAL_AFFAIRS = "External Affairs",
+    HR = "HR",
 }
 
 // Map each accountType to its default RoleName
@@ -62,13 +65,20 @@ export interface User {
     mailingAddress?: Address;
     contactEmail?: string;
     contactPhone?: string;
-    profilePhotoId?: string;
-    profilePhotoUrl?: string; // Presigned URL for avatar display
     lastLogin?: Date;
     createdBy?: string;
     updatedBy?: string;
     createdAt?: Date;
     updatedAt?: Date;
+    // Deletion lifecycle
+    deleteRequested?: boolean;
+    deleteRequestedAt?: Date | string;
+    deletionApprovedAt?: Date | string;
+    deletionApprovedBy?: string;
+    deletionScheduledFor?: Date | string;
+    anonymizedAt?: Date | string;
+    isTransferableEmail?: boolean;
+    legalHold?: boolean;
 }
 
 export interface Vendor {
@@ -161,12 +171,6 @@ export interface UpdateProfileDto {
     contactPhone?: string;
     physicalAddress?: Address;
     mailingAddress?: Address;
-}
-
-export interface UploadAvatarResponse {
-    message: string;
-    profilePhotoId: string;
-    profilePhotoUrl?: string;
 }
 
 export interface UserDetailsResponse {

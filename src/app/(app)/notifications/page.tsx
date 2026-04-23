@@ -5,6 +5,8 @@ import { useAuth } from "@/lib/contexts/auth-context";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { PermissionName as P } from "@/lib/constants/permission-names";
 import { useRouter } from "next/navigation";
+import { motion } from "motion/react";
+import { pageTransition } from "@/lib/animations";
 
 /**
  * Full-page Novu notification inbox
@@ -38,7 +40,12 @@ export default function NotificationsPage() {
 
     return (
         <ProtectedRoute anyOf={[P.NOTIFICATIONS_READ]}>
-            <main className="space-y-6">
+            <motion.main
+                className="space-y-6"
+                variants={pageTransition}
+                initial="hidden"
+                animate="visible"
+            >
                 <div>
                     <h1 className="text-3xl font-bold">Notifications</h1>
                     <p className="text-muted-foreground mt-1">
@@ -79,7 +86,7 @@ export default function NotificationsPage() {
                         }}
                     />
                 </div>
-            </main>
+            </motion.main>
         </ProtectedRoute>
     );
 }

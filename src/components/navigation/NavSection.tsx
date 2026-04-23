@@ -59,7 +59,7 @@ export function NavSection({
                 <SidebarMenu>
                     {items.map((item) => {
                         const content = (
-                            <SidebarMenuItem key={item.title}>
+                            <SidebarMenuItem key={item.title} data-tour={item.dataTour}>
                                 <SidebarMenuButton
                                     asChild
                                     isActive={isActive(pathname, item.url)}

@@ -330,7 +330,7 @@ export function ContractsTable() {
                     </Button>
                 </Can>
                 <Can anyOf={[P.CONTRACT_CREATE]}>
-                    <Button asChild>
+                    <Button asChild data-tour="create-contract">
                         <Link href="/contracts/new">
                             <Plus className="mr-2 h-4 w-4" />
                             Create Contract
@@ -340,6 +340,7 @@ export function ContractsTable() {
             </div>
 
             {/* Table */}
+            <div data-tour="contracts-list">
             <GenericTable
                 data={contracts}
                 loading={loading}
@@ -349,6 +350,7 @@ export function ContractsTable() {
                 state={tableState}
                 totalItems={totalContracts}
             />
+            </div>
         </div>
     );
 }

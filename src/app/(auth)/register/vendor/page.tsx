@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 
 import {
     Card,
@@ -10,24 +10,27 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import VendorRegistrationForm from "@/components/vendors/VendorRegistrationForm";
+import { staggerContainer, staggerItem } from "@/lib/animations";
 
 export default function VendorRegisterPage() {
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/20 p-4">
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
-                className="w-full max-w-3xl"
-            >
-                <div className="text-center mb-8">
-                    <h1 className="text-2xl font-bold">Vendor Registration</h1>
-                    <p className="text-muted-foreground">
-                        Submit your details for approval. You can update
-                        information later.
-                    </p>
-                </div>
+        <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            animate="visible"
+            className="w-full"
+        >
+            <motion.div variants={staggerItem} className="text-center mb-8">
+                <h1 className="text-2xl font-bold tracking-tight">
+                    Vendor Registration
+                </h1>
+                <p className="text-muted-foreground text-sm mt-1">
+                    Submit your details for approval. You can update information
+                    later.
+                </p>
+            </motion.div>
 
+            <motion.div variants={staggerItem}>
                 <Card>
                     <CardHeader>
                         <CardTitle>Create Vendor Account</CardTitle>
@@ -41,6 +44,6 @@ export default function VendorRegisterPage() {
                     </CardContent>
                 </Card>
             </motion.div>
-        </div>
+        </motion.div>
     );
 }

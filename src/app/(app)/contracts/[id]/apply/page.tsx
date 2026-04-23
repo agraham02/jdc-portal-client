@@ -49,6 +49,8 @@ import {
 import { useApi } from "@/lib/hooks/useApi";
 import { formatCurrency } from "@/lib/utils/formatters";
 import { apiToast } from "@/lib/utils/toast-helpers";
+import { motion } from "motion/react";
+import { pageTransition } from "@/lib/animations";
 import {
     ContractStatus,
     getDocumentFilename,
@@ -79,7 +81,7 @@ export default function ApplyToContractPage() {
     >(new Map());
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
     const [documentErrors, setDocumentErrors] = useState<Map<string, string>>(
-        new Map()
+        new Map(),
     );
     const [existingApplication, setExistingApplication] =
         useState<ExistingApplicationInfo | null>(null);
@@ -119,7 +121,7 @@ export default function ApplyToContractPage() {
             }
             try {
                 const result = await ApplicationsService.checkApplication(
-                    params.id
+                    params.id,
                 );
                 if (result.hasApplication && result.application) {
                     setExistingApplication(result.application);
@@ -152,8 +154,8 @@ export default function ApplyToContractPage() {
             files.some(
                 (f) =>
                     (f.progress > 0 && f.progress < 100) ||
-                    (f.progress === 100 && f.uploadComplete !== true)
-            )
+                    (f.progress === 100 && f.uploadComplete !== true),
+            ),
         );
     }, [documentUploads]);
 
@@ -175,7 +177,7 @@ export default function ApplyToContractPage() {
 
     function updateDocumentFiles(
         documentName: string,
-        files: UploadingFileMetadata[]
+        files: UploadingFileMetadata[],
     ) {
         setDocumentUploads((prev) => {
             const newMap = new Map(prev);
@@ -189,7 +191,7 @@ export default function ApplyToContractPage() {
         try {
             const blob = await ContractsService.downloadDocumentAsBlob(
                 params.id,
-                file._id
+                file._id,
             );
             const url = globalThis.URL.createObjectURL(blob);
             const newWindow = globalThis.open(url, "_blank");
@@ -218,7 +220,7 @@ export default function ApplyToContractPage() {
             await ContractsService.triggerDocumentDownload(
                 params.id,
                 fileId,
-                filename
+                filename,
             );
         } catch (err) {
             apiToast.error("Failed to download document", err);
@@ -268,7 +270,7 @@ export default function ApplyToContractPage() {
             const uploadingFiles = uploads.filter(
                 (u) =>
                     (u.progress > 0 && u.progress < 100) ||
-                    (u.progress === 100 && u.uploadComplete !== true)
+                    (u.progress === 100 && u.uploadComplete !== true),
             );
             if (uploadingFiles.length > 0) {
                 const errorMsg = `Files for "${doc.name}" are still uploading. Please wait.`;
@@ -285,7 +287,7 @@ export default function ApplyToContractPage() {
             // Scroll to first error - check form fields first, then file uploads
             setTimeout(() => {
                 const firstFormError = document.querySelector(
-                    '[aria-invalid="true"]'
+                    '[aria-invalid="true"]',
                 );
                 const firstUploadError =
                     newDocumentErrors.size > 0
@@ -320,7 +322,7 @@ export default function ApplyToContractPage() {
         try {
             // Re-check application status to avoid race conditions on resubmit
             const latestCheck = await ApplicationsService.checkApplication(
-                params.id
+                params.id,
             );
             if (
                 latestCheck.hasApplication &&
@@ -328,7 +330,7 @@ export default function ApplyToContractPage() {
                 !latestCheck.application.canResubmit
             ) {
                 apiToast.error(
-                    "You already have an active application for this contract"
+                    "You already have an active application for this contract",
                 );
                 setIsSubmitting(false);
                 return;
@@ -346,7 +348,7 @@ export default function ApplyToContractPage() {
             await ApplicationsService.submitApplication(
                 params.id,
                 { proposal: data.proposal, proposedBudget },
-                files
+                files,
             );
 
             apiToast.success(
@@ -355,7 +357,7 @@ export default function ApplyToContractPage() {
                     : "Application Submitted",
                 isResubmission
                     ? "Your application has been resubmitted successfully"
-                    : "Your application has been submitted successfully"
+                    : "Your application has been submitted successfully",
             );
             router.push("/contracts/my-applications");
         } catch (err) {
@@ -418,7 +420,7 @@ export default function ApplyToContractPage() {
                         variant="outline"
                         onClick={() =>
                             router.push(
-                                `/contracts/applications/${existingApplication._id}`
+                                `/contracts/applications/${existingApplication._id}`,
                             )
                         }
                     >
@@ -475,7 +477,12 @@ export default function ApplyToContractPage() {
 
     return (
         <ProtectedRoute requireAuth>
-            <main className="container mx-auto max-w-4xl space-y-6 py-6">
+            <motion.main
+                className="container mx-auto max-w-4xl space-y-6 py-6"
+                variants={pageTransition}
+                initial="hidden"
+                animate="visible"
+            >
                 {/* Header */}
                 <div className="flex items-center gap-4">
                     <Button variant="ghost" size="icon" onClick={handleCancel}>
@@ -553,7 +560,7 @@ export default function ApplyToContractPage() {
                                                                     doc.size /
                                                                     1024
                                                                 ).toFixed(
-                                                                    1
+                                                                    1,
                                                                 )}{" "}
                                                                 KB
                                                             </p>
@@ -567,7 +574,7 @@ export default function ApplyToContractPage() {
                                                         size="sm"
                                                         onClick={() =>
                                                             handleViewDocument(
-                                                                doc
+                                                                doc,
                                                             )
                                                         }
                                                     >
@@ -581,7 +588,7 @@ export default function ApplyToContractPage() {
                                                         onClick={() =>
                                                             handleDownloadDocument(
                                                                 doc._id,
-                                                                filename
+                                                                filename,
                                                             )
                                                         }
                                                     >
@@ -689,7 +696,7 @@ export default function ApplyToContractPage() {
                                         Contract budget:{" "}
                                         {formatCurrency(
                                             contract.budget,
-                                            contract.currency
+                                            contract.currency,
                                         )}
                                     </p>
                                     {errors.proposedBudget && (
@@ -766,7 +773,7 @@ export default function ApplyToContractPage() {
                                                             )}
                                                             {!hasFiles &&
                                                                 documentErrors.has(
-                                                                    doc.name
+                                                                    doc.name,
                                                                 ) && (
                                                                     <AlertCircle className="h-4 w-4 text-destructive" />
                                                                 )}
@@ -787,11 +794,11 @@ export default function ApplyToContractPage() {
                                                     disabled={isSubmitting}
                                                     uploadingFiles={files}
                                                     onUploadingFilesChange={(
-                                                        newFiles
+                                                        newFiles,
                                                     ) => {
                                                         updateDocumentFiles(
                                                             doc.name,
-                                                            newFiles
+                                                            newFiles,
                                                         );
                                                         // Clear error when files are added
                                                         if (
@@ -803,20 +810,20 @@ export default function ApplyToContractPage() {
                                                                 (prev) => {
                                                                     const next =
                                                                         new Map(
-                                                                            prev
+                                                                            prev,
                                                                         );
                                                                     next.delete(
-                                                                        doc.name
+                                                                        doc.name,
                                                                     );
                                                                     return next;
-                                                                }
+                                                                },
                                                             );
                                                         }
                                                     }}
                                                     showUploadButton={true}
                                                     uploadButtonText="Select Files"
                                                     validationError={documentErrors.get(
-                                                        doc.name
+                                                        doc.name,
                                                     )}
                                                 />
                                             </div>
@@ -874,17 +881,17 @@ export default function ApplyToContractPage() {
                                                     disabled={isSubmitting}
                                                     uploadingFiles={files}
                                                     onUploadingFilesChange={(
-                                                        newFiles
+                                                        newFiles,
                                                     ) =>
                                                         updateDocumentFiles(
                                                             doc.name,
-                                                            newFiles
+                                                            newFiles,
                                                         )
                                                     }
                                                     showUploadButton={true}
                                                     uploadButtonText="Select Files"
                                                     validationError={documentErrors.get(
-                                                        doc.name
+                                                        doc.name,
                                                     )}
                                                 />
                                             </div>
@@ -921,8 +928,8 @@ export default function ApplyToContractPage() {
                             {hasUploadingFiles
                                 ? "Uploading files..."
                                 : isSubmitting
-                                ? "Submitting..."
-                                : "Submit Application"}
+                                  ? "Submitting..."
+                                  : "Submit Application"}
                         </Button>
                     </div>
 
@@ -958,7 +965,7 @@ export default function ApplyToContractPage() {
                         </AlertDialogContent>
                     </AlertDialog>
                 </form>
-            </main>
+            </motion.main>
         </ProtectedRoute>
     );
 }

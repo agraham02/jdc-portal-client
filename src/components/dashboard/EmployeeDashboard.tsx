@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { motion } from "motion/react";
 import {
     Users,
     Briefcase,
@@ -15,7 +16,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { BaseDashboardCard } from "./BaseDashboardCard";
+import { QuickStartCard } from "./QuickStartCard";
 import { useAuth } from "@/lib/contexts/auth-context";
+import { staggerContainer, staggerItem } from "@/lib/animations";
 
 interface QuickLink {
     href: string;
@@ -57,15 +60,14 @@ function ProfileCompletionCard() {
             completed: !!user?.firstName && !!user?.lastName,
         },
         { label: "Email", completed: !!user?.email },
-        { label: "Profile Photo", completed: !!user?.profilePhotoUrl },
         { label: "Contact Phone", completed: !!user?.contactPhone },
     ];
 
     const completedCount = completionItems.filter(
-        (item) => item.completed
+        (item) => item.completed,
     ).length;
     const completionPercentage = Math.round(
-        (completedCount / completionItems.length) * 100
+        (completedCount / completionItems.length) * 100,
     );
 
     if (completionPercentage === 100) {
@@ -227,9 +229,16 @@ function UpcomingEventsCard() {
  */
 export function EmployeeDashboard() {
     return (
-        <div className="space-y-6">
+        <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            animate="visible"
+            className="space-y-6"
+        >
             {/* Welcome Header */}
-            <WelcomeHeader />
+            <motion.div variants={staggerItem}>
+                <WelcomeHeader />
+            </motion.div>
 
             {/* Main content grid */}
             <div className="grid gap-6 lg:grid-cols-3">
@@ -240,9 +249,10 @@ export function EmployeeDashboard() {
 
                 <div className="space-y-6">
                     <ProfileCompletionCard />
+                    <QuickStartCard />
                     <UpcomingEventsCard />
                 </div>
             </div>
-        </div>
+        </motion.div>
     );
 }

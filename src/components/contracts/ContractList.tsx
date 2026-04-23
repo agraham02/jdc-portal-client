@@ -13,6 +13,8 @@ import { ContractCard } from "./ContractCard";
 import { Pagination } from "./Pagination";
 import { Contract, ContractStatus } from "@/lib/types/contracts";
 import { SearchIcon } from "lucide-react";
+import { motion } from "motion/react";
+import { staggerContainer } from "@/lib/animations";
 
 interface ContractListProps {
     contracts: Contract[];
@@ -136,7 +138,12 @@ export function ContractList({
             {/* Contract Grid */}
             {!loading && contracts.length > 0 && (
                 <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <motion.div
+                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                        variants={staggerContainer}
+                        initial="hidden"
+                        animate="visible"
+                    >
                         {contracts.map((contract) => (
                             <ContractCard
                                 key={contract._id}
@@ -144,7 +151,7 @@ export function ContractList({
                                 showApplicationCount={showApplicationCount}
                             />
                         ))}
-                    </div>
+                    </motion.div>
 
                     {/* Pagination */}
                     {totalPages > 1 && (

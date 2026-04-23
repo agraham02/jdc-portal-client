@@ -3,6 +3,7 @@
 import useSWR from "swr";
 import Link from "next/link";
 import { formatDistanceToNow, format, isPast } from "date-fns";
+import { motion } from "motion/react";
 import {
     FileText,
     Clock,
@@ -16,6 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { BaseDashboardCard } from "./BaseDashboardCard";
+import { QuickStartCard } from "./QuickStartCard";
 import {
     ApplicationsService,
     ContractsService,
@@ -25,6 +27,7 @@ import {
     type Application,
     type Contract,
 } from "@/lib/types/contracts";
+import { staggerContainer, staggerItem } from "@/lib/animations";
 
 interface VendorStats {
     total: number;
@@ -135,7 +138,7 @@ function UpcomingDeadlinesCard({
         .sort(
             (a, b) =>
                 new Date(a.deadline!).getTime() -
-                new Date(b.deadline!).getTime()
+                new Date(b.deadline!).getTime(),
         )
         .slice(0, 4);
 
@@ -164,7 +167,7 @@ function UpcomingDeadlinesCard({
                         const deadline = new Date(contract.deadline!);
                         const daysUntil = Math.ceil(
                             (deadline.getTime() - Date.now()) /
-                                (1000 * 60 * 60 * 24)
+                                (1000 * 60 * 60 * 24),
                         );
                         const isUrgent = daysUntil <= 3;
 
@@ -276,18 +279,18 @@ export function VendorDashboard() {
         return {
             total: apps.length,
             submitted: apps.filter(
-                (a: Application) => a.status === ApplicationStatus.SUBMITTED
+                (a: Application) => a.status === ApplicationStatus.SUBMITTED,
             ).length,
             inReview: apps.filter(
                 (a: Application) =>
                     a.status === ApplicationStatus.REVIEWED ||
-                    a.status === ApplicationStatus.ACCEPTED
+                    a.status === ApplicationStatus.ACCEPTED,
             ).length,
             awarded: apps.filter(
-                (a: Application) => a.status === ApplicationStatus.AWARDED
+                (a: Application) => a.status === ApplicationStatus.AWARDED,
             ).length,
             rejected: apps.filter(
-                (a: Application) => a.status === ApplicationStatus.REJECTED
+                (a: Application) => a.status === ApplicationStatus.REJECTED,
             ).length,
         };
     });
@@ -297,15 +300,23 @@ export function VendorDashboard() {
         async () => {
             const response = await ContractsService.listActiveContracts();
             return response.data || [];
-        }
+        },
     );
 
     const error = appError?.message || contractsError?.message;
 
     return (
-        <div className="space-y-6">
+        <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            animate="visible"
+            className="space-y-6"
+        >
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <motion.div
+                variants={staggerItem}
+                className="flex items-center justify-between"
+            >
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">
                         Vendor Dashboard
@@ -327,7 +338,7 @@ export function VendorDashboard() {
                     />
                     Refresh
                 </Button>
-            </div>
+            </motion.div>
 
             {error && (
                 <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
@@ -341,6 +352,9 @@ export function VendorDashboard() {
                 <UpcomingDeadlinesCard contracts={contracts ?? null} />
                 <QuickActionsCard />
             </div>
-        </div>
+
+            {/* Quick Start Tour */}
+            <QuickStartCard />
+        </motion.div>
     );
 }

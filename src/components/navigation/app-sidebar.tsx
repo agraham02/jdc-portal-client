@@ -12,7 +12,7 @@ import { menu } from "@/components/navigation/menu-config";
 
 export function AppSidebar() {
     return (
-        <Sidebar>
+        <Sidebar data-tour="sidebar">
             <SidebarHeader />
             <SidebarContent>
                 <NavSection label="Application" items={menu.application} />
@@ -26,6 +26,10 @@ export function AppSidebar() {
                     label="User Management"
                     items={menu.userManagement}
                 />
+
+                <SidebarSeparator />
+
+                <NavSection label="Help" items={menu.help} />
 
                 <SidebarSeparator />
 

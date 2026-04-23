@@ -125,7 +125,7 @@ export interface FileUploadProps<TMetadata = Record<string, never>> {
  * @example With custom upload handler
  * ```tsx
  * <FileUpload
- *   category={FileUploadCategory.PROFILE_IMAGE}
+ *   category={FileUploadCategory.EMPLOYEE_DOCUMENT}
  *   onUpload={async (files) => {
  *     const formData = new FormData();
  *     files.forEach(({ file }) => formData.append('files', file));

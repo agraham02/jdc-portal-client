@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -69,12 +70,15 @@ export function EmployeeCombobox({
 
                 // Filter out the excluded employee
                 const filteredEmployees = allEmployees.filter(
-                    (emp) => emp._id !== excludeEmployeeId
+                    (emp) => emp._id !== excludeEmployeeId,
                 );
 
                 setEmployees(filteredEmployees);
             } catch (error) {
                 console.error("Failed to load employees:", error);
+                toast.error(
+                    "Could not load employees. Check your permissions or network.",
+                );
                 setEmployees([]);
             } finally {
                 setLoading(false);
@@ -86,10 +90,9 @@ export function EmployeeCombobox({
 
     // Format employee name for display
     const getEmployeeName = (employee: EmployeeWithUser) => {
-        const fullName =
-            `${employee.userId?.firstName ?? ""} ${
-                employee.userId?.lastName ?? ""
-            }`.trim();
+        const fullName = `${employee.userId?.firstName ?? ""} ${
+            employee.userId?.lastName ?? ""
+        }`.trim();
         return fullName || employee.userId?.email || "Unknown";
     };
 
@@ -163,7 +166,7 @@ export function EmployeeCombobox({
                                 <Check
                                     className={cn(
                                         "mr-2 h-4 w-4",
-                                        !value ? "opacity-100" : "opacity-0"
+                                        !value ? "opacity-100" : "opacity-0",
                                     )}
                                 />
                                 No Manager
@@ -183,7 +186,7 @@ export function EmployeeCombobox({
                                             "mr-2 h-4 w-4 shrink-0",
                                             value === employee._id
                                                 ? "opacity-100"
-                                                : "opacity-0"
+                                                : "opacity-0",
                                         )}
                                     />
                                     <div className="flex flex-col overflow-hidden">
@@ -191,9 +194,12 @@ export function EmployeeCombobox({
                                             {getEmployeeName(employee)}
                                         </span>
                                         <span className="truncate text-xs text-muted-foreground">
-                                            {employee.jobTitle && employee.department
+                                            {employee.jobTitle &&
+                                            employee.department
                                                 ? `${employee.jobTitle} • ${employee.department}`
-                                                : employee.jobTitle || employee.department || employee.userId?.email}
+                                                : employee.jobTitle ||
+                                                  employee.department ||
+                                                  employee.userId?.email}
                                         </span>
                                     </div>
                                 </CommandItem>

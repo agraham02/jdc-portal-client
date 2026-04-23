@@ -615,7 +615,7 @@ export function GenericTable<T extends BaseEntity>({
             )}
 
             {/* Table */}
-            <div className="rounded-md border">
+            <div className="rounded-lg border overflow-hidden">
                 <Table>
                     <TableHeader>
                         <TableRow>

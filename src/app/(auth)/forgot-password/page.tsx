@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
+import { KeyRound } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ import {
     forgotPasswordSchema,
 } from "@/lib/validations";
 import type { StandardError } from "@/lib/types/errors";
+import { staggerContainer, staggerItem } from "@/lib/animations";
 
 export default function ForgotPasswordPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -39,7 +41,7 @@ export default function ForgotPasswordPage() {
             const res = await AuthService.requestPasswordReset(data);
             setSuccess(
                 res.message ||
-                    "If an active account exists, a reset link will be sent."
+                    "If an active account exists, a reset link will be sent.",
             );
             if (process.env.NODE_ENV !== "production" && res.token) {
                 setDevToken(res.token);
@@ -49,7 +51,7 @@ export default function ForgotPasswordPage() {
             setError(
                 typeof std.message === "string" && std.message.length > 0
                     ? std.message
-                    : "Unable to process request right now. Please try again later."
+                    : "Unable to process request right now. Please try again later.",
             );
         } finally {
             setIsSubmitting(false);
@@ -57,16 +59,28 @@ export default function ForgotPasswordPage() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-4">
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                className="w-full max-w-md"
-            >
+        <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            animate="visible"
+            className="w-full"
+        >
+            <motion.div variants={staggerItem} className="text-center mb-8">
+                <div className="inline-flex items-center justify-center w-14 h-14 bg-primary/10 rounded-xl mb-4">
+                    <KeyRound className="w-7 h-7 text-primary" />
+                </div>
+                <h1 className="text-2xl font-bold tracking-tight">
+                    Forgot Password
+                </h1>
+                <p className="text-muted-foreground text-sm mt-1">
+                    Enter your email to receive a reset link
+                </p>
+            </motion.div>
+
+            <motion.div variants={staggerItem}>
                 <Card>
                     <CardHeader>
-                        <CardTitle>Forgot Password</CardTitle>
+                        <CardTitle>Reset Your Password</CardTitle>
                     </CardHeader>
                     <CardContent>
                         {success ? (
@@ -78,7 +92,7 @@ export default function ForgotPasswordPage() {
                                         <Link
                                             className="text-primary underline"
                                             href={`/reset-password?token=${encodeURIComponent(
-                                                devToken
+                                                devToken,
                                             )}`}
                                         >
                                             Reset now
@@ -138,6 +152,6 @@ export default function ForgotPasswordPage() {
                     </CardContent>
                 </Card>
             </motion.div>
-        </div>
+        </motion.div>
     );
 }
