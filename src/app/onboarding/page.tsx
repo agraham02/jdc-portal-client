@@ -149,7 +149,15 @@ function OnboardingForm() {
                 err?.response?.data?.message ||
                 err?.message ||
                 "Failed to complete onboarding. Please try again.";
-            setGeneralError(message);
+
+            // Token invalidated by a subsequent resend — guide the employee to their latest email
+            if (message.includes("Invalid or expired activation token")) {
+                setGeneralError(
+                    "This activation link is no longer valid — it may have been replaced by a newer invitation email. Please check your inbox for the most recent invitation and use that link instead. If you continue to have issues, contact your administrator.",
+                );
+            } else {
+                setGeneralError(message);
+            }
         } finally {
             setIsLoading(false);
         }
@@ -496,8 +504,8 @@ function OnboardingForm() {
                                         )}
                                     </AnimatePresence>
                                     <p className="text-xs text-muted-foreground">
-                                        We&apos;ll use this for important
-                                        account notifications
+                                        Select your country flag and enter your
+                                        number. Example: +1 (202) 555-0100
                                     </p>
                                 </div>
 
