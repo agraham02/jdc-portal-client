@@ -27,6 +27,7 @@ export function EmployeesTable() {
     const canRead = hasAny([P.EMPLOYEE_READ, P.EMPLOYEE_READ_ALL]);
     const canUpdate = hasAny([P.EMPLOYEE_UPDATE]);
     const canDelete = hasAny([P.EMPLOYEE_DELETE]);
+    const canActivate = hasAny([P.USER_ACTIVATE]);
     const canResendActivation = hasAny([P.EMPLOYEE_CREATE, P.EMPLOYEE_UPDATE]);
 
     const [loading, setLoading] = useState(true);
@@ -66,7 +67,7 @@ export function EmployeesTable() {
                 options: DEPARTMENT_OPTIONS,
             },
         ],
-        []
+        [],
     );
 
     const tableState = useTableState({
@@ -150,6 +151,28 @@ export function EmployeesTable() {
             }
         };
 
+        const handleReactivate = async (employee: EmployeeWithUser) => {
+            try {
+                await AuthService.reactivateUser(employee.userId._id);
+                apiToast.success("Employee reactivated");
+                await loadEmployees(); // Refresh the list
+            } catch (error) {
+                apiToast.error("Failed to reactivate employee", error);
+            }
+        };
+
+        const handleResumeOnboarding = async (employee: EmployeeWithUser) => {
+            try {
+                await AuthService.resumeOnboarding(employee.userId._id);
+                apiToast.success(
+                    "Employee returned to onboarding and invite resent",
+                );
+                await loadEmployees(); // Refresh the list
+            } catch (error) {
+                apiToast.error("Failed to resend onboarding invite", error);
+            }
+        };
+
         return {
             columns: [
                 {
@@ -226,14 +249,14 @@ export function EmployeesTable() {
                               onClick: async (employee: EmployeeWithUser) => {
                                   try {
                                       await AuthService.resendActivation(
-                                          employee.userId._id
+                                          employee.userId._id,
                                       );
                                       apiToast.success("Activation email sent");
                                       await loadEmployees();
                                   } catch (err) {
                                       apiToast.error(
                                           errorMessages.auth.resendVerification,
-                                          err
+                                          err,
                                       );
                                   }
                               },
@@ -262,6 +285,28 @@ export function EmployeesTable() {
                           },
                       ]
                     : []),
+                ...(canActivate
+                    ? [
+                          {
+                              key: "reactivate",
+                              label: "Reactivate",
+                              variant: "default" as const,
+                              onClick: handleReactivate,
+                              hidden: (employee: EmployeeWithUser) =>
+                                  employee.userId.status !==
+                                  UserStatus.INACTIVE,
+                          },
+                          {
+                              key: "resume-onboarding",
+                              label: "Reactivate & resend invite",
+                              variant: "secondary" as const,
+                              onClick: handleResumeOnboarding,
+                              hidden: (employee: EmployeeWithUser) =>
+                                  employee.userId.status !==
+                                  UserStatus.INACTIVE,
+                          },
+                      ]
+                    : []),
             ],
             filters: filterDefinitions,
             statusConfig: {
@@ -286,6 +331,7 @@ export function EmployeesTable() {
     }, [
         canUpdate,
         canDelete,
+        canActivate,
         loadEmployees,
         router,
         filterDefinitions,

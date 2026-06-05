@@ -209,19 +209,25 @@ export const AuthService = {
     // Admin user actions
     deactivateUser(userId: string) {
         return apiClient.patch<{ message: string }>(
-            `/auth/${encodeURIComponent(userId)}/deactivate`,
+            `/users/${encodeURIComponent(userId)}/deactivate`,
             {},
         );
     },
     reactivateUser(userId: string) {
         return apiClient.patch<{ message: string }>(
-            `/auth/${encodeURIComponent(userId)}/reactivate`,
+            `/users/${encodeURIComponent(userId)}/reactivate`,
+            {},
+        );
+    },
+    resumeOnboarding(userId: string) {
+        return apiClient.patch<{ message: string }>(
+            `/users/${encodeURIComponent(userId)}/resume-onboarding`,
             {},
         );
     },
     unlockUser(userId: string) {
         return apiClient.patch<{ message: string }>(
-            `/auth/${encodeURIComponent(userId)}/unlock`,
+            `/users/${encodeURIComponent(userId)}/unlock`,
             {},
         );
     },
