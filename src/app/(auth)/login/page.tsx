@@ -67,7 +67,12 @@ function LoginInner() {
             if (!user) {
                 throw new Error("Invalid email or password");
             }
-            router.push("/dashboard");
+            // Admin-provisioned accounts must set their own password first.
+            if (user.mustChangePassword) {
+                router.push("/profile/security?forceChange=1");
+            } else {
+                router.push("/dashboard");
+            }
         } catch (e: unknown) {
             // Map backend standard errors to friendly messages
             const std = (e ?? {}) as Partial<StandardError>;

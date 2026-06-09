@@ -20,6 +20,16 @@ import { errorMessages, successMessages } from "@/lib/utils/error-messages";
 import { UserStatus } from "@/lib/types/auth";
 import { useRouter } from "next/navigation";
 import { StatusBadge } from "../common";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Copy, Check } from "lucide-react";
 
 export function EmployeesTable() {
     const router = useRouter();
@@ -34,6 +44,14 @@ export function EmployeesTable() {
     const [employees, setEmployees] = useState<EmployeeWithUser[]>([]);
     const [totalEmployees, setTotalEmployees] = useState(0);
     const { error, setError, clearError } = useErrorState();
+
+    // Holds the one-time temporary password returned after admin activation,
+    // shown to the admin in a dialog to share securely with the employee.
+    const [tempPasswordInfo, setTempPasswordInfo] = useState<{
+        email: string;
+        password: string;
+    } | null>(null);
+    const [copied, setCopied] = useState(false);
 
     const filterDefinitions = useMemo<
         GenericTableConfig<EmployeeWithUser>["filters"]
@@ -173,6 +191,21 @@ export function EmployeesTable() {
             }
         };
 
+        const handleActivate = async (employee: EmployeeWithUser) => {
+            try {
+                const { temporaryPassword } = await AuthService.activateUser(
+                    employee.userId._id,
+                );
+                setTempPasswordInfo({
+                    email: employee.userId.email,
+                    password: temporaryPassword,
+                });
+                await loadEmployees(); // Refresh the list
+            } catch (error) {
+                apiToast.error("Failed to activate employee", error);
+            }
+        };
+
         return {
             columns: [
                 {
@@ -305,6 +338,24 @@ export function EmployeesTable() {
                                   employee.userId.status !==
                                   UserStatus.INACTIVE,
                           },
+                          {
+                              key: "activate-temp-password",
+                              label: "Activate with temporary password",
+                              variant: "secondary" as const,
+                              onClick: handleActivate,
+                              hidden: (employee: EmployeeWithUser) =>
+                                  // Admin override for accounts that can't finish
+                                  // the normal invite flow. Hidden for already-active
+                                  // and terminal accounts.
+                                  employee.userId.status ===
+                                      UserStatus.ACTIVE ||
+                                  employee.userId.status ===
+                                      UserStatus.TERMINATED ||
+                                  employee.userId.status ===
+                                      UserStatus.REJECTED ||
+                                  employee.userId.status ===
+                                      UserStatus.ARCHIVED,
+                          },
                       ]
                     : []),
             ],
@@ -346,15 +397,80 @@ export function EmployeesTable() {
         );
     }
 
+    const copyTempPassword = async () => {
+        if (!tempPasswordInfo) return;
+        try {
+            await navigator.clipboard.writeText(tempPasswordInfo.password);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        } catch {
+            apiToast.error("Couldn't copy to clipboard");
+        }
+    };
+
     return (
-        <GenericTable
-            data={employees}
-            loading={loading}
-            error={error}
-            config={tableConfig}
-            onRefresh={loadEmployees}
-            state={tableState}
-            totalItems={totalEmployees}
-        />
+        <>
+            <GenericTable
+                data={employees}
+                loading={loading}
+                error={error}
+                config={tableConfig}
+                onRefresh={loadEmployees}
+                state={tableState}
+                totalItems={totalEmployees}
+            />
+            <Dialog
+                open={!!tempPasswordInfo}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setTempPasswordInfo(null);
+                        setCopied(false);
+                    }
+                }}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Temporary password created</DialogTitle>
+                        <DialogDescription>
+                            Share this one-time password securely with{" "}
+                            <span className="font-medium">
+                                {tempPasswordInfo?.email}
+                            </span>
+                            . They must change it the next time they sign in.
+                            This password won&apos;t be shown again.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex items-center gap-2 rounded-md border bg-muted px-3 py-2">
+                        <code className="flex-1 break-all font-mono text-sm">
+                            {tempPasswordInfo?.password}
+                        </code>
+                        <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            onClick={copyTempPassword}
+                            aria-label="Copy password"
+                        >
+                            {copied ? (
+                                <Check className="h-4 w-4" />
+                            ) : (
+                                <Copy className="h-4 w-4" />
+                            )}
+                        </Button>
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            onClick={() => {
+                                setTempPasswordInfo(null);
+                                setCopied(false);
+                            }}
+                        >
+                            Done
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </>
     );
 }

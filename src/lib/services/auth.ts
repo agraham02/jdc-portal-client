@@ -225,6 +225,12 @@ export const AuthService = {
             {},
         );
     },
+    activateUser(userId: string) {
+        return apiClient.patch<{ message: string; temporaryPassword: string }>(
+            `/users/${encodeURIComponent(userId)}/activate`,
+            {},
+        );
+    },
     unlockUser(userId: string) {
         return apiClient.patch<{ message: string }>(
             `/users/${encodeURIComponent(userId)}/unlock`,

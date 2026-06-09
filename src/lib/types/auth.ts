@@ -79,6 +79,9 @@ export interface User {
     anonymizedAt?: Date | string;
     isTransferableEmail?: boolean;
     legalHold?: boolean;
+    // Set when an admin provisions the account with a temporary password;
+    // the user must change their password before using the app.
+    mustChangePassword?: boolean;
 }
 
 export interface Vendor {

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "motion/react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { pageTransition } from "@/lib/animations";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,6 +20,9 @@ import type { StandardError } from "@/lib/types/errors";
 import PasswordPolicyHints from "@/components/auth/PasswordPolicyHints";
 
 export default function SecurityPage() {
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const forceChange = searchParams.get("forceChange") === "1";
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [success, setSuccess] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -42,6 +46,11 @@ export default function SecurityPage() {
             const res = await AuthService.changePassword(data);
             setSuccess(res.message || "Password updated successfully.");
             reset();
+            // Forced first-time change: session tokens were revoked server-side,
+            // so send the user back to login to sign in with their new password.
+            if (forceChange) {
+                setTimeout(() => router.push("/login?passwordChanged=1"), 1500);
+            }
         } catch (e: unknown) {
             const std = (e ?? {}) as Partial<StandardError>;
             if (
@@ -74,6 +83,14 @@ export default function SecurityPage() {
                         <CardTitle>Change Password</CardTitle>
                     </CardHeader>
                     <CardContent>
+                        {forceChange && (
+                            <div className="mb-4 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
+                                Your account was set up with a temporary
+                                password. Please choose a new password to
+                                continue. Enter the temporary password as your
+                                current password below.
+                            </div>
+                        )}
                         <form
                             onSubmit={handleSubmit(onSubmit)}
                             className="space-y-4"
